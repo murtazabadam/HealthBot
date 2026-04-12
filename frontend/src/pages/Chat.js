@@ -27,7 +27,7 @@ export default function Chat() {
     setInput('');
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:5000/api/chat/message',
+      const res = await axios.post('https://healthbot-production-3c7d.up.railway.app/api/chat/message',
         { text: input },
         { headers: { Authorization: `Bearer ${token}` } }
       );
