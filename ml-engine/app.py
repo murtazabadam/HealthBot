@@ -1,109 +1,190 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import pickle, os, json
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
+import pandas as pd
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+import os, json
 
 app = Flask(__name__)
 CORS(app)
 
-# ── Disease / symptom data (built-in, no CSV needed) ──────────────────────────
-DISEASES = {
-    "Common Cold":     ["sneezing","runny_nose","sore_throat","cough","fatigue"],
-    "Flu":             ["fever","chills","body_ache","fatigue","cough","headache"],
-    "Malaria":         ["fever","chills","sweating","headache","nausea","vomiting"],
-    "Typhoid":         ["high_fever","weakness","stomach_pain","headache","nausea"],
-    "Pneumonia":       ["fever","cough","chest_pain","shortness_of_breath","fatigue"],
-    "Dengue":          ["high_fever","severe_headache","joint_pain","rash","fatigue"],
-    "Diabetes":        ["frequent_urination","excessive_thirst","fatigue","blurred_vision","slow_healing"],
-    "Hypertension":    ["headache","dizziness","chest_pain","shortness_of_breath","fatigue"],
-    "Asthma":          ["shortness_of_breath","wheezing","chest_tightness","cough","fatigue"],
-    "Migraine":        ["severe_headache","nausea","vomiting","sensitivity_to_light","blurred_vision"],
-    "Gastroenteritis": ["nausea","vomiting","diarrhea","stomach_pain","fever"],
-    "Anemia":          ["fatigue","weakness","pale_skin","shortness_of_breath","dizziness"],
-    "UTI":             ["frequent_urination","burning_urination","lower_back_pain","fever","nausea"],
-    "Jaundice":        ["yellowing_of_skin","dark_urine","fatigue","nausea","abdominal_pain"],
-    "Chickenpox":      ["rash","fever","itching","fatigue","headache"],
-}
+BASE = os.path.dirname(os.path.abspath(__file__))
+DATA = os.path.join(BASE, 'data')
 
-SEVERITY = {
-    "Common Cold":1,"Flu":2,"Malaria":4,"Typhoid":4,"Pneumonia":4,
-    "Dengue":4,"Diabetes":3,"Hypertension":3,"Asthma":3,"Migraine":2,
-    "Gastroenteritis":2,"Anemia":2,"UTI":2,"Jaundice":3,"Chickenpox":2,
-}
+# ── Load datasets ──────────────────────────────────────────────────────────────
+print("Loading datasets...")
+df         = pd.read_csv(os.path.join(DATA, 'dataset.csv'))
+desc_df    = pd.read_csv(os.path.join(DATA, 'symptom_Description.csv'))
+prec_df    = pd.read_csv(os.path.join(DATA, 'symptom_precaution.csv'))
+sev_df     = pd.read_csv(os.path.join(DATA, 'Symptom-severity.csv'))
 
-# Gather all unique symptoms
-ALL_SYMPTOMS = sorted({s for symptoms in DISEASES.values() for s in symptoms})
+# ── Clean data ─────────────────────────────────────────────────────────────────
+df.columns = df.columns.str.strip()
+df = df.fillna('')
+for col in df.columns:
+    if col != 'Disease':
+        df[col] = df[col].str.strip().str.replace(' ', '_').str.lower()
 
-def build_training_data():
-    X, y = [], []
-    for disease, symptoms in DISEASES.items():
-        for _ in range(30):  # 30 samples per disease
-            row = [1 if s in symptoms else 0 for s in ALL_SYMPTOMS]
-            # Add slight noise
-            for i in range(len(row)):
-                if row[i] == 0 and np.random.random() < 0.05:
-                    row[i] = 1
-            X.append(row)
-            y.append(disease)
-    return np.array(X), np.array(y)
+desc_df.columns  = desc_df.columns.str.strip()
+prec_df.columns  = prec_df.columns.str.strip()
+sev_df.columns   = sev_df.columns.str.strip()
+sev_df['Symptom'] = sev_df['Symptom'].str.strip().str.replace(' ', '_').str.lower()
 
-# Train model on startup
-print("Training model...")
-X, y = build_training_data()
-model = RandomForestClassifier(n_estimators=100, random_state=42)
-model.fit(X, y)
-print("Model ready!")
+# ── Build symptom list & severity map ─────────────────────────────────────────
+symptom_cols = [c for c in df.columns if c != 'Disease']
+ALL_SYMPTOMS = sorted(set(
+    s for col in symptom_cols for s in df[col].unique() if s != ''
+))
+SEVERITY_MAP = dict(zip(sev_df['Symptom'], sev_df['weight']))
+
+# ── Build description & precaution maps ───────────────────────────────────────
+DESC_MAP = {}
+for _, row in desc_df.iterrows():
+    DESC_MAP[row['Disease'].strip()] = row['Description'].strip()
+
+PREC_MAP = {}
+for _, row in prec_df.iterrows():
+    disease = row['Disease'].strip()
+    precs = [str(row.get(f'Precaution_{i}','')).strip()
+             for i in range(1,5) if str(row.get(f'Precaution_{i}','')).strip()]
+    PREC_MAP[disease] = precs
+
+# ── Build feature matrix ───────────────────────────────────────────────────────
+print("Building feature matrix...")
+X, y = [], []
+for _, row in df.iterrows():
+    symptoms = set(row[col] for col in symptom_cols if row[col] != '')
+    features = [1 if s in symptoms else 0 for s in ALL_SYMPTOMS]
+    X.append(features)
+    y.append(row['Disease'].strip())
+
+X = np.array(X)
+y = np.array(y)
+
+# ── Train models ───────────────────────────────────────────────────────────────
+print("Training models...")
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+rf_model = RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1)
+rf_model.fit(X_train, y_train)
+rf_acc = accuracy_score(y_test, rf_model.predict(X_test))
+
+gb_model = GradientBoostingClassifier(n_estimators=100, random_state=42)
+gb_model.fit(X_train, y_train)
+gb_acc = accuracy_score(y_test, gb_model.predict(X_test))
+
+print(f"Random Forest accuracy:      {rf_acc*100:.1f}%")
+print(f"Gradient Boosting accuracy:  {gb_acc*100:.1f}%")
+print(f"Loaded {len(ALL_SYMPTOMS)} symptoms | {len(set(y))} diseases")
+print("ML Engine ready!")
+
+# ── Severity scoring ───────────────────────────────────────────────────────────
+def severity_score(symptoms):
+    total = sum(SEVERITY_MAP.get(s, 3) for s in symptoms)
+    avg   = total / max(len(symptoms), 1)
+    if avg <= 2:   return "Mild",     1
+    elif avg <= 4: return "Moderate", 2
+    elif avg <= 6: return "Serious",  3
+    else:          return "Severe",   4
+
+def get_recommendation(level):
+    return {
+        1: "Rest at home, stay hydrated, and monitor your symptoms.",
+        2: "Visit a clinic if symptoms persist beyond 2 days.",
+        3: "Consult a doctor soon. Do not ignore these symptoms.",
+        4: "Seek immediate medical attention!"
+    }.get(level, "Please consult a healthcare professional.")
 
 # ── Routes ─────────────────────────────────────────────────────────────────────
 @app.route('/')
 def home():
-    return jsonify({"message": "HealthBot ML Engine running!"})
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    data = request.get_json()
-    symptoms = data.get('symptoms', [])
-    if not symptoms:
-        return jsonify({"error": "No symptoms provided"}), 400
-
-    # Build feature vector
-    input_vec = [1 if s in symptoms else 0 for s in ALL_SYMPTOMS]
-    proba = model.predict_proba([input_vec])[0]
-    classes = model.classes_
-
-    # Top 3 predictions
-    top3_idx = np.argsort(proba)[::-1][:3]
-    predictions = []
-    for idx in top3_idx:
-        disease = classes[idx]
-        confidence = round(float(proba[idx]) * 100, 1)
-        if confidence > 1:
-            predictions.append({
-                "disease": disease,
-                "confidence": confidence,
-                "severity": SEVERITY.get(disease, 1)
-            })
-
-    severity = predictions[0]["severity"] if predictions else 1
-    severity_label = {1:"Mild",2:"Moderate",3:"Serious",4:"Severe"}.get(severity,"Unknown")
-
     return jsonify({
-        "predictions": predictions,
-        "severity": severity_label,
-        "recommendation": get_recommendation(severity)
+        "message": "HealthBot ML Engine running!",
+        "diseases": len(set(y)),
+        "symptoms": len(ALL_SYMPTOMS),
+        "rf_accuracy": f"{rf_acc*100:.1f}%",
+        "gb_accuracy": f"{gb_acc*100:.1f}%"
     })
 
 @app.route('/symptoms', methods=['GET'])
 def get_symptoms():
-    return jsonify({"symptoms": ALL_SYMPTOMS})
+    return jsonify({"symptoms": ALL_SYMPTOMS, "total": len(ALL_SYMPTOMS)})
 
-def get_recommendation(severity):
-    if severity == 1: return "Rest at home, drink plenty of fluids."
-    if severity == 2: return "Monitor symptoms. Visit a clinic if no improvement in 2 days."
-    if severity == 3: return "Consult a doctor soon. Do not ignore these symptoms."
-    return "Seek immediate medical attention!"
+@app.route('/diseases', methods=['GET'])
+def get_diseases():
+    return jsonify({"diseases": sorted(set(y)), "total": len(set(y))})
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    data     = request.get_json()
+    symptoms = [s.strip().lower().replace(' ', '_') for s in data.get('symptoms', [])]
+
+    if not symptoms:
+        return jsonify({"error": "No symptoms provided"}), 400
+
+    # Match to known symptoms
+    matched = [s for s in symptoms if s in ALL_SYMPTOMS]
+    if not matched:
+        return jsonify({
+            "error": "No matching symptoms found",
+            "hint":  "Use /symptoms to see all valid symptoms"
+        }), 400
+
+    # Build input vector
+    vec = [1 if s in matched else 0 for s in ALL_SYMPTOMS]
+
+    # Get predictions from both models
+    rf_proba  = rf_model.predict_proba([vec])[0]
+    gb_proba  = gb_model.predict_proba([vec])[0]
+    classes   = rf_model.classes_
+
+    # Ensemble average
+    avg_proba = (rf_proba + gb_proba) / 2
+    top_idx   = np.argsort(avg_proba)[::-1][:5]
+
+    predictions = []
+    for idx in top_idx:
+        disease    = classes[idx]
+        confidence = round(float(avg_proba[idx]) * 100, 1)
+        if confidence < 1:
+            continue
+        predictions.append({
+            "disease":     disease,
+            "confidence":  confidence,
+            "description": DESC_MAP.get(disease, ""),
+            "precautions": PREC_MAP.get(disease, [])
+        })
+
+    severity_label, severity_level = severity_score(matched)
+
+    return jsonify({
+        "matched_symptoms": matched,
+        "unmatched_symptoms": [s for s in symptoms if s not in ALL_SYMPTOMS],
+        "predictions":     predictions,
+        "severity":        severity_label,
+        "severity_level":  severity_level,
+        "recommendation":  get_recommendation(severity_level),
+        "model_info": {
+            "rf_accuracy":  f"{rf_acc*100:.1f}%",
+            "gb_accuracy":  f"{gb_acc*100:.1f}%",
+            "total_diseases": len(set(y)),
+            "total_symptoms": len(ALL_SYMPTOMS)
+        }
+    })
+
+@app.route('/disease/<name>', methods=['GET'])
+def disease_info(name):
+    matched = next((d for d in set(y) if d.lower() == name.lower()), None)
+    if not matched:
+        return jsonify({"error": "Disease not found"}), 404
+    return jsonify({
+        "disease":     matched,
+        "description": DESC_MAP.get(matched, ""),
+        "precautions": PREC_MAP.get(matched, [])
+    })
 
 if __name__ == '__main__':
     app.run(port=5001, debug=True)
