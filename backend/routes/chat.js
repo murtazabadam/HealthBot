@@ -5,7 +5,7 @@ const Conversation = require('../models/Conversation');
 
 async function getMLPrediction(symptoms) {
   try {
-    const response = await fetch('http://127.0.0.1:5001/predict', {
+    const response = await fetch('https://tranquil-nourishment-production-11f9.up.railway.app/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ symptoms })
