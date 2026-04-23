@@ -1,18 +1,27 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Chat from './pages/Chat';
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Home from "./pages/home"; // <-- We added this!
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Chat from "./pages/Chat";
 
 function App() {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={token ? <Navigate to="/chat" /> : <Navigate to="/login" />} />
+        {/* This now shows your beautiful new landing page! */}
+        <Route path="/" element={<Home />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/chat" element={token ? <Chat /> : <Navigate to="/login" />} />
+
+        {/* This keeps your teammate's security for the chat page */}
+        <Route
+          path="/chat"
+          element={token ? <Chat /> : <Navigate to="/login" />}
+        />
       </Routes>
     </BrowserRouter>
   );
