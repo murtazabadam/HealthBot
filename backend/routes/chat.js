@@ -34,7 +34,7 @@ function buildBotReply(text, mlResult) {
   const symptoms = extractSymptoms(text);
 
   if (symptoms.length === 0) {
-    return `I'm HealthBot 🤖. Please describe your symptoms and I'll analyze them. For example: "I have fever, cough and fatigue."`;
+    return `I'm HealthBot 🤖. Please describe your symptoms and I'll help analyze them.\n\nExample: "I have fever, cough and fatigue"`;
   }
 
   if (!mlResult || !mlResult.predictions || mlResult.predictions.length === 0) {
@@ -42,13 +42,25 @@ function buildBotReply(text, mlResult) {
   }
 
   const top = mlResult.predictions[0];
-  const others = mlResult.predictions.slice(1).map(p => `${p.disease} (${p.confidence}%)`).join(', ');
+  const others = mlResult.predictions.slice(1)
+    .map(p => `${p.disease} (${p.confidence}%)`)
+    .join(', ');
 
-  return `🔍 Based on your symptoms (${symptoms.join(', ')}):
+  const precautions = top.precautions && top.precautions.length > 0
+    ? `\n📌 Precautions: ${top.precautions.join(', ')}`
+    : '';
+
+  const description = top.description
+    ? `\n📖 About: ${top.description}`
+    : '';
+
+  return `🔍 Based on your symptoms (${(mlResult.matched_symptoms || symptoms).join(', ')}):
 
 📋 Most likely: **${top.disease}** (${top.confidence}% confidence)
 ${others ? `📌 Also possible: ${others}` : ''}
 ⚠️ Severity: **${mlResult.severity}**
+${description}
+${precautions}
 💊 Recommendation: ${mlResult.recommendation}
 
 ⚕️ *This is not a substitute for professional medical advice.*`;
