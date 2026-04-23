@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import {
   Shield,
   Clock,
@@ -44,12 +45,18 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="hidden sm:block px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors">
+          <Link
+            to="/login"
+            className="hidden sm:block px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
+          >
             Log In
-          </button>
-          <button className="px-5 py-2.5 text-sm font-semibold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all shadow-[0_0_15px_rgba(45,212,191,0.3)] hover:shadow-[0_0_25px_rgba(45,212,191,0.5)]">
+          </Link>
+          <Link
+            to="/register"
+            className="px-5 py-2.5 text-sm font-semibold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all shadow-[0_0_15px_rgba(45,212,191,0.3)] hover:shadow-[0_0_25px_rgba(45,212,191,0.5)]"
+          >
             Sign Up
-          </button>
+          </Link>
         </div>
       </nav>
 
@@ -75,10 +82,13 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start mb-12">
-            <button className="w-full sm:w-auto px-8 py-4 text-base font-bold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(45,212,191,0.4)]">
+            <Link
+              to="/chat"
+              className="w-full sm:w-auto px-8 py-4 text-base font-bold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(45,212,191,0.4)]"
+            >
               <MessageSquare className="h-5 w-5" />
               Start Chatting
-            </button>
+            </Link>
             <button className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white border border-slate-700 hover:border-slate-500 hover:bg-slate-800 rounded-full transition-all flex items-center justify-center gap-2">
               Learn More
               <ChevronRight className="h-5 w-5" />
@@ -240,7 +250,7 @@ export default function Home() {
             </div>
 
             {/* Feature 2 */}
-            <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:shadow-xl hover:blue-100 transition-all group">
+            <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:shadow-xl hover:border-blue-100 transition-all group">
               <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <UserPlus className="h-7 w-7 text-blue-600" />
               </div>
