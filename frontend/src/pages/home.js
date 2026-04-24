@@ -233,7 +233,7 @@ export default function Home() {
 
         {/* Copyright text perfectly centered */}
         <div className="w-full text-center">
-          <p className="text-slate-500 text-xs lg:text-sm font-medium leading-relaxed">
+          <p className="text-slate-500 text-[10px] sm:text-xs lg:text-sm font-medium leading-relaxed whitespace-nowrap">
             © Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badam.
           </p>
         </div>
