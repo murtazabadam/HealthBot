@@ -12,7 +12,7 @@ import {
   Clock,
   Brain,
   Menu,
-  X
+  X,
 } from "lucide-react";
 
 export default function Home() {
@@ -22,7 +22,6 @@ export default function Home() {
     <div className="min-h-screen overflow-x-hidden bg-slate-900 font-sans text-slate-50 selection:bg-teal-500 selection:text-white">
       {/* Navigation Bar */}
       <nav className="flex items-center justify-between px-6 py-4 lg:px-12 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md fixed w-full top-0 z-50">
-        
         {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-8 w-8 text-teal-400" />
@@ -39,7 +38,10 @@ export default function Home() {
           <a href="#features" className="hover:text-teal-400 transition-colors">
             Features
           </a>
-          <a href="#how-it-works" className="hover:text-teal-400 transition-colors">
+          <a
+            href="#how-it-works"
+            className="hover:text-teal-400 transition-colors"
+          >
             How It Works
           </a>
           <a href="#about" className="hover:text-teal-400 transition-colors">
@@ -49,7 +51,6 @@ export default function Home() {
 
         {/* Desktop Auth Buttons & Mobile Menu Toggle */}
         <div className="flex items-center gap-4">
-          
           {/* Desktop Auth (Hidden on Mobile) */}
           <div className="hidden md:flex items-center gap-4">
             <Link
@@ -67,34 +68,62 @@ export default function Home() {
           </div>
 
           {/* Mobile Menu Button (Hamburger) */}
-          <button 
+          <button
             className="md:hidden text-slate-300 hover:text-white p-2"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
-            {isMobileMenuOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
+            {isMobileMenuOpen ? (
+              <X className="h-7 w-7" />
+            ) : (
+              <Menu className="h-7 w-7" />
+            )}
           </button>
         </div>
 
         {/* Mobile Menu Dropdown Panel */}
         {isMobileMenuOpen && (
           <div className="absolute top-full left-0 w-full bg-slate-900 border-b border-slate-800 shadow-2xl flex flex-col py-6 px-6 gap-6 md:hidden z-50">
-            <a href="#home" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-slate-300 hover:text-teal-400">
+            <a
+              href="#home"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-lg font-medium text-slate-300 hover:text-teal-400"
+            >
               Home
             </a>
-            <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-slate-300 hover:text-teal-400">
+            <a
+              href="#features"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-lg font-medium text-slate-300 hover:text-teal-400"
+            >
               Features
             </a>
-            <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-slate-300 hover:text-teal-400">
+            <a
+              href="#how-it-works"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-lg font-medium text-slate-300 hover:text-teal-400"
+            >
               How It Works
             </a>
-            <a href="#about" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-slate-300 hover:text-teal-400">
+            <a
+              href="#about"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-lg font-medium text-slate-300 hover:text-teal-400"
+            >
               About Us
             </a>
             <div className="flex flex-col gap-4 mt-2 pt-6 border-t border-slate-800">
-              <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-center text-slate-300 py-2">
+              <Link
+                to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-lg font-medium text-center text-slate-300 py-2"
+              >
                 Log In
               </Link>
-              <Link to="/register" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-bold text-center text-slate-900 bg-teal-400 py-3 rounded-full">
+              <Link
+                to="/register"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-lg font-bold text-center text-slate-900 bg-teal-400 py-3 rounded-full"
+              >
                 Sign Up
               </Link>
             </div>
@@ -136,18 +165,30 @@ export default function Home() {
         </div>
 
         {/* Restored Trust Badges */}
-        <div className="flex flex-wrap justify-center gap-6 md:gap-12 pt-8 border-t border-slate-800/50 w-full max-w-2xl mx-auto">
+        <div className="flex flex-wrap justify-center gap-6 md:gap-12 pt-8 border-t border-slate-800/50 w-full max-w-3xl mx-auto">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-teal-400" />
-            <span className="text-sm font-medium text-slate-300">Secure & Private</span>
+            <span className="text-sm font-medium text-slate-300">
+              Secure & Private
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-blue-400" />
-            <span className="text-sm font-medium text-slate-300">Instant Support</span>
+            <span className="text-sm font-medium text-slate-300">
+              Instant Support
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-purple-400" />
-            <span className="text-sm font-medium text-slate-300">AI-Powered</span>
+            <span className="text-sm font-medium text-slate-300">
+              AI-Powered
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-rose-400" />
+            <span className="text-sm font-medium text-slate-300">
+              24/7 Available
+            </span>
           </div>
         </div>
       </main>
