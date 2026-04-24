@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import {
   HeartPulse,
@@ -11,124 +11,64 @@ import {
   Shield,
   Clock,
   Brain,
-  Menu,
-  X,
 } from "lucide-react";
 
 export default function Home() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-900 font-sans text-slate-50 selection:bg-teal-500 selection:text-white">
-      {/* Navigation Bar */}
-      <nav className="flex items-center justify-between px-6 py-4 lg:px-12 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md fixed w-full top-0 z-50">
+      {/* Navigation Bar - Forced Desktop Layout */}
+      <nav className="flex items-center justify-between px-4 py-4 lg:px-12 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md fixed w-full top-0 z-50 min-w-max">
         {/* Logo */}
-        <div className="flex items-center gap-2 cursor-pointer">
-          <Activity className="h-8 w-8 text-teal-400" />
-          <span className="text-2xl font-bold tracking-tight text-white">
+        <div className="flex items-center gap-2 cursor-pointer pr-4">
+          <Activity className="h-6 w-6 lg:h-8 lg:w-8 text-teal-400" />
+          <span className="text-xl lg:text-2xl font-bold tracking-tight text-white">
             HealthBot
           </span>
         </div>
 
-        {/* Desktop Navigation Links (Hidden on Mobile) */}
-        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
-          <a href="#home" className="hover:text-teal-400 transition-colors">
+        {/* Navigation Links - Always Visible */}
+        <div className="flex items-center gap-4 lg:gap-8 text-xs lg:text-sm font-medium text-slate-300">
+          <a
+            href="#home"
+            className="hover:text-teal-400 transition-colors whitespace-nowrap"
+          >
             Home
           </a>
-          <a href="#features" className="hover:text-teal-400 transition-colors">
+          <a
+            href="#features"
+            className="hover:text-teal-400 transition-colors whitespace-nowrap"
+          >
             Features
           </a>
           <a
             href="#how-it-works"
-            className="hover:text-teal-400 transition-colors"
+            className="hover:text-teal-400 transition-colors whitespace-nowrap"
           >
             How It Works
           </a>
-          <a href="#about" className="hover:text-teal-400 transition-colors">
+          <a
+            href="#about"
+            className="hover:text-teal-400 transition-colors whitespace-nowrap"
+          >
             About Us
           </a>
         </div>
 
-        {/* Desktop Auth Buttons & Mobile Menu Toggle */}
-        <div className="flex items-center gap-4">
-          {/* Desktop Auth (Hidden on Mobile) */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link
-              to="/login"
-              className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
-            >
-              Log In
-            </Link>
-            <Link
-              to="/register"
-              className="px-5 py-2.5 text-sm font-semibold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all shadow-[0_0_15px_rgba(45,212,191,0.3)] hover:shadow-[0_0_25px_rgba(45,212,191,0.5)]"
-            >
-              Sign Up
-            </Link>
-          </div>
-
-          {/* Mobile Menu Button (Hamburger) */}
-          <button
-            className="md:hidden text-slate-300 hover:text-white p-2"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        {/* Auth Buttons - Always Visible */}
+        <div className="flex items-center gap-2 lg:gap-4 pl-4">
+          <Link
+            to="/login"
+            className="px-2 py-2 text-xs lg:text-sm font-medium text-slate-300 hover:text-white transition-colors whitespace-nowrap"
           >
-            {isMobileMenuOpen ? (
-              <X className="h-7 w-7" />
-            ) : (
-              <Menu className="h-7 w-7" />
-            )}
-          </button>
+            Log In
+          </Link>
+          <Link
+            to="/register"
+            className="px-4 py-2 lg:px-5 lg:py-2.5 text-xs lg:text-sm font-semibold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all shadow-[0_0_15px_rgba(45,212,191,0.3)] hover:shadow-[0_0_25px_rgba(45,212,191,0.5)] whitespace-nowrap"
+          >
+            Sign Up
+          </Link>
         </div>
-
-        {/* Mobile Menu Dropdown Panel */}
-        {isMobileMenuOpen && (
-          <div className="absolute top-full left-0 w-full bg-slate-900 border-b border-slate-800 shadow-2xl flex flex-col py-6 px-6 gap-6 md:hidden z-50">
-            <a
-              href="#home"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-lg font-medium text-slate-300 hover:text-teal-400"
-            >
-              Home
-            </a>
-            <a
-              href="#features"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-lg font-medium text-slate-300 hover:text-teal-400"
-            >
-              Features
-            </a>
-            <a
-              href="#how-it-works"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-lg font-medium text-slate-300 hover:text-teal-400"
-            >
-              How It Works
-            </a>
-            <a
-              href="#about"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-lg font-medium text-slate-300 hover:text-teal-400"
-            >
-              About Us
-            </a>
-            <div className="flex flex-col gap-4 mt-2 pt-6 border-t border-slate-800">
-              <Link
-                to="/login"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-lg font-medium text-center text-slate-300 py-2"
-              >
-                Log In
-              </Link>
-              <Link
-                to="/register"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-lg font-bold text-center text-slate-900 bg-teal-400 py-3 rounded-full"
-              >
-                Sign Up
-              </Link>
-            </div>
-          </div>
-        )}
       </nav>
 
       {/* Hero Section */}
@@ -164,36 +104,36 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Restored Trust Badges */}
-        <div className="flex flex-wrap justify-center gap-6 md:gap-12 pt-8 border-t border-slate-800/50 w-full max-w-3xl mx-auto">
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-teal-400" />
-            <span className="text-sm font-medium text-slate-300">
+        {/* Trust Badges - Desktop Layout Maintained */}
+        <div className="flex flex-row justify-center items-center gap-4 lg:gap-12 pt-8 border-t border-slate-800/50 w-full max-w-4xl mx-auto overflow-hidden">
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <Shield className="h-4 w-4 lg:h-5 lg:w-5 text-teal-400" />
+            <span className="text-xs lg:text-sm font-medium text-slate-300">
               Secure & Private
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-blue-400" />
-            <span className="text-sm font-medium text-slate-300">
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-blue-400" />
+            <span className="text-xs lg:text-sm font-medium text-slate-300">
               Instant Support
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-purple-400" />
-            <span className="text-sm font-medium text-slate-300">
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <Brain className="h-4 w-4 lg:h-5 lg:w-5 text-purple-400" />
+            <span className="text-xs lg:text-sm font-medium text-slate-300">
               AI-Powered
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-rose-400" />
-            <span className="text-sm font-medium text-slate-300">
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <Activity className="h-4 w-4 lg:h-5 lg:w-5 text-rose-400" />
+            <span className="text-xs lg:text-sm font-medium text-slate-300">
               24/7 Available
             </span>
           </div>
         </div>
       </main>
 
-      {/* Features Section (White Background) */}
+      {/* Features Section */}
       <section
         id="features"
         className="bg-white text-slate-900 py-24 px-6 lg:px-12 rounded-t-[3rem] lg:rounded-t-[5rem] relative z-20"
@@ -210,7 +150,6 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Feature 1 */}
             <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:shadow-xl hover:border-teal-100 transition-all group">
               <div className="w-14 h-14 bg-teal-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <MessageSquare className="h-7 w-7 text-teal-600" />
@@ -223,7 +162,6 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Feature 2 */}
             <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:shadow-xl hover:border-blue-100 transition-all group">
               <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <UserPlus className="h-7 w-7 text-blue-600" />
@@ -235,7 +173,6 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Feature 3 */}
             <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:shadow-xl hover:border-purple-100 transition-all group">
               <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <FileText className="h-7 w-7 text-purple-600" />
@@ -247,7 +184,6 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Feature 4 */}
             <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 hover:shadow-xl hover:border-rose-100 transition-all group">
               <div className="w-14 h-14 bg-rose-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <MapPin className="h-7 w-7 text-rose-600" />
@@ -284,12 +220,11 @@ export default function Home() {
             </p>
           </div>
 
-          <p className="text-slate-400 text-sm">
-            © Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badam.
+          <p className="text-slate-400 text-sm font-medium">
+            © Developed by Aarif, Junaid, and Murtaza.
           </p>
         </div>
       </footer>
     </div>
   );
 }
- 
