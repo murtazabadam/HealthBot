@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import {
   HeartPulse,
@@ -12,20 +12,16 @@ import {
   Clock,
   Brain,
   AlertTriangle,
-  Menu,
-  X,
 } from "lucide-react";
 
 export default function Home() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white overflow-x-hidden relative w-full">
       {/* Background Glow Orbs */}
       <div className="absolute top-0 left-0 md:left-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-teal-500/10 rounded-full blur-[80px] md:blur-[120px] pointer-events-none" />
       <div className="absolute top-40 right-0 md:right-1/4 w-[250px] md:w-[400px] h-[250px] md:h-[400px] bg-cyan-500/10 rounded-full blur-[60px] md:blur-[100px] pointer-events-none" />
 
-      {/* Navigation Bar */}
+      {/* Navigation Bar - Hamburger Menu Removed as requested */}
       <nav className="flex items-center justify-between px-6 py-4 lg:px-12 lg:py-5 border-b border-slate-800/60 bg-[#0B1120]/80 backdrop-blur-md fixed w-full top-0 z-50">
         {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer">
@@ -54,94 +50,32 @@ export default function Home() {
           </a>
         </div>
 
-        {/* Desktop Auth Buttons & Mobile Menu Toggle */}
-        <div className="flex items-center gap-4">
+        {/* Auth Buttons */}
+        <div className="flex items-center gap-3 sm:gap-6">
           <Link
             to="/login"
-            className="hidden md:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
+            className="hidden sm:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
           >
             Log In
           </Link>
           <Link
             to="/register"
-            className="hidden md:flex px-6 py-2.5 text-sm font-semibold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-md transition-all shadow-[0_0_15px_rgba(45,212,191,0.2)]"
+            className="px-4 py-2 lg:px-6 lg:py-2.5 text-xs lg:text-sm font-semibold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-md transition-all shadow-[0_0_15px_rgba(45,212,191,0.2)]"
           >
             Sign Up
           </Link>
-
-          {/* Mobile Menu Button (Hamburger) */}
-          <button
-            className="md:hidden text-slate-300 hover:text-white p-1"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-7 w-7" />
-            ) : (
-              <Menu className="h-7 w-7" />
-            )}
-          </button>
         </div>
-
-        {/* Mobile Dropdown Panel */}
-        {isMobileMenuOpen && (
-          <div className="absolute top-full left-0 w-full bg-[#0B1120] border-b border-slate-800 shadow-2xl flex flex-col py-6 px-6 gap-6 md:hidden z-50">
-            <a
-              href="#home"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-lg font-medium text-slate-300 hover:text-teal-400"
-            >
-              Home
-            </a>
-            <a
-              href="#features"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-lg font-medium text-slate-300 hover:text-teal-400"
-            >
-              Features
-            </a>
-            <a
-              href="#how-it-works"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-lg font-medium text-slate-300 hover:text-teal-400"
-            >
-              How It Works
-            </a>
-            <a
-              href="#about"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-lg font-medium text-slate-300 hover:text-teal-400"
-            >
-              About Us
-            </a>
-            <div className="flex flex-col gap-4 mt-2 pt-6 border-t border-slate-800">
-              <Link
-                to="/login"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-lg font-medium text-center text-slate-300 py-2 border border-slate-700 rounded-md hover:bg-slate-800"
-              >
-                Log In
-              </Link>
-              <Link
-                to="/register"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="text-lg font-bold text-center text-slate-900 bg-teal-400 py-3 rounded-md"
-              >
-                Sign Up
-              </Link>
-            </div>
-          </div>
-        )}
       </nav>
 
       {/* Hero Section */}
-      <main className="relative pt-32 pb-12 px-6 lg:pt-44 lg:px-12 max-w-[1200px] mx-auto flex flex-col items-center text-center z-10">
+      <main className="relative pt-32 pb-20 px-6 lg:pt-44 lg:pb-32 lg:px-12 max-w-[1200px] mx-auto flex flex-col items-center text-center z-10">
         {/* Top Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 lg:px-4 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-400 text-[10px] lg:text-xs font-bold tracking-wider mb-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 lg:px-4 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-400 text-[10px] lg:text-xs font-bold tracking-wider mb-6 mt-4 lg:mt-0">
           <Activity size={14} />
           AI POWERED HEALTH ASSISTANT
         </div>
 
-        {/* Heading - Wraps smartly on mobile, single line on desktop */}
+        {/* Heading */}
         <h1 className="text-4xl sm:text-5xl lg:text-[4rem] font-extrabold tracking-tight text-white mb-6 leading-[1.2] lg:leading-[1.1] lg:whitespace-nowrap">
           Your AI-Powered <br className="block lg:hidden" />{" "}
           <span className="text-teal-400">Health</span> Assistant
@@ -152,7 +86,7 @@ export default function Home() {
           receive smart, evidence-based recommendations – anytime, anywhere.
         </p>
 
-        {/* Action Buttons - Stack on mobile, side-by-side on desktop */}
+        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 lg:mb-16 w-full sm:w-auto">
           <Link
             to="/chat"
@@ -167,8 +101,8 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Trust Badges - Stacks elegantly on mobile */}
-        <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-8 pt-8 border-t border-slate-800/50 w-full max-w-3xl mx-auto">
+        {/* Trust Badges - Border removed to match photo exactly */}
+        <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-8 w-full max-w-3xl mx-auto">
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4 lg:h-5 lg:w-5 text-teal-400" />
             <span className="text-xs lg:text-sm font-medium text-slate-200">
@@ -196,12 +130,12 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Features Section */}
+      {/* Features Section - Increased padding for massive photo-accurate gap */}
       <section
         id="features"
-        className="pt-8 pb-8 px-6 lg:px-12 relative z-20 max-w-[1400px] mx-auto"
+        className="pt-16 pb-20 px-6 lg:pt-24 lg:pb-28 lg:px-12 relative z-20 max-w-[1400px] mx-auto"
       >
-        <div className="text-center mb-10">
+        <div className="text-center mb-16 lg:mb-20">
           <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-white">
             Why Choose HealthBot?
           </h2>
@@ -211,7 +145,7 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Grid dynamically adapts: 1 col on mobile, 2 cols on tablet, 4 cols on desktop */}
+        {/* Grid dynamically adapts */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-[#111827] rounded-2xl p-6 lg:p-8 border border-slate-800 hover:border-teal-500/50 transition-all group text-left">
             <div className="w-12 h-12 bg-teal-500/20 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
@@ -267,10 +201,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Medical Disclaimer Box */}
-      <div className="max-w-4xl mx-auto px-6 lg:px-12 pb-12 w-full mt-4">
-        <div className="bg-[#111827] border border-slate-800 rounded-xl p-5 lg:p-6 text-center w-full">
-          <div className="flex items-center justify-center gap-2 mb-3">
+      {/* Medical Disclaimer Box - Restored exact spacing from photo */}
+      <div className="max-w-4xl mx-auto px-6 lg:px-12 pb-24 lg:pb-32 w-full">
+        <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 lg:p-8 text-center w-full">
+          <div className="flex items-center justify-center gap-2 mb-4">
             <AlertTriangle className="h-4 w-4 lg:h-5 lg:w-5 text-teal-400" />
             <h4 className="text-teal-400 font-bold uppercase text-xs lg:text-sm tracking-widest">
               Appendix E: Medical Disclaimer
@@ -287,18 +221,18 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800/60 py-8 px-6 lg:px-12 flex flex-col items-center justify-center w-full">
+      {/* Footer - Border removed, margins adjusted for exact photo matching */}
+      <footer className="pb-12 px-6 lg:px-12 flex flex-col items-center justify-center w-full">
         {/* Logo at the top */}
-        <div className="flex items-center gap-2 opacity-80 mb-4">
-          <HeartPulse className="h-5 w-5 lg:h-6 lg:w-6 text-slate-300" />
-          <span className="text-lg lg:text-xl font-bold text-slate-300">
+        <div className="flex items-center gap-2 opacity-80 mb-6 lg:mb-8">
+          <HeartPulse className="h-6 w-6 lg:h-8 lg:w-8 text-slate-300" />
+          <span className="text-xl lg:text-2xl font-bold text-slate-300">
             HealthBot
           </span>
         </div>
 
         {/* Copyright text at the bottom */}
-        <p className="text-slate-400 text-xs lg:text-sm font-medium text-center leading-relaxed">
+        <p className="text-slate-500 text-xs lg:text-sm font-medium text-center leading-relaxed">
           © Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badaam.
         </p>
       </footer>
