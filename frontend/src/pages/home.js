@@ -16,14 +16,15 @@ import {
 
 export default function Home() {
   return (
-    /* min-w-[1024px] is the magic class that forces the phone to display the laptop view! */
-    <div className="min-h-screen bg-slate-950 font-sans text-slate-50 selection:bg-teal-500 selection:text-white min-w-[1024px] overflow-x-hidden relative">
+    /* min-w-[1024px] forces the phone to display the laptop view! 
+       bg-[#0B1120] is the EXACT deep navy background color from your photo */
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white min-w-[1024px] overflow-x-hidden relative">
       {/* Background Glow Orbs matching the image */}
       <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute top-40 right-1/4 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Navigation Bar */}
-      <nav className="flex items-center justify-between px-12 py-5 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md fixed w-full top-0 z-50">
+      <nav className="flex items-center justify-between px-12 py-5 border-b border-slate-800/60 bg-[#0B1120]/80 backdrop-blur-md fixed w-full top-0 z-50">
         {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-7 w-7 text-teal-400" />
@@ -145,10 +146,10 @@ export default function Home() {
           </p>
         </div>
 
-        {/* 4 Column Grid forced for all devices */}
+        {/* 4 Column Grid forced for all devices - bg-[#111827] matches exact photo color */}
         <div className="grid grid-cols-4 gap-6">
           {/* Feature 1 */}
-          <div className="bg-slate-800/40 rounded-2xl p-8 border border-slate-700/50 hover:border-teal-500/50 transition-all group">
+          <div className="bg-[#111827] rounded-2xl p-8 border border-slate-800 hover:border-teal-500/50 transition-all group">
             <div className="w-12 h-12 bg-teal-500/20 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
               <MessageSquare className="h-6 w-6 text-teal-400" />
             </div>
@@ -162,7 +163,7 @@ export default function Home() {
           </div>
 
           {/* Feature 2 */}
-          <div className="bg-slate-800/40 rounded-2xl p-8 border border-slate-700/50 hover:border-blue-500/50 transition-all group">
+          <div className="bg-[#111827] rounded-2xl p-8 border border-slate-800 hover:border-blue-500/50 transition-all group">
             <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
               <UserPlus className="h-6 w-6 text-blue-400" />
             </div>
@@ -176,7 +177,7 @@ export default function Home() {
           </div>
 
           {/* Feature 3 */}
-          <div className="bg-slate-800/40 rounded-2xl p-8 border border-slate-700/50 hover:border-purple-500/50 transition-all group">
+          <div className="bg-[#111827] rounded-2xl p-8 border border-slate-800 hover:border-purple-500/50 transition-all group">
             <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
               <FileText className="h-6 w-6 text-purple-400" />
             </div>
@@ -190,7 +191,7 @@ export default function Home() {
           </div>
 
           {/* Feature 4 */}
-          <div className="bg-slate-800/40 rounded-2xl p-8 border border-slate-700/50 hover:border-rose-500/50 transition-all group">
+          <div className="bg-[#111827] rounded-2xl p-8 border border-slate-800 hover:border-rose-500/50 transition-all group">
             <div className="w-12 h-12 bg-rose-500/20 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
               <MapPin className="h-6 w-6 text-rose-400" />
             </div>
@@ -205,16 +206,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Medical Disclaimer Box moved UP to reduce the gap */}
+      {/* Medical Disclaimer Box matching the dark theme of the feature cards */}
       <div className="max-w-4xl mx-auto px-12 pb-12 w-full mt-4">
-        <div className="bg-amber-900/20 border border-amber-700/50 rounded-xl p-6 text-center w-full">
+        <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 text-center w-full">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <h4 className="text-amber-500 font-bold uppercase text-sm tracking-widest">
+            <AlertTriangle className="h-5 w-5 text-teal-400" />
+            <h4 className="text-teal-400 font-bold uppercase text-sm tracking-widest">
               Appendix E: Medical Disclaimer
             </h4>
           </div>
-          <p className="text-amber-500/80 text-sm leading-relaxed max-w-3xl mx-auto">
+          <p className="text-slate-300 text-sm leading-relaxed max-w-3xl mx-auto">
             This system provides preliminary health information only and is not
             a substitute for professional medical advice, diagnosis, or
             treatment. Always seek the advice of qualified health providers with
