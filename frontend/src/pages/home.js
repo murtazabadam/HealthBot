@@ -285,11 +285,11 @@ export default function Home() {
           </div>
 
           <p className="text-slate-400 text-sm">
-            © 2024-2026 HealthBot Project. Developed by Aarif, Junaid, and
-            Murtaza.
+            © Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badam.
           </p>
         </div>
       </footer>
     </div>
   );
 }
+ 
