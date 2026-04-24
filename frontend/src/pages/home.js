@@ -50,11 +50,11 @@ export default function Home() {
           </a>
         </div>
 
-        {/* Auth Buttons */}
-        <div className="flex items-center gap-3 sm:gap-6">
+        {/* Auth Buttons - Both visible on mobile now! */}
+        <div className="flex items-center gap-4 lg:gap-6">
           <Link
             to="/login"
-            className="hidden sm:block text-sm font-medium text-slate-300 hover:text-white transition-colors"
+            className="text-xs lg:text-sm font-medium text-slate-300 hover:text-white transition-colors"
           >
             Log In
           </Link>
@@ -130,10 +130,10 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Features Section - Increased padding for massive photo-accurate gap */}
+      {/* Features Section - Exact gap from the photo */}
       <section
         id="features"
-        className="pt-16 pb-20 px-6 lg:pt-24 lg:pb-28 lg:px-12 relative z-20 max-w-[1400px] mx-auto"
+        className="pt-8 pb-16 px-6 lg:pt-16 lg:pb-20 lg:px-12 relative z-20 max-w-[1400px] mx-auto"
       >
         <div className="text-center mb-16 lg:mb-20">
           <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-white">
@@ -201,8 +201,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Medical Disclaimer Box - Restored exact spacing from photo */}
-      <div className="max-w-4xl mx-auto px-6 lg:px-12 pb-24 lg:pb-32 w-full">
+      {/* Medical Disclaimer Box - Exact spacing from photo */}
+      <div className="max-w-5xl mx-auto px-6 lg:px-12 pb-16 lg:pb-20 w-full">
         <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 lg:p-8 text-center w-full">
           <div className="flex items-center justify-center gap-2 mb-4">
             <AlertTriangle className="h-4 w-4 lg:h-5 lg:w-5 text-teal-400" />
@@ -221,20 +221,22 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Footer - Border removed, margins adjusted for exact photo matching */}
-      <footer className="pb-12 px-6 lg:px-12 flex flex-col items-center justify-center w-full">
-        {/* Logo at the top */}
-        <div className="flex items-center gap-2 opacity-80 mb-6 lg:mb-8">
-          <HeartPulse className="h-6 w-6 lg:h-8 lg:w-8 text-slate-300" />
-          <span className="text-xl lg:text-2xl font-bold text-slate-300">
+      {/* Footer - Logo on Left, Copyright Centered, exact photo layout */}
+      <footer className="pb-8 px-6 lg:px-12 flex flex-col md:flex-row items-center justify-between w-full max-w-[1400px] mx-auto relative">
+        {/* Logo at the far left on desktop, stacked on mobile */}
+        <div className="flex items-center gap-2 opacity-60 mb-4 md:mb-0 md:absolute md:left-6 lg:left-12">
+          <HeartPulse className="h-5 w-5 lg:h-6 lg:w-6 text-slate-400" />
+          <span className="text-lg lg:text-xl font-bold text-slate-400">
             HealthBot
           </span>
         </div>
 
-        {/* Copyright text at the bottom */}
-        <p className="text-slate-500 text-xs lg:text-sm font-medium text-center leading-relaxed">
-          © Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badaam.
-        </p>
+        {/* Copyright text perfectly centered */}
+        <div className="w-full text-center">
+          <p className="text-slate-500 text-xs lg:text-sm font-medium leading-relaxed">
+            © Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badaam.
+          </p>
+        </div>
       </footer>
     </div>
   );
