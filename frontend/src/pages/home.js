@@ -70,6 +70,12 @@ export default function Home() {
 
       {/* Hero Section - Centered Layout */}
       <main className="relative pt-44 pb-12 px-12 max-w-[1200px] mx-auto flex flex-col items-center text-center z-10">
+        {/* Top Badge matching the photo */}
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-400 text-xs font-bold tracking-wider mb-6">
+          <Activity size={14} />
+          AI POWERED HEALTH ASSISTANT
+        </div>
+
         {/* Heading on one line matching the photo */}
         <h1 className="text-5xl lg:text-[4rem] font-extrabold tracking-tight text-white mb-6 whitespace-nowrap">
           Your AI-Powered <span className="text-teal-400">Health</span>{" "}
@@ -124,10 +130,10 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Features Section - Centered matching the photo */}
+      {/* Features Section - Reduced bottom padding to close the gap */}
       <section
         id="features"
-        className="pt-8 pb-16 px-12 relative z-20 max-w-[1400px] mx-auto"
+        className="pt-8 pb-8 px-12 relative z-20 max-w-[1400px] mx-auto"
       >
         <div className="text-center mb-10">
           <h2 className="text-4xl font-bold mb-4 text-white">
@@ -199,17 +205,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer structured exactly like the photo: Logo -> Disclaimer -> Copyright */}
-      <footer className="border-t border-slate-800/60 pt-16 pb-10 px-12 flex flex-col items-center justify-center w-full mt-8">
-        {/* 1. Logo at the top */}
-        <div className="flex items-center gap-2 opacity-80 mb-8">
-          <HeartPulse className="h-6 w-6 text-slate-300" />
-          <span className="text-xl font-bold text-slate-300">HealthBot</span>
-        </div>
-
-        {/* 2. Medical Disclaimer Box in the middle */}
-        <div className="bg-amber-900/20 border border-amber-700/50 rounded-2xl p-8 text-center max-w-4xl mx-auto mb-8 w-full">
-          <div className="flex items-center justify-center gap-2 mb-4">
+      {/* Medical Disclaimer Box moved UP to reduce the gap */}
+      <div className="max-w-4xl mx-auto px-12 pb-12 w-full mt-4">
+        <div className="bg-amber-900/20 border border-amber-700/50 rounded-xl p-6 text-center w-full">
+          <div className="flex items-center justify-center gap-2 mb-3">
             <AlertTriangle className="h-5 w-5 text-amber-500" />
             <h4 className="text-amber-500 font-bold uppercase text-sm tracking-widest">
               Appendix E: Medical Disclaimer
@@ -224,10 +223,19 @@ export default function Home() {
             information provided by this system.
           </p>
         </div>
+      </div>
 
-        {/* 3. Copyright text at the bottom */}
+      {/* Footer structured: Logo above Copyright text */}
+      <footer className="border-t border-slate-800/60 py-8 px-12 flex flex-col items-center justify-center w-full">
+        {/* Logo at the top */}
+        <div className="flex items-center gap-2 opacity-80 mb-4">
+          <HeartPulse className="h-6 w-6 text-slate-300" />
+          <span className="text-xl font-bold text-slate-300">HealthBot</span>
+        </div>
+
+        {/* Copyright text at the bottom */}
         <p className="text-slate-400 text-sm font-medium text-center">
-          Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badaam.
+          © Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badaam.
         </p>
       </footer>
     </div>
