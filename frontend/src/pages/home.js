@@ -69,7 +69,7 @@ export default function Home() {
       </nav>
 
       {/* Hero Section - Centered Layout */}
-      <main className="relative pt-40 pb-20 px-12 max-w-[1000px] mx-auto flex flex-col items-center text-center z-10">
+      <main className="relative pt-40 pb-8 px-12 max-w-[1000px] mx-auto flex flex-col items-center text-center z-10">
         {/* Top Badge matching the photo */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-400 text-xs font-bold tracking-wider mb-6">
           <Activity size={14} />
@@ -132,7 +132,7 @@ export default function Home() {
       {/* Features Section - Centered matching the photo */}
       <section
         id="features"
-        className="py-20 px-12 relative z-20 max-w-[1400px] mx-auto"
+        className="pt-8 pb-20 px-12 relative z-20 max-w-[1400px] mx-auto"
       >
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold mb-4 text-white">
@@ -233,7 +233,7 @@ export default function Home() {
           </div>
 
           <p className="text-slate-400 text-sm font-medium text-center">
-            © Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badaam.
+            Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badaam.
           </p>
         </div>
       </footer>
