@@ -68,72 +68,64 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* Hero Section - 50/50 Split (Left Aligned Text, Right Side Empty) */}
-      <main className="relative pt-40 pb-20 px-12 max-w-[1400px] mx-auto flex flex-row items-center gap-12 z-10">
-        {/* Hero Left Content */}
-        <div className="flex-1 text-left">
-          {/* Top Badge matching the photo */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-400 text-xs font-bold tracking-wider mb-6">
-            <Activity size={14} />
-            AI POWERED HEALTH ASSISTANT
-          </div>
-
-          <h1 className="text-6xl font-extrabold tracking-tight text-white mb-6 leading-[1.1]">
-            Your AI-Powered <br />
-            <span className="text-teal-400">Health Assistant</span>
-          </h1>
-
-          <p className="text-lg text-slate-300 mb-10 leading-relaxed max-w-xl">
-            Get instant answers to your health questions, check symptoms, and
-            receive smart, evidence-based recommendations – anytime, anywhere.
-          </p>
-
-          <div className="flex flex-row items-center gap-4 mb-12">
-            <Link
-              to="/chat"
-              className="px-8 py-3.5 text-base font-bold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all flex items-center gap-2"
-            >
-              <MessageSquare className="h-5 w-5" />
-              Start Chatting
-            </Link>
-            <button className="px-8 py-3.5 text-base font-bold text-white border border-slate-600 hover:bg-slate-800 rounded-full transition-all flex items-center gap-2">
-              Learn More
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Trust Badges matching the photo (+ 24/7 Added) */}
-          <div className="flex flex-row items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-teal-400" />
-              <span className="text-sm font-medium text-slate-200">
-                Secure & Private
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-400" />
-              <span className="text-sm font-medium text-slate-200">
-                Instant Support
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-purple-400" />
-              <span className="text-sm font-medium text-slate-200">
-                AI-Powered
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Activity className="h-5 w-5 text-rose-400" />
-              <span className="text-sm font-medium text-slate-200">
-                24/7 Available
-              </span>
-            </div>
-          </div>
+      {/* Hero Section - Centered Layout */}
+      <main className="relative pt-40 pb-20 px-12 max-w-[1000px] mx-auto flex flex-col items-center text-center z-10">
+        {/* Top Badge matching the photo */}
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-400 text-xs font-bold tracking-wider mb-6">
+          <Activity size={14} />
+          AI POWERED HEALTH ASSISTANT
         </div>
 
-        {/* Hero Right Content - Empty Space ready for Chatbot Preview */}
-        <div className="flex-1 h-[500px]">
-          {/* Leaving this completely empty so the 50/50 layout is preserved exactly like the photo */}
+        <h1 className="text-6xl font-extrabold tracking-tight text-white mb-6 leading-[1.1]">
+          Your AI-Powered <br />
+          <span className="text-teal-400">Health Assistant</span>
+        </h1>
+
+        <p className="text-lg text-slate-300 mb-10 leading-relaxed max-w-2xl mx-auto">
+          Get instant answers to your health questions, check symptoms, and
+          receive smart, evidence-based recommendations – anytime, anywhere.
+        </p>
+
+        <div className="flex flex-row items-center justify-center gap-4 mb-12">
+          <Link
+            to="/chat"
+            className="px-8 py-3.5 text-base font-bold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all flex items-center gap-2"
+          >
+            <MessageSquare className="h-5 w-5" />
+            Start Chatting
+          </Link>
+          <button className="px-8 py-3.5 text-base font-bold text-white border border-slate-600 hover:bg-slate-800 rounded-full transition-all flex items-center gap-2">
+            Learn More
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Trust Badges (+ 24/7 Added) - Centered */}
+        <div className="flex flex-row items-center justify-center gap-6 pt-8 border-t border-slate-800/50 w-full max-w-3xl mx-auto">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-teal-400" />
+            <span className="text-sm font-medium text-slate-200">
+              Secure & Private
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-blue-400" />
+            <span className="text-sm font-medium text-slate-200">
+              Instant Support
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-purple-400" />
+            <span className="text-sm font-medium text-slate-200">
+              AI-Powered
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-rose-400" />
+            <span className="text-sm font-medium text-slate-200">
+              24/7 Available
+            </span>
+          </div>
         </div>
       </main>
 
@@ -232,16 +224,16 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Footer matching the photo with the requested text update */}
+      {/* Footer with updated centered text */}
       <footer className="border-t border-slate-800/60 py-8 px-12">
-        <div className="max-w-[1400px] mx-auto flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="max-w-[1400px] mx-auto flex flex-col items-center justify-center gap-4">
+          <div className="flex items-center gap-2 opacity-80">
             <HeartPulse className="h-6 w-6 text-slate-300" />
             <span className="text-xl font-bold text-slate-300">HealthBot</span>
           </div>
 
-          <p className="text-slate-400 text-sm">
-            © Developed by Aarif, Junaid, and Murtaza.
+          <p className="text-slate-400 text-sm font-medium text-center">
+            © Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badaam.
           </p>
         </div>
       </footer>
