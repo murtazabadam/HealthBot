@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   HeartPulse,
@@ -8,13 +8,22 @@ import {
   MapPin,
   Activity,
   ChevronRight,
+  Shield,
+  Clock,
+  Brain,
+  Menu,
+  X
 } from "lucide-react";
 
 export default function Home() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-900 font-sans text-slate-50 selection:bg-teal-500 selection:text-white">
       {/* Navigation Bar */}
       <nav className="flex items-center justify-between px-6 py-4 lg:px-12 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md fixed w-full top-0 z-50">
+        
+        {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-8 w-8 text-teal-400" />
           <span className="text-2xl font-bold tracking-tight text-white">
@@ -22,6 +31,7 @@ export default function Home() {
           </span>
         </div>
 
+        {/* Desktop Navigation Links (Hidden on Mobile) */}
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
           <a href="#home" className="hover:text-teal-400 transition-colors">
             Home
@@ -29,10 +39,7 @@ export default function Home() {
           <a href="#features" className="hover:text-teal-400 transition-colors">
             Features
           </a>
-          <a
-            href="#how-it-works"
-            className="hover:text-teal-400 transition-colors"
-          >
+          <a href="#how-it-works" className="hover:text-teal-400 transition-colors">
             How It Works
           </a>
           <a href="#about" className="hover:text-teal-400 transition-colors">
@@ -40,20 +47,59 @@ export default function Home() {
           </a>
         </div>
 
+        {/* Desktop Auth Buttons & Mobile Menu Toggle */}
         <div className="flex items-center gap-4">
-          <Link
-            to="/login"
-            className="hidden sm:block px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
+          
+          {/* Desktop Auth (Hidden on Mobile) */}
+          <div className="hidden md:flex items-center gap-4">
+            <Link
+              to="/login"
+              className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
+            >
+              Log In
+            </Link>
+            <Link
+              to="/register"
+              className="px-5 py-2.5 text-sm font-semibold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all shadow-[0_0_15px_rgba(45,212,191,0.3)] hover:shadow-[0_0_25px_rgba(45,212,191,0.5)]"
+            >
+              Sign Up
+            </Link>
+          </div>
+
+          {/* Mobile Menu Button (Hamburger) */}
+          <button 
+            className="md:hidden text-slate-300 hover:text-white p-2"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
-            Log In
-          </Link>
-          <Link
-            to="/register"
-            className="px-5 py-2.5 text-sm font-semibold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all shadow-[0_0_15px_rgba(45,212,191,0.3)] hover:shadow-[0_0_25px_rgba(45,212,191,0.5)]"
-          >
-            Sign Up
-          </Link>
+            {isMobileMenuOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
+          </button>
         </div>
+
+        {/* Mobile Menu Dropdown Panel */}
+        {isMobileMenuOpen && (
+          <div className="absolute top-full left-0 w-full bg-slate-900 border-b border-slate-800 shadow-2xl flex flex-col py-6 px-6 gap-6 md:hidden z-50">
+            <a href="#home" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-slate-300 hover:text-teal-400">
+              Home
+            </a>
+            <a href="#features" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-slate-300 hover:text-teal-400">
+              Features
+            </a>
+            <a href="#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-slate-300 hover:text-teal-400">
+              How It Works
+            </a>
+            <a href="#about" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-slate-300 hover:text-teal-400">
+              About Us
+            </a>
+            <div className="flex flex-col gap-4 mt-2 pt-6 border-t border-slate-800">
+              <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-medium text-center text-slate-300 py-2">
+                Log In
+              </Link>
+              <Link to="/register" onClick={() => setIsMobileMenuOpen(false)} className="text-lg font-bold text-center text-slate-900 bg-teal-400 py-3 rounded-full">
+                Sign Up
+              </Link>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
@@ -87,6 +133,22 @@ export default function Home() {
             Learn More
             <ChevronRight className="h-5 w-5" />
           </button>
+        </div>
+
+        {/* Restored Trust Badges */}
+        <div className="flex flex-wrap justify-center gap-6 md:gap-12 pt-8 border-t border-slate-800/50 w-full max-w-2xl mx-auto">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-teal-400" />
+            <span className="text-sm font-medium text-slate-300">Secure & Private</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-blue-400" />
+            <span className="text-sm font-medium text-slate-300">Instant Support</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Brain className="h-5 w-5 text-purple-400" />
+            <span className="text-sm font-medium text-slate-300">AI-Powered</span>
+          </div>
         </div>
       </main>
 
@@ -182,7 +244,7 @@ export default function Home() {
           </div>
 
           <p className="text-slate-400 text-sm">
-            ©️ 2024-2026 HealthBot Project. Developed by Aarif, Junaid, and
+            © 2024-2026 HealthBot Project. Developed by Aarif, Junaid, and
             Murtaza.
           </p>
         </div>
