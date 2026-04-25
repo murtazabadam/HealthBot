@@ -13,33 +13,76 @@ import {
   Droplet,
   MapPin,
   CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  // Email Verification State
+  const [email, setEmail] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
+
   const navigate = useNavigate();
 
   const handleGoogleSignUp = async () => {
-    console.log(
-      "Firebase Google signup clicked. Implement actual Firebase logic here.",
-    );
     setErrorMessage("Google Sign Up is not connected to a backend yet.");
+  };
+
+  // Mock function to send OTP
+  const handleSendOTP = () => {
+    if (!email) {
+      setErrorMessage("Please enter an email address first.");
+      return;
+    }
+    setErrorMessage("");
+    setOtpSent(true);
+    setSuccessMessage(
+      "A verification code has been sent to your email! (Use 1234 to test)",
+    );
+  };
+
+  // Mock function to verify OTP
+  const handleVerifyOTP = () => {
+    if (otp === "1234") {
+      // Mock OTP code for testing
+      setEmailVerified(true);
+      setOtpSent(false);
+      setSuccessMessage("Email verified successfully!");
+      setErrorMessage("");
+    } else {
+      setErrorMessage("Invalid verification code. Please try again.");
+      setSuccessMessage("");
+    }
   };
 
   const handleRegister = (e) => {
     e.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    // 1. Check if email is verified
+    if (!emailVerified) {
+      setErrorMessage("You must verify your email address before registering.");
+      return;
+    }
+
+    // 2. Check if terms are agreed
     if (!agreedToTerms) {
       setErrorMessage(
         "You must agree to the Terms of Service and Privacy Policy.",
       );
       return;
     }
-    setErrorMessage(""); // Clears any previous errors
+
     console.log("Registration submitted");
-    navigate("/chat"); // Mock behavior: Takes you straight to the chat page to test the UI!
+    navigate("/chat"); // Mock behavior: Takes you straight to the chat page
   };
 
   return (
@@ -78,7 +121,7 @@ export default function Register() {
 
       {/* Main Register Container */}
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
-        {/* Glassmorphism Card - Widened to 800px for the grid layout */}
+        {/* Glassmorphism Card */}
         <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 sm:p-12 w-full max-w-[800px] shadow-[0_0_50px_rgba(13,148,136,0.1)] relative">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
@@ -96,15 +139,21 @@ export default function Register() {
             </p>
           </div>
 
+          {/* Messages */}
+          {errorMessage && (
+            <div className="mb-6 bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center">
+              {errorMessage}
+            </div>
+          )}
+          {successMessage && (
+            <div className="mb-6 bg-emerald-500/10 border border-emerald-500/50 text-emerald-400 text-sm p-3 rounded-lg text-center flex items-center justify-center gap-2">
+              <ShieldCheck className="h-4 w-4" /> {successMessage}
+            </div>
+          )}
+
           {/* Registration Form */}
           <form className="flex flex-col gap-6" onSubmit={handleRegister}>
-            {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center">
-                {errorMessage}
-              </div>
-            )}
-
-            {/* Row 1: Name & Email (2 Columns) */}
+            {/* Row 1: Name & Email Verification */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Full Name */}
               <div className="flex flex-col gap-2">
@@ -124,28 +173,72 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Email Address */}
+              {/* Email Address with Verification Button */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-300">
                   Email Address
                 </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-slate-500" />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-slate-500" />
+                    </div>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={emailVerified}
+                      placeholder="Enter your email address"
+                      required
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors disabled:opacity-60"
+                    />
                   </div>
-                  <input
-                    type="email"
-                    placeholder="Enter your email address"
-                    required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
-                  />
+                  <button
+                    type="button"
+                    onClick={handleSendOTP}
+                    disabled={emailVerified}
+                    className={`px-4 rounded-lg text-sm font-bold transition-all shadow-lg flex items-center gap-1 ${
+                      emailVerified
+                        ? "bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 cursor-default"
+                        : "bg-teal-500 hover:bg-teal-400 text-slate-900 shadow-[0_0_15px_rgba(20,184,166,0.3)]"
+                    }`}
+                  >
+                    {emailVerified ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" /> Verified
+                      </>
+                    ) : otpSent ? (
+                      "Resend"
+                    ) : (
+                      "Verify"
+                    )}
+                  </button>
                 </div>
+
+                {/* OTP Input Field (Only shows when OTP is sent) */}
+                {otpSent && !emailVerified && (
+                  <div className="flex gap-2 mt-1 animate-in fade-in slide-in-from-top-2">
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value)}
+                      placeholder="Enter 4-digit code"
+                      className="flex-1 bg-[#0B1120] border border-teal-500/50 rounded-lg py-2 px-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyOTP}
+                      className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Row 2: Passwords (2 Columns) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Password */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-300">
                   Password
@@ -181,7 +274,6 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Confirm Password */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-300">
                   Confirm Password
@@ -213,7 +305,6 @@ export default function Register() {
 
             {/* Row 3: Age & Phone (2 Columns) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Age */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-300">
                   Age
@@ -230,10 +321,9 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Phone */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-300">
-                  Phone Number (optional)
+                  Phone Number
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -250,25 +340,24 @@ export default function Register() {
 
             {/* Row 4: Gender, Blood Group, City (3 Columns) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Gender */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-300">
-                  Gender (optional)
+                  Gender
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <User className="h-5 w-5 text-slate-500" />
                   </div>
-                  <select className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors appearance-none">
-                    <option value="" disabled selected>
+                  <select
+                    defaultValue=""
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors appearance-none"
+                  >
+                    <option value="" disabled>
                       Select gender
                     </option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
-                    <option value="other">Other</option>
-                    <option value="prefer-not">Prefer not to say</option>
                   </select>
-                  {/* Custom Dropdown Arrow */}
                   <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
                     <svg
                       className="w-4 h-4 text-slate-500"
@@ -287,17 +376,19 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Blood Group */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-300">
-                  Blood Group (optional)
+                  Blood Group
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Droplet className="h-5 w-5 text-slate-500" />
                   </div>
-                  <select className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors appearance-none">
-                    <option value="" disabled selected>
+                  <select
+                    defaultValue=""
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors appearance-none"
+                  >
+                    <option value="" disabled>
                       Select blood group
                     </option>
                     <option value="A+">A+</option>
@@ -309,7 +400,6 @@ export default function Register() {
                     <option value="AB+">AB+</option>
                     <option value="AB-">AB-</option>
                   </select>
-                  {/* Custom Dropdown Arrow */}
                   <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
                     <svg
                       className="w-4 h-4 text-slate-500"
@@ -328,7 +418,6 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* City */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-medium text-slate-300">
                   City
