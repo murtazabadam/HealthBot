@@ -1,65 +1,61 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-/**
- * NOTE FOR LOCAL DEVELOPMENT:
- * The Preview environment below cannot see your local files (Login.js, Register.js, etc.).
- * To make this code work in your local VS Code, you must:
- * 1. Uncomment the "REAL IMPORTS" block below.
- * 2. Delete the "MOCK COMPONENTS" block below.
+/** * NOTE FOR LOCAL VS CODE:
+ * To see your real designs (the navy/teal pages), you should:
+ * 1. Use the REAL IMPORTS below.
+ * 2. Delete the MOCK COMPONENTS at the bottom of this file.
+ * * If you see a blank screen locally, check if your file names match
+ * exactly (e.g., login.js vs Login.js).
  */
 
-// --- 1. REAL IMPORTS (Uncomment these in VS Code) ---
+// --- REAL IMPORTS (Uncomment these in your local VS Code) ---
 /*
 import Home from "./pages/home";
-import Login from "./pages/Login";
+import Login from "./pages/login";
 import Register from "./pages/Register";
 import Chat from "./pages/Chat";
 import AuthCallback from './pages/AuthCallback';
 import ForgotPassword from './pages/ForgotPassword';
 */
 
-// --- 2. MOCK COMPONENTS (Delete these in VS Code to see your real designs) ---
+// --- MOCK COMPONENTS (Used here to prevent preview compilation errors) ---
+// On your local computer, delete these lines to use your real page files!
 const Home = () => (
-  <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center text-white p-10 font-sans">
-    <h1 className="text-4xl font-bold mb-4 text-teal-400">HealthBot Home</h1>
-    <p className="text-slate-400 text-center">
-      Your local project is correctly routed to the Home Page.
-    </p>
-    <a
-      href="/login"
-      className="mt-6 px-6 py-2 bg-teal-500 rounded-lg font-bold"
-    >
-      Go to Login
-    </a>
-  </div>
-);
-
-const Login = () => (
-  <div className="min-h-screen bg-[#0B1120] flex flex-col items-center justify-center text-white p-10 font-sans">
-    <h1 className="text-4xl font-bold mb-4 text-teal-400">Login Page</h1>
-    <p className="text-slate-400 text-center">
-      Real component is located at: ./pages/Login.js
+  <div className="min-h-screen bg-[#0B1120] text-teal-400 flex flex-col items-center justify-center font-sans">
+    <h1 className="text-4xl font-bold mb-4">HealthBot Home</h1>
+    <p className="text-slate-400">
+      Previewing routing... Visit /login or /register
     </p>
     <div className="flex gap-4 mt-6">
-      <a href="/register" className="text-teal-400">
-        Register
+      <a
+        href="/login"
+        className="px-4 py-2 bg-teal-500 text-slate-900 rounded font-bold"
+      >
+        Login
       </a>
-      <a href="/forgot-password" className="text-teal-400">
-        Forgot Password?
+      <a
+        href="/register"
+        className="px-4 py-2 border border-teal-500 rounded font-bold"
+      >
+        Register
       </a>
     </div>
   </div>
 );
-
+const Login = () => (
+  <div className="min-h-screen bg-[#0B1120] text-white flex items-center justify-center">
+    Login Page
+  </div>
+);
 const Register = () => (
   <div className="min-h-screen bg-[#0B1120] text-white flex items-center justify-center">
-    Registration Page
+    Register Page
   </div>
 );
 const Chat = () => (
   <div className="min-h-screen bg-[#0B1120] text-white flex items-center justify-center">
-    Chat Dashboard
+    Chat Interface
   </div>
 );
 const AuthCallback = () => (
@@ -74,7 +70,6 @@ const ForgotPassword = () => (
 );
 
 function App() {
-  // Check for authentication token
   const token = localStorage.getItem("token");
 
   return (
