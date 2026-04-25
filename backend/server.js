@@ -7,6 +7,18 @@ const { Server } = require('socket.io');
 
 dotenv.config();
 
+const session = require('express-session');
+const passport = require('./config/passport');
+
+// Add after dotenv.config() and before other middleware:
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
