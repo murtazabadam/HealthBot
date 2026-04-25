@@ -41,4 +41,26 @@ router.post('/login', async (req, res) => {
   }
 });
 
+const passport = require('passport');
+require('../config/passport');
+
+// Google OAuth
+router.get('/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+router.get('/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login', session: false }),
+  async (req, res) => {
+    try {
+      const token = jwt.sign({ id: req.user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+      const user  = { id: req.user._id, name: req.user.name, email: req.user.email, avatar: req.user.avatar };
+      // Redirect to frontend with token
+      res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(user))}`);
+    } catch (err) {
+      res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_failed`);
+    }
+  }
+);
+
 module.exports = router;
