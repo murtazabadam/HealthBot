@@ -150,7 +150,7 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Forgot Password Link - FIXED */}
+            {/* Forgot Password Link */}
             <div className="flex justify-end">
               <Link
                 to="/forgot-password"
@@ -178,12 +178,12 @@ export default function Login() {
             <div className="h-[1px] flex-1 bg-slate-700/50"></div>
           </div>
 
-          {/* Social Logins */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          {/* Social Logins - Apple removed, Google is now full width */}
+          <div className="flex flex-col gap-4 mb-6">
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-lg py-3 transition-colors text-sm font-medium text-slate-300"
+              className="w-full flex items-center justify-center gap-3 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-lg py-3.5 transition-colors text-sm font-medium text-slate-300"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -203,20 +203,7 @@ export default function Login() {
                   fill="#EA4335"
                 />
               </svg>
-              Google
-            </button>
-            <button
-              type="button"
-              className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-lg py-3 transition-colors text-sm font-medium text-slate-300"
-            >
-              <svg
-                className="w-5 h-5 text-white"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.04 2.26-.82 3.59-.8 1.83.02 3.2.73 4.14 2.05-1.62 1.05-1.92 3.19-.38 4.25-1.22 2.27-2.66 4.39-4.33 6.67M12.05 6.01C11.96 3.02 14.53 1 17.5 1c.21 2.92-2.58 5.17-5.45 5.01" />
-              </svg>
-              Apple
+              Continue with Google
             </button>
           </div>
 
@@ -235,7 +222,7 @@ export default function Login() {
         </div>
       </main>
 
-      {/* Footer - FIXED */}
+      {/* Footer */}
       <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10">
         <p className="text-slate-400 text-xs font-medium">
           © 2026 HealthBot. All rights reserved.
