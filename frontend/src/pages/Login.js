@@ -1,50 +1,210 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { Activity, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post('https://healthbot-production-3c7d.up.railway.app/api/auth/login', form);
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      navigate('/chat');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
-    }
-  };
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <div style={styles.logo}>⚕️ HealthBot</div>
-        <p style={styles.subtitle}>AI Medical Assistant</p>
-        <form onSubmit={handleSubmit}>
-          <input style={styles.input} type="email" placeholder="Email"
-            value={form.email} onChange={e => setForm({...form, email: e.target.value})} required />
-          <input style={styles.input} type="password" placeholder="Password"
-            value={form.password} onChange={e => setForm({...form, password: e.target.value})} required />
-          {error && <p style={styles.error}>{error}</p>}
-          <button style={styles.btn} type="submit">Login</button>
-        </form>
-        <p style={styles.link}>Don't have an account? <Link to="/register">Register</Link></p>
-      </div>
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white relative flex flex-col items-center overflow-x-hidden">
+      {/* Dynamic Background Effects matching the photo */}
+      {/* 1. Ambient Glow behind the card */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* 2. Dotted Pattern Grid Overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-20"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)",
+          backgroundSize: "40px 40px",
+        }}
+      />
+
+      {/* Navigation Bar - Minimal for Login Page */}
+      <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
+        <Link to="/" className="flex items-center gap-2 cursor-pointer">
+          <Activity className="h-7 w-7 text-teal-400" />
+          <span className="text-2xl font-bold tracking-tight text-white">
+            HealthBot
+          </span>
+        </Link>
+
+        <Link
+          to="/register"
+          className="px-6 py-2.5 text-sm font-semibold text-white bg-transparent border border-teal-500 hover:bg-teal-500/10 rounded-md transition-all"
+        >
+          Sign Up
+        </Link>
+      </nav>
+
+      {/* Main Login Container */}
+      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
+        {/* Glassmorphism Card */}
+        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 sm:p-12 w-full max-w-[480px] shadow-[0_0_40px_rgba(13,148,136,0.1)] relative">
+          {/* Subtle top border glow on the card */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
+
+          {/* Header */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-16 h-16 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mb-6">
+              <Activity className="h-8 w-8 text-teal-400" />
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-3">
+              Welcome Back!
+            </h1>
+            <p className="text-slate-400 text-center text-sm leading-relaxed max-w-[280px]">
+              Login to your account and continue your health journey with{" "}
+              <span className="text-teal-400 font-medium">HealthBot</span>.
+            </p>
+          </div>
+
+          {/* Login Form */}
+          <form className="flex flex-col gap-5">
+            {/* Email Field */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-300">
+                Email Address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-slate-500" />
+                </div>
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-300">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-slate-500" />
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Forgot Password Link - FIXED */}
+            <div className="flex justify-end">
+              <Link
+                to="/forgot-password"
+                className="text-xs text-teal-400 hover:text-teal-300 font-medium transition-colors"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+
+            {/* Main Login Button with Gradient */}
+            <button
+              type="submit"
+              className="w-full mt-2 bg-gradient-to-r from-teal-400 to-cyan-500 hover:from-teal-300 hover:to-cyan-400 text-slate-900 font-bold py-3.5 rounded-lg transition-all shadow-[0_0_20px_rgba(45,212,191,0.3)] flex items-center justify-center gap-2"
+            >
+              Log In <span className="text-xl leading-none">→</span>
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="flex items-center gap-4 my-8">
+            <div className="h-[1px] flex-1 bg-slate-700/50"></div>
+            <span className="text-xs text-slate-500 font-medium">
+              or continue with
+            </span>
+            <div className="h-[1px] flex-1 bg-slate-700/50"></div>
+          </div>
+
+          {/* Social Logins */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <button className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-lg py-3 transition-colors text-sm font-medium text-slate-300">
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Google
+            </button>
+            <button className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-lg py-3 transition-colors text-sm font-medium text-slate-300">
+              <svg
+                className="w-5 h-5 text-white"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.04 2.26-.82 3.59-.8 1.83.02 3.2.73 4.14 2.05-1.62 1.05-1.92 3.19-.38 4.25-1.22 2.27-2.66 4.39-4.33 6.67M12.05 6.01C11.96 3.02 14.53 1 17.5 1c.21 2.92-2.58 5.17-5.45 5.01" />
+              </svg>
+              Apple
+            </button>
+          </div>
+
+          {/* Register Link */}
+          <div className="text-center">
+            <span className="text-sm text-slate-400">
+              Don't have an account?{" "}
+            </span>
+            <Link
+              to="/register"
+              className="text-sm text-teal-400 hover:text-teal-300 font-medium transition-colors"
+            >
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer - FIXED */}
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10">
+        <p className="text-slate-400 text-xs font-medium">
+          © 2024 HealthBot. All rights reserved.
+        </p>
+        <div className="flex items-center gap-4 text-xs font-medium">
+          <Link
+            to="/privacy"
+            className="text-slate-500 hover:text-slate-400 transition-colors"
+          >
+            Privacy Policy
+          </Link>
+          <span className="text-slate-700">|</span>
+          <Link
+            to="/terms"
+            className="text-slate-500 hover:text-slate-400 transition-colors"
+          >
+            Terms of Service
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }
-
-const styles = {
-  container: { minHeight:'100vh', background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center' },
-  card: { background:'#1e293b', padding:'40px', borderRadius:'16px', width:'100%', maxWidth:'400px', boxShadow:'0 20px 60px rgba(0,0,0,0.4)' },
-  logo: { fontSize:'28px', fontWeight:'700', color:'#38bdf8', textAlign:'center', marginBottom:'4px' },
-  subtitle: { color:'#64748b', textAlign:'center', marginBottom:'28px', fontSize:'14px' },
-  input: { width:'100%', padding:'12px 16px', marginBottom:'12px', borderRadius:'8px', border:'1px solid #334155', background:'#0f172a', color:'#e2e8f0', fontSize:'14px', boxSizing:'border-box' },
-  btn: { width:'100%', padding:'12px', background:'#0ea5e9', color:'#fff', border:'none', borderRadius:'8px', fontSize:'15px', fontWeight:'600', cursor:'pointer', marginTop:'4px' },
-  error: { color:'#ef4444', fontSize:'13px', marginBottom:'8px' },
-  link: { textAlign:'center', marginTop:'16px', color:'#64748b', fontSize:'13px' }
-};
