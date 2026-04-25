@@ -7,12 +7,25 @@ const { Server } = require('socket.io');
 
 dotenv.config();
 
-const app = express();
+const session = require('express-session');
+const passport = require('./config/passport');
+
+const app = express(); // MUST COME BEFORE app.use()
+
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-// Middleware
-// CORS fix
+/* Session + Passport */
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'healthbot_secret',
+  resave: false,
+  saveUninitialized: false
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+/* Middleware */
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
@@ -20,28 +33,30 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
+
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// Routes
+/* Routes */
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/chat', require('./routes/chat'));
 
-// Test route
+/* Test Route */
 app.get('/', (req, res) => {
   res.json({ message: 'HealthBot API is running!' });
 });
 
-// MongoDB connection
+/* MongoDB */
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.log('DB Error:', err));
 
-// Socket.IO
+/* Socket.IO */
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
   socket.on('disconnect', () => console.log('User disconnected'));
 });
 
+/* Start Server */
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
