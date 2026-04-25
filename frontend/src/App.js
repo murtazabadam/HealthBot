@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-// Uncomment these imports in your local VS Code environment!
+// --- LOCAL USERS: UNCOMMENT THESE IMPORTS AND DELETE THE MOCKS BELOW ---
 // import Home from "./pages/home";
 // import Login from "./pages/Login";
 // import Register from "./pages/Register";
@@ -9,25 +9,25 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 // import AuthCallback from './pages/AuthCallback';
 // import ForgotPassword from './pages/ForgotPassword';
 
-// Mock components for the preview environment to prevent compilation errors
+// --- MOCKS FOR PREVIEW ENVIRONMENT (Delete these in your local VS Code) ---
 const Home = () => (
   <div className="min-h-screen bg-[#0B1120] text-white p-10 font-sans">
-    Home Page
+    Home Page (Preview Mock)
   </div>
 );
 const Login = () => (
   <div className="min-h-screen bg-[#0B1120] text-white p-10 font-sans">
-    Login Page
+    Login Page (Preview Mock)
   </div>
 );
 const Register = () => (
   <div className="min-h-screen bg-[#0B1120] text-white p-10 font-sans">
-    Register Page
+    Register Page (Preview Mock)
   </div>
 );
 const Chat = () => (
   <div className="min-h-screen bg-[#0B1120] text-white p-10 font-sans">
-    Chat Interface
+    Chat Interface (Preview Mock)
   </div>
 );
 const AuthCallback = () => (
@@ -37,7 +37,7 @@ const AuthCallback = () => (
 );
 const ForgotPassword = () => (
   <div className="min-h-screen bg-[#0B1120] text-white p-10 font-sans">
-    Forgot Password Page
+    Forgot Password Page (Preview Mock)
   </div>
 );
 
@@ -52,6 +52,8 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+
+        {/* Protected Route: Forces users to log in before seeing the chat */}
         <Route
           path="/chat"
           element={token ? <Chat /> : <Navigate to="/login" />}
