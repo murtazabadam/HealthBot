@@ -4,3 +4,7 @@ scikit-learn
 pandas
 numpy
 gunicorn
+nltk
+textblob
+fuzzywuzzy
+python-Levenshtein

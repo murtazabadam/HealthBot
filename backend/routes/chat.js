@@ -3,12 +3,12 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const Conversation = require('../models/Conversation');
 
-async function getMLPrediction(symptoms) {
+async function getMLPrediction(text, symptoms) {
   try {
     const response = await fetch('https://tranquil-nourishment-production-11f9.up.railway.app/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ symptoms })
+      body: JSON.stringify({ text, symptoms })
     });
     return await response.json();
   } catch (err) {
@@ -70,8 +70,7 @@ ${precautions}
 router.post('/message', auth, async (req, res) => {
   try {
     const { text } = req.body;
-    const symptoms = extractSymptoms(text);
-    const mlResult = symptoms.length > 0 ? await getMLPrediction(symptoms) : null;
+    const mlResult = await getMLPrediction(text, []);
     const botReply = buildBotReply(text, mlResult);
 
     let conversation = await Conversation.findOne({ userId: req.user.id });
