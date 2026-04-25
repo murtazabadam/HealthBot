@@ -1,9 +1,43 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Activity, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const navigate = useNavigate();
+
+  const handleGoogleLogin = async () => {
+    // Firebase implementation commented out to fix missing module compilation error
+    console.log(
+      "Firebase Google login clicked. Implement actual Firebase logic here.",
+    );
+    /*
+    try {
+      setErrorMessage(""); 
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      const response = await axios.post("http://localhost:5000/api/auth/google", {
+        firebaseUid: user.uid,
+        email: user.email,
+        name: user.displayName,
+        profilePicture: user.photoURL
+      });
+
+      localStorage.setItem("token", response.data.token);
+      navigate("/chat");
+    } catch (error) {
+      console.error("Google login error:", error);
+      setErrorMessage("Failed to log in with Google. Please try again.");
+    }
+    */
+  };
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    console.log("Login submitted");
+  };
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white relative flex flex-col items-center overflow-x-hidden">
@@ -60,7 +94,14 @@ export default function Login() {
           </div>
 
           {/* Login Form */}
-          <form className="flex flex-col gap-5">
+          <form className="flex flex-col gap-5" onSubmit={handleLogin}>
+            {/* Show error message if Google login fails */}
+            {errorMessage && (
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center">
+                {errorMessage}
+              </div>
+            )}
+
             {/* Email Field */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-slate-300">
@@ -136,7 +177,11 @@ export default function Login() {
 
           {/* Social Logins */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <button className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-lg py-3 transition-colors text-sm font-medium text-slate-300">
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-lg py-3 transition-colors text-sm font-medium text-slate-300"
+            >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -157,7 +202,10 @@ export default function Login() {
               </svg>
               Google
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-lg py-3 transition-colors text-sm font-medium text-slate-300">
+            <button
+              type="button"
+              className="flex-1 flex items-center justify-center gap-2 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-lg py-3 transition-colors text-sm font-medium text-slate-300"
+            >
               <svg
                 className="w-5 h-5 text-white"
                 fill="currentColor"
@@ -187,7 +235,7 @@ export default function Login() {
       {/* Footer - FIXED */}
       <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10">
         <p className="text-slate-400 text-xs font-medium">
-          © 2024 HealthBot. All rights reserved.
+          © 2026 HealthBot. All rights reserved.
         </p>
         <div className="flex items-center gap-4 text-xs font-medium">
           <Link
