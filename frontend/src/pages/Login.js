@@ -160,23 +160,23 @@ export default function Login() {
               </Link>
             </div>
 
-            {/* Main Login Button with Gradient */}
-            <button
-              type="submit"
-              className="w-full mt-2 bg-gradient-to-r from-teal-400 to-cyan-500 hover:from-teal-300 hover:to-cyan-400 text-slate-900 font-bold py-3.5 rounded-lg transition-all shadow-[0_0_20px_rgba(45,212,191,0.3)] flex items-center justify-center gap-2"
-            >
-              Log In <span className="text-xl leading-none">→</span>
-            </button>
-          </form>
+  {/* Main Login Button with Gradient */}
+  <button
+    type="submit"
+    className="w-full mt-2 bg-gradient-to-r from-teal-400 to-cyan-500 hover:from-teal-300 hover:to-cyan-400 text-slate-900 font-bold py-3.5 rounded-lg transition-all shadow-[0_0_20px_rgba(45,212,191,0.3)] flex items-center justify-center gap-2"
+  >
+    Log In <span className="text-xl leading-none">→</span>
+  </button>
 
-          {/* Divider */}
-          <div className="flex items-center gap-4 my-8">
-            <div className="h-[1px] flex-1 bg-slate-700/50"></div>
-            <span className="text-xs text-slate-500 font-medium">
-              or continue with
-            </span>
-            <div className="h-[1px] flex-1 bg-slate-700/50"></div>
-          </div>
+  {/* Divider */}
+  <div className="flex items-center gap-4 my-8">
+    <div className="h-[1px] flex-1 bg-slate-700/50"></div>
+    <span className="text-xs text-slate-500 font-medium">
+      or continue with
+    </span>
+    <div className="h-[1px] flex-1 bg-slate-700/50"></div>
+  </div>
+</form>
 
           {/* Social Logins */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
