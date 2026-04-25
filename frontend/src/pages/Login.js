@@ -12,6 +12,7 @@ export default function Login() {
     console.log(
       "Firebase Google login clicked. Implement actual Firebase logic here.",
     );
+    setErrorMessage("Google Login is not connected to a backend yet.");
     /*
     try {
       setErrorMessage(""); 
@@ -36,7 +37,9 @@ export default function Login() {
 
   const handleLogin = (e) => {
     e.preventDefault();
+    setErrorMessage(""); // Clears any previous errors
     console.log("Login submitted");
+    navigate("/chat"); // Mock behavior: Takes you straight to the chat page to test the UI!
   };
 
   return (
