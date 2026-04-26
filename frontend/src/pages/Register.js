@@ -1,4 +1,4 @@
-/* VERSION_CONTROL: 1.2.4_GENDER_FIX */
+/* VERSION_CONTROL: 1.2.7_STRICT_VALIDATION */
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -20,17 +20,33 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  // State for password fields to enable comparison
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const navigate = useNavigate();
 
   const handleRegister = (e) => {
     e.preventDefault();
+    setErrorMessage("");
+
+    // 1. Comparison Logic: This blocks the 'navigate' if passwords are different
+    if (password !== confirmPassword) {
+      setErrorMessage("Passwords do not match. Please check again.");
+      return; // STOPS THE FUNCTION HERE
+    }
+
+    // 2. Terms Check
     if (!agreedToTerms) {
       setErrorMessage(
         "You must agree to the Terms of Service and Privacy Policy.",
       );
-      return;
+      return; // STOPS THE FUNCTION HERE
     }
-    // Validation passed - proceed to chat
+
+    // 3. Successful Logic - Only runs if the checks above passed
+    console.log("Passwords match. Proceeding to Chat...");
     navigate("/chat");
   };
 
@@ -39,7 +55,7 @@ export default function Register() {
       {/* Background Decor */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Navigation - Logo Only */}
+      {/* Nav - Clean Logo */}
       <nav className="flex items-center justify-start px-6 py-6 lg:px-12 w-full z-50">
         <Link to="/" className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-7 w-7 text-teal-400" />
@@ -49,7 +65,6 @@ export default function Register() {
         </Link>
       </nav>
 
-      {/* Main Registration Card */}
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-4 sm:my-10">
         <div className="bg-[#111827]/90 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-12 w-full max-w-[850px] shadow-2xl relative">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
@@ -68,12 +83,12 @@ export default function Register() {
             className="flex flex-col gap-6 sm:gap-8"
           >
             {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-lg text-center font-medium">
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-lg text-center font-bold">
                 {errorMessage}
               </div>
             )}
 
-            {/* Row 1: REQUIRED (*) */}
+            {/* Required Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
@@ -85,7 +100,7 @@ export default function Register() {
                     type="text"
                     placeholder="Enter your full name"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
@@ -100,13 +115,13 @@ export default function Register() {
                     type="email"
                     placeholder="name@example.com"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Row 2: Password (*) & Confirm */}
+            {/* Password Validation Row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
@@ -116,14 +131,16 @@ export default function Register() {
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Create password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Create a password"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -137,13 +154,15 @@ export default function Register() {
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                   <input
                     type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Repeat your password"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500 transition-all"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm password"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
                   >
                     {showConfirmPassword ? (
                       <EyeOff size={18} />
@@ -155,7 +174,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 3: Age & Phone (Non-mandatory) */}
+            {/* Optional Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300">
@@ -166,8 +185,8 @@ export default function Register() {
                   <input
                     type="number"
                     min="0"
-                    placeholder="Enter your age"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    placeholder="Enter age"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
@@ -179,14 +198,13 @@ export default function Register() {
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                   <input
                     type="tel"
-                    placeholder="Enter phone number"
+                    placeholder="Enter phone"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Row 4: Gender (*) & Others */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
@@ -194,13 +212,12 @@ export default function Register() {
                 </label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" />
-                  {/* UPDATED: Male and Female only */}
                   <select
                     required
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 appearance-none cursor-pointer"
                   >
                     <option value="" disabled selected>
-                      Select gender
+                      Select
                     </option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -214,18 +231,12 @@ export default function Register() {
                 </label>
                 <div className="relative">
                   <Droplet className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" />
-                  <select className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 appearance-none cursor-pointer">
+                  <select className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none appearance-none cursor-pointer">
                     <option value="" disabled selected>
-                      Select group
+                      Select
                     </option>
                     <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
                     <option value="O+">O+</option>
-                    <option value="O-">O-</option>
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                 </div>
@@ -245,7 +256,6 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Terms */}
             <div className="flex items-start gap-3 py-2">
               <input
                 type="checkbox"
@@ -266,7 +276,6 @@ export default function Register() {
               </label>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               className="w-full bg-gradient-to-r from-teal-400 to-blue-500 text-slate-900 font-extrabold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 transition-all"
@@ -274,8 +283,7 @@ export default function Register() {
               Create Account →
             </button>
 
-            {/* LOGIN LINK AT THE BOTTOM */}
-            <div className="text-center pt-6 border-t border-slate-800/50">
+            <div className="text-center pt-6 border-t border-slate-800/50 mt-2">
               <p className="text-sm text-slate-400">
                 Already have an account?{" "}
                 <Link
@@ -292,7 +300,7 @@ export default function Register() {
 
       <footer className="pb-10 pt-4 opacity-40 flex flex-col items-center">
         <p className="text-[10px] text-slate-500">
-          © 2026 HealthBot Project • V1.2.4 - GENDER FIX
+          © 2026 HealthBot Project • V1.2.7 - FINAL
         </p>
       </footer>
     </div>
