@@ -1,431 +1,332 @@
-import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Activity,
-  MessageSquarePlus,
-  History,
-  FolderHeart,
-  User,
-  Settings,
-  LogOut,
-  Send,
-  Bot,
-  CheckCheck,
-  MessageSquare,
-  ShieldCheck,
   Mail,
-  X,
-  Smartphone,
+  Lock,
+  Eye,
+  EyeOff,
+  User,
+  Calendar,
+  Phone,
+  Droplet,
+  MapPin,
+  CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
 
-export default function Chat() {
-  // Navigation & View State
-  const [activeTab, setActiveTab] = useState("chat");
-  const [isVerified, setIsVerified] = useState(false);
-  const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-
-  // Chat Logic State (Connected to your Backend)
-  const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const bottomRef = useRef(null);
+export default function Register() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const navigate = useNavigate();
-  const otpRefs = useRef([]);
 
-  // Get User Data & Token from your teammate's Login logic
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const token = localStorage.getItem("token");
-
-  // Welcome Message
-  useEffect(() => {
-    const now = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    setMessages([
-      {
-        id: "welcome",
-        sender: "bot",
-        text: `Hello ${user.name ? user.name.split(" ")[0] : "there"}! I'm HealthBot 🤖\nDescribe your symptoms and I'll help analyze them. Example: "I have fever, cough and fatigue"`,
-        time: now,
-      },
-    ]);
-  }, [user.name]);
-
-  // Auto-scroll
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
-
-  // Real Backend Connection Logic
-  const sendMessage = async () => {
-    if (!inputText.trim() || loading) return;
-
-    const now = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const userMsg = {
-      id: Date.now(),
-      sender: "user",
-      text: inputText,
-      time: now,
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    const currentInput = inputText;
-    setInputText("");
-    setLoading(true);
-
-    try {
-      // Talking to your teammate's Railway Backend
-      const res = await axios.post(
-        "https://healthbot-production-3c7d.up.railway.app/api/chat/message",
-        { text: currentInput },
-        { headers: { Authorization: `Bearer ${token}` } },
+  const handleRegister = (e) => {
+    e.preventDefault();
+    if (!agreedToTerms) {
+      setErrorMessage(
+        "You must agree to the Terms of Service and Privacy Policy.",
       );
-
-      const botNow = new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          sender: "bot",
-          text: res.data.reply,
-          time: botNow,
-        },
-      ]);
-    } catch (error) {
-      const botErrorNow = new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 2,
-          sender: "bot",
-          text: "Sorry, I'm having trouble connecting to my brain. Please try again in a moment.",
-          time: botErrorNow,
-        },
-      ]);
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
-
-  // OTP Logic
-  const handleOtpChange = (element, index) => {
-    if (isNaN(element.value)) return false;
-    let newOtp = [...otp];
-    newOtp[index] = element.value;
-    setOtp(newOtp);
-    if (element.value !== "" && index < 5) otpRefs.current[index + 1].focus();
-  };
-
-  const handleVerifyOtp = () => {
-    if (otp.join("").length === 6) {
-      setIsVerified(true);
-      setShowVerifyModal(false);
-    }
-  };
-
-  const logout = () => {
-    localStorage.clear();
-    navigate("/login");
+    // Success Logic
+    console.log("Registration successful");
+    navigate("/chat");
   };
 
   return (
-    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 flex items-center justify-center p-0 lg:p-8 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-1/4 -left-32 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
-
-      {/* App Shell */}
-      <div className="w-full max-w-[1440px] h-screen lg:h-[90vh] bg-[#0f1523]/80 backdrop-blur-2xl lg:border lg:border-teal-500/20 lg:rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden relative z-10">
-        {/* Navbar */}
-        <header className="h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-6 lg:px-10 bg-[#0f1523]/50">
-          <div className="flex items-center gap-2">
-            <Activity className="h-7 w-7 text-teal-400" />
-            <span className="text-2xl font-bold tracking-tight text-white">
-              HealthBot
-            </span>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {!isVerified && (
-              <button
-                onClick={() => setShowVerifyModal(true)}
-                className="hidden md:flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-full text-amber-400 text-xs font-bold animate-pulse hover:bg-amber-500/20 transition-all"
-              >
-                <ShieldCheck className="h-3.5 w-3.5" /> VERIFY EMAIL
-              </button>
-            )}
-            <div className="flex items-center gap-3 pl-4 border-l border-slate-700">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-white leading-none">
-                  {user.name || "Guest"}
-                </p>
-                <p className="text-[10px] text-teal-400 font-bold mt-1 tracking-widest uppercase">
-                  Patient Account
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-full border-2 border-teal-500/30 bg-slate-800 flex items-center justify-center">
-                <User className="h-5 w-5 text-slate-300" />
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <aside className="w-[280px] shrink-0 border-r border-slate-800/60 bg-[#0b1120]/50 hidden lg:flex flex-col">
-            <div className="p-6">
-              <button
-                onClick={() => {
-                  setActiveTab("chat");
-                  window.location.reload();
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 bg-teal-500 text-slate-900 rounded-xl transition-all font-bold text-sm shadow-[0_0_20px_rgba(20,184,166,0.3)]"
-              >
-                <MessageSquarePlus className="h-4 w-4" /> New Consultation
-              </button>
-            </div>
-
-            <nav className="px-4 py-2 flex flex-col gap-1 text-sm font-medium text-slate-400">
-              <button
-                onClick={() => setActiveTab("chat")}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === "chat" ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "hover:bg-slate-800/50 hover:text-white"}`}
-              >
-                <MessageSquare className="h-4 w-4" /> AI Chat
-              </button>
-              <button className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/50 hover:text-white transition-all">
-                <History className="h-4 w-4" /> Chat History
-              </button>
-              <button className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/50 hover:text-white transition-all">
-                <FolderHeart className="h-4 w-4" /> Medical Records
-              </button>
-              <button
-                onClick={() => setActiveTab("profile")}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === "profile" ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "hover:bg-slate-800/50 hover:text-white"}`}
-              >
-                <User className="h-4 w-4" /> My Profile
-              </button>
-              <button className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/50 hover:text-white transition-all">
-                <Settings className="h-4 w-4" /> Settings
-              </button>
-              <button
-                onClick={logout}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-rose-500/10 text-rose-400 transition-all mt-4"
-              >
-                <LogOut className="h-4 w-4" /> Sign Out
-              </button>
-            </nav>
-          </aside>
-
-          {/* Chat Window */}
-          <main className="flex-1 flex flex-col bg-[#0f1523]/30 relative overflow-hidden">
-            {activeTab === "chat" ? (
-              <>
-                <div className="h-20 shrink-0 border-b border-slate-800/60 px-8 flex items-center justify-between bg-[#0b1120]/30 backdrop-blur-md absolute top-0 w-full z-10">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-teal-500/10 flex items-center justify-center border border-teal-500/20">
-                      <Bot className="h-6 w-6 text-teal-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-white leading-tight">
-                        HealthBot AI
-                      </h2>
-                      <p className="text-[10px] text-emerald-500 font-bold mt-1 tracking-wide uppercase">
-                        ● System Online
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto px-4 md:px-10 pb-6 pt-28 flex flex-col gap-6 scrollbar-hide">
-                  {messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`flex gap-4 max-w-[85%] md:max-w-[70%] ${msg.sender === "user" ? "ml-auto flex-row-reverse" : "mr-auto"}`}
-                    >
-                      <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 ${msg.sender === "bot" ? "bg-teal-500/20 border border-teal-500/30" : "bg-blue-500/20 border border-blue-500/30"}`}
-                      >
-                        {msg.sender === "bot" ? (
-                          <Bot className="h-4 w-4 text-teal-400" />
-                        ) : (
-                          <User className="h-4 w-4 text-blue-400" />
-                        )}
-                      </div>
-                      <div
-                        className={`p-4 text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-gradient-to-br from-teal-500 to-cyan-600 text-white rounded-2xl rounded-tr-none" : "bg-slate-800/50 border border-slate-700/50 text-slate-200 rounded-2xl rounded-tl-none"}`}
-                      >
-                        {msg.text}
-                        <div
-                          className={`text-[9px] mt-2 opacity-50 flex items-center gap-1 ${msg.sender === "user" ? "justify-end" : ""}`}
-                        >
-                          {msg.time}{" "}
-                          {msg.sender === "user" && (
-                            <CheckCheck className="h-3 w-3" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {loading && (
-                    <div className="flex gap-4 max-w-[85%] mr-auto animate-pulse">
-                      <div className="w-8 h-8 rounded-full bg-teal-500/20 border border-teal-500/30 flex items-center justify-center shrink-0 mt-1">
-                        <Bot className="h-4 w-4 text-teal-400" />
-                      </div>
-                      <div className="p-4 bg-slate-800/50 border border-slate-700/50 rounded-2xl rounded-tl-none text-slate-400 text-xs italic">
-                        Analyzing symptoms...
-                      </div>
-                    </div>
-                  )}
-                  <div ref={bottomRef} />
-                </div>
-
-                <div className="p-4 md:p-8 bg-gradient-to-t from-[#0f1523] via-[#0f1523]/95 to-transparent">
-                  <div className="max-w-4xl mx-auto flex items-center gap-3 bg-[#111827]/80 backdrop-blur-md border border-slate-700 rounded-2xl p-2 pl-5">
-                    <textarea
-                      rows={1}
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" &&
-                        !e.shiftKey &&
-                        (e.preventDefault(), sendMessage())
-                      }
-                      placeholder="Describe your symptoms... (e.g. I have fever and cough)"
-                      className="flex-1 bg-transparent border-none focus:outline-none text-sm text-white placeholder-slate-500 py-3 resize-none scrollbar-hide"
-                    />
-                    <button
-                      onClick={sendMessage}
-                      disabled={loading}
-                      className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${loading ? "bg-slate-700 cursor-not-allowed" : "bg-teal-500 text-slate-900 hover:scale-105 shadow-[0_0_15px_rgba(20,184,166,0.3)]"}`}
-                    >
-                      <Send className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              /* Profile Dashboard */
-              <div className="flex-1 overflow-y-auto p-6 md:p-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex flex-col md:flex-row items-center gap-8 mb-12">
-                  <div className="w-32 h-32 rounded-3xl border-2 border-teal-500/30 bg-slate-800 flex items-center justify-center relative shadow-2xl">
-                    <User className="h-16 w-16 text-slate-600" />
-                    <div
-                      className="absolute -bottom-2 -right-2 bg-emerald-500 h-6 w-6 rounded-full border-4 border-[#0b1120]"
-                      title="Online"
-                    />
-                  </div>
-                  <div className="text-center md:text-left">
-                    <h1 className="text-3xl font-bold text-white mb-2">
-                      {user.name || "N/A"}
-                    </h1>
-                    <p className="text-slate-400 flex items-center justify-center md:justify-start gap-2">
-                      <Mail className="h-4 w-4 text-teal-400" />{" "}
-                      {user.email || "N/A"}
-                    </p>
-                    <div className="flex gap-3 mt-4">
-                      <span className="px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-[10px] font-bold tracking-widest uppercase">
-                        Verified Account
-                      </span>
-                      <span className="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-bold tracking-widest uppercase">
-                        Patient
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-[#111827]/50 border border-slate-800 p-6 rounded-3xl backdrop-blur-md">
-                    <h3 className="text-sm font-bold text-white mb-6 flex items-center gap-2">
-                      <Smartphone className="h-4 w-4 text-teal-400" /> Contact
-                      Details
-                    </h3>
-                    <div className="space-y-4 text-sm text-slate-400">
-                      <div className="flex justify-between border-b border-slate-800/50 pb-2">
-                        <span>Phone</span>
-                        <span className="text-white">Not provided</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Region</span>
-                        <span className="text-white">Kashmir</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </main>
-        </div>
-      </div>
-
-      {/* VERIFICATION MODAL */}
-      {showVerifyModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-[#0B1120]/80 backdrop-blur-md"
-            onClick={() => setShowVerifyModal(false)}
-          />
-          <div className="bg-[#111827] border border-slate-700 w-full max-w-md rounded-[2.5rem] p-8 relative z-10 shadow-2xl animate-in zoom-in duration-300">
-            <button
-              onClick={() => setShowVerifyModal(false)}
-              className="absolute top-6 right-6 text-slate-500 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-6">
-                <Smartphone className="h-8 w-8 text-amber-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-2">
-                Verify Email
-              </h3>
-              <p className="text-slate-400 text-sm mb-8">
-                Verification code sent to {user.email || "your email"}
-              </p>
-              <div className="flex gap-2 mb-8">
-                {otp.map((data, index) => (
-                  <input
-                    key={index}
-                    type="text"
-                    maxLength="1"
-                    ref={(el) => (otpRefs.current[index] = el)}
-                    value={data}
-                    onChange={(e) => handleOtpChange(e.target, index)}
-                    className="w-12 h-14 bg-[#0B1120] border border-slate-700 rounded-xl text-center text-xl font-bold text-white focus:border-teal-500 focus:outline-none"
-                  />
-                ))}
-              </div>
-              <button
-                onClick={handleVerifyOtp}
-                className="w-full bg-teal-500 text-slate-900 font-bold py-4 rounded-xl shadow-lg hover:bg-teal-400 transition-all"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-      `,
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white relative flex flex-col items-center overflow-x-hidden">
+      {/* Background Effects */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-teal-500/5 rounded-full blur-[150px] pointer-events-none" />
+      <div
+        className="absolute inset-0 pointer-events-none opacity-20"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)",
+          backgroundSize: "40px 40px",
         }}
       />
+
+      {/* Navigation */}
+      <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
+        <Link to="/" className="flex items-center gap-2 cursor-pointer">
+          <Activity className="h-7 w-7 text-teal-400" />
+          <span className="text-2xl font-bold tracking-tight text-white">
+            HealthBot
+          </span>
+        </Link>
+      </nav>
+
+      {/* Main Container */}
+      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
+        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 sm:p-12 w-full max-w-[850px] shadow-[0_0_50px_rgba(13,148,136,0.1)] relative">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
+
+          <div className="flex flex-col items-center mb-10 text-center">
+            <h1 className="text-3xl font-bold text-white mb-3">
+              Create Account
+            </h1>
+            <p className="text-slate-400 text-sm">
+              Join HealthBot today and start your journey to better health.
+            </p>
+          </div>
+
+          <form onSubmit={handleRegister} className="flex flex-col gap-8">
+            {errorMessage && (
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center">
+                {errorMessage}
+              </div>
+            )}
+
+            {/* Row 1: Full Name & Email (REQUIRED) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-slate-300 flex gap-1">
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="Enter your full name"
+                    required
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-slate-300 flex gap-1">
+                  Email Address <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <input
+                    type="email"
+                    placeholder="name@example.com"
+                    required
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Row 2: Passwords (Password REQUIRED, Confirm Optional) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-slate-300 flex gap-1">
+                  Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Create a password"
+                    required
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-slate-300">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Repeat password"
+                    title="Optional field"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: Age & Phone Number (Optional) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-slate-300">
+                  Age
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <input
+                    type="number"
+                    min="0"
+                    max="120"
+                    placeholder="Enter your age"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-slate-300">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <input
+                    type="tel"
+                    placeholder="Enter phone number"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Row 4: Gender (REQUIRED), Blood Group & Address (Optional) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-slate-300 flex gap-1">
+                  Gender <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" />
+                  <select
+                    required
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors appearance-none cursor-pointer"
+                  >
+                    <option value="" disabled selected>
+                      Select gender
+                    </option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-slate-300">
+                  Blood Group
+                </label>
+                <div className="relative">
+                  <Droplet className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" />
+                  <select className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors appearance-none cursor-pointer">
+                    <option value="" disabled selected>
+                      Select blood group
+                    </option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-slate-300">
+                  Address
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="Enter your address"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Terms and Conditions */}
+            <div className="flex items-start gap-3 py-2">
+              <div className="relative flex items-center">
+                <input
+                  type="checkbox"
+                  id="terms"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-700 bg-[#0B1120] checked:bg-teal-500 checked:border-teal-500 transition-all"
+                />
+                <CheckCircle2
+                  className="absolute h-3.5 w-3.5 text-slate-900 left-0.5 pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity"
+                  strokeWidth={3}
+                />
+              </div>
+              <label
+                htmlFor="terms"
+                className="text-xs text-slate-400 leading-relaxed cursor-pointer select-none"
+              >
+                I agree to the{" "}
+                <span className="text-teal-400 hover:underline">
+                  Terms of Service
+                </span>{" "}
+                and{" "}
+                <span className="text-teal-400 hover:underline">
+                  Privacy Policy
+                </span>
+                .
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-teal-400 to-blue-500 hover:from-teal-300 hover:to-blue-400 text-slate-900 font-bold py-4 rounded-xl transition-all shadow-[0_0_25px_rgba(45,212,191,0.3)] flex items-center justify-center gap-2"
+            >
+              Create Account <span className="text-xl leading-none">→</span>
+            </button>
+
+            {/* Already have an account - MOVED TO BOTTOM */}
+            <div className="text-center mt-2 pb-2">
+              <span className="text-sm text-slate-400">
+                Already have an account?{" "}
+              </span>
+              <Link
+                to="/login"
+                className="text-sm text-teal-400 hover:text-teal-300 font-medium transition-colors"
+              >
+                Log In
+              </Link>
+            </div>
+          </form>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10">
+        <p className="text-slate-400 text-[10px] sm:text-xs font-medium">
+          © 2026 HealthBot Project. All rights reserved.
+        </p>
+        <div className="flex items-center gap-4 text-[10px] sm:text-xs font-medium">
+          <Link
+            to="/privacy"
+            className="text-slate-500 hover:text-slate-400 transition-colors"
+          >
+            Privacy Policy
+          </Link>
+          <span className="text-slate-700">|</span>
+          <Link
+            to="/terms"
+            className="text-slate-500 hover:text-slate-400 transition-colors"
+          >
+            Terms of Service
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }
