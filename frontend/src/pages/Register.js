@@ -1,4 +1,4 @@
-/* VERSION_CONTROL: 1.2.7_STRICT_VALIDATION */
+/* VERSION_CONTROL: 1.2.8_FOOTER_RESTORED */
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -34,7 +34,7 @@ export default function Register() {
     // 1. Comparison Logic: This blocks the 'navigate' if passwords are different
     if (password !== confirmPassword) {
       setErrorMessage("Passwords do not match. Please check again.");
-      return; // STOPS THE FUNCTION HERE
+      return;
     }
 
     // 2. Terms Check
@@ -42,11 +42,11 @@ export default function Register() {
       setErrorMessage(
         "You must agree to the Terms of Service and Privacy Policy.",
       );
-      return; // STOPS THE FUNCTION HERE
+      return;
     }
 
-    // 3. Successful Logic - Only runs if the checks above passed
-    console.log("Passwords match. Proceeding to Chat...");
+    // 3. Successful Logic
+    console.log("Validation successful. Proceeding to Chat...");
     navigate("/chat");
   };
 
@@ -185,7 +185,7 @@ export default function Register() {
                   <input
                     type="number"
                     min="0"
-                    placeholder="Enter age"
+                    placeholder="Enter your age"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
@@ -198,7 +198,7 @@ export default function Register() {
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                   <input
                     type="tel"
-                    placeholder="Enter phone"
+                    placeholder="Enter phone number"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
@@ -217,7 +217,7 @@ export default function Register() {
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 appearance-none cursor-pointer"
                   >
                     <option value="" disabled selected>
-                      Select
+                      Select gender
                     </option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -233,7 +233,7 @@ export default function Register() {
                   <Droplet className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" />
                   <select className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none appearance-none cursor-pointer">
                     <option value="" disabled selected>
-                      Select
+                      Select group
                     </option>
                     <option value="A+">A+</option>
                     <option value="O+">O+</option>
@@ -266,7 +266,7 @@ export default function Register() {
               />
               <label
                 htmlFor="terms"
-                className="text-[10px] sm:text-xs text-slate-400 cursor-pointer"
+                className="text-[10px] sm:text-xs text-slate-400 cursor-pointer select-none"
               >
                 I agree to the{" "}
                 <span className="text-teal-400 font-medium hover:underline">
@@ -298,10 +298,27 @@ export default function Register() {
         </div>
       </main>
 
-      <footer className="pb-10 pt-4 opacity-40 flex flex-col items-center">
-        <p className="text-[10px] text-slate-500">
-          © 2026 HealthBot Project • V1.2.7 - FINAL
+      {/* Footer - Restored to match Login page exactly */}
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10">
+        <p className="text-slate-400 text-xs font-medium">
+          © 2026 HealthBot. All rights reserved.
         </p>
+        <div className="flex items-center gap-4 text-xs font-medium">
+          <Link
+            to="/privacy"
+            className="text-slate-500 hover:text-slate-400 transition-colors"
+          >
+            Privacy Policy
+          </Link>
+          <span className="text-slate-700">|</span>
+          <Link
+            to="/terms"
+            className="text-slate-500 hover:text-slate-400 transition-colors"
+          >
+            Terms of Service
+          </Link>
+        </div>
+        <p className="text-[10px] text-slate-600 opacity-50 mt-2">Ver 1.2.8</p>
       </footer>
     </div>
   );
