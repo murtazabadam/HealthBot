@@ -1,4 +1,4 @@
-/* VERSION_CONTROL: 1.1.0_FINAL_STABLE */
+/* VERSION_CONTROL: 1.2.0_FORCED_UPDATE */
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -31,17 +31,14 @@ export default function Register() {
       );
       return;
     }
-    // Form is valid - redirect to chat
-    console.log("Registration process initiated...");
     navigate("/chat");
   };
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
-      {/* Dynamic Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Navigation - Clean Logo Only */}
+      {/* Nav - Logo ONLY, No Links */}
       <nav className="flex items-center justify-start px-6 py-6 lg:px-12 w-full z-50">
         <Link to="/" className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-7 w-7 text-teal-400" />
@@ -51,10 +48,8 @@ export default function Register() {
         </Link>
       </nav>
 
-      {/* Main Registration Card */}
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-4 sm:my-10">
         <div className="bg-[#111827]/90 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-12 w-full max-w-[850px] shadow-2xl relative">
-          {/* Top Decorative Line */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
           <div className="flex flex-col items-center mb-8 text-center">
@@ -71,31 +66,30 @@ export default function Register() {
             className="flex flex-col gap-6 sm:gap-8"
           >
             {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-lg text-center">
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-lg text-center font-medium">
                 {errorMessage}
               </div>
             )}
 
-            {/* Row 1: Full Name & Email (REQUIRED) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* REQUIRED Fields Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Full Name <span className="text-rose-500 font-bold">*</span>
+                  Full Name <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                   <input
                     type="text"
-                    placeholder="Enter your full name"
+                    placeholder="Enter full name"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Email Address{" "}
-                  <span className="text-rose-500 font-bold">*</span>
+                  Email Address <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
@@ -103,30 +97,30 @@ export default function Register() {
                     type="email"
                     placeholder="name@example.com"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Row 2: Passwords (Password REQUIRED, Confirm Optional) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Passwords */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Password <span className="text-rose-500 font-bold">*</span>
+                  Password <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="Create a password"
+                    placeholder="Create password"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -141,12 +135,13 @@ export default function Register() {
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Repeat password"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                    ring-0
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
                   >
                     {showConfirmPassword ? (
                       <EyeOff size={18} />
@@ -158,8 +153,8 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 3: Age & Phone (OPTIONAL) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* OPTIONAL Row (No required tag) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300">
                   Age
@@ -189,11 +184,11 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 4: Gender (REQUIRED), Blood Group & Address (OPTIONAL) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Gender Required (*), Others Optional */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Gender <span className="text-rose-500 font-bold">*</span>
+                  Gender <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" />
@@ -222,13 +217,7 @@ export default function Register() {
                       Select
                     </option>
                     <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
                     <option value="O+">O+</option>
-                    <option value="O-">O-</option>
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                 </div>
@@ -248,52 +237,40 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Terms and Conditions */}
             <div className="flex items-start gap-3 py-2">
-              <div className="relative flex items-center">
-                <input
-                  type="checkbox"
-                  id="terms"
-                  checked={agreedToTerms}
-                  onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-700 bg-[#0B1120] checked:bg-teal-500 transition-all"
-                />
-                <CheckCircle2
-                  className="absolute h-3.5 w-3.5 text-slate-900 left-0.5 pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity"
-                  strokeWidth={3}
-                />
-              </div>
+              <input
+                type="checkbox"
+                id="terms"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="h-5 w-5 rounded border-slate-700 bg-[#0B1120] text-teal-500 cursor-pointer"
+              />
               <label
                 htmlFor="terms"
-                className="text-[10px] sm:text-xs text-slate-400 leading-relaxed cursor-pointer select-none"
+                className="text-[10px] sm:text-xs text-slate-400 cursor-pointer"
               >
                 I agree to the{" "}
-                <span className="text-teal-400 hover:underline font-medium">
-                  Terms of Service
-                </span>{" "}
-                and{" "}
-                <span className="text-teal-400 hover:underline font-medium">
-                  Privacy Policy
+                <span className="text-teal-400 font-medium">
+                  Terms & Privacy Policy
                 </span>
                 .
               </label>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-teal-400 to-blue-500 hover:from-teal-300 hover:to-blue-400 text-slate-900 font-extrabold py-4 rounded-xl transition-all shadow-[0_0_25px_rgba(45,212,191,0.3)] flex items-center justify-center gap-2 uppercase tracking-wide"
+              className="w-full bg-gradient-to-r from-teal-400 to-blue-500 text-slate-900 font-extrabold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 transition-all"
             >
-              Create Account <span className="text-xl">→</span>
+              Create Account →
             </button>
 
-            {/* THE LOGIN LINK - FIRMLY PLACED AT THE BOTTOM */}
-            <div className="text-center pt-4 border-t border-slate-800/50 mt-2">
+            {/* LOGIN LINK FIRMLY AT BOTTOM */}
+            <div className="text-center pt-6 border-t border-slate-800/50">
               <p className="text-sm text-slate-400">
                 Already have an account?{" "}
                 <Link
                   to="/login"
-                  className="text-teal-400 hover:text-teal-300 font-bold transition-colors"
+                  className="text-teal-400 font-extrabold hover:underline"
                 >
                   Log In
                 </Link>
@@ -303,10 +280,9 @@ export default function Register() {
         </div>
       </main>
 
-      {/* Footer with Version Check */}
-      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 px-4">
-        <p className="text-slate-500 text-[10px] sm:text-xs font-medium text-center opacity-60">
-          © 2026 HealthBot Project • Ver 1.1.0
+      <footer className="pb-10 pt-4 opacity-50 flex flex-col items-center">
+        <p className="text-[10px] text-slate-500">
+          © 2026 HealthBot • V1.2 - ACTIVE
         </p>
       </footer>
     </div>
