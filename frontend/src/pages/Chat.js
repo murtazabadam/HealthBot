@@ -12,15 +12,12 @@ import {
   Settings,
   LogOut,
   Send,
-  Bot,
   Paperclip,
   Mic,
-  ImageIcon,
-  Video,
-  BarChart3,
   UserCircle,
   Menu,
   X,
+  ChevronRight,
 } from "lucide-react";
 
 export default function Chat() {
@@ -32,6 +29,7 @@ export default function Chat() {
   const bottomRef = useRef(null);
   const navigate = useNavigate();
 
+  // Get user data from localStorage
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
 
@@ -57,18 +55,18 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  const sendMessage = async () => {
-    if (!inputText.trim() || loading) return;
+  const sendMessage = async (textOverride = null) => {
+    const textToSend = textOverride || inputText;
+    if (!textToSend.trim() || loading) return;
 
     const now = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const currentInput = inputText;
 
     setMessages((prev) => [
       ...prev,
-      { id: Date.now(), sender: "user", text: currentInput, time: now },
+      { id: Date.now(), sender: "user", text: textToSend, time: now },
     ]);
     setInputText("");
     setLoading(true);
@@ -76,7 +74,7 @@ export default function Chat() {
     try {
       const res = await axios.post(
         "https://healthbot-production-3c7d.up.railway.app/api/chat/message",
-        { text: currentInput },
+        { text: textToSend },
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
@@ -98,7 +96,7 @@ export default function Chat() {
         {
           id: Date.now() + 2,
           sender: "bot",
-          text: "⚠️ Could not reach the ML service. Please ensure the backend is live.",
+          text: "⚠️ Connection error. Please ensure the Python backend is live.",
           time: now,
         },
       ]);
@@ -108,10 +106,11 @@ export default function Chat() {
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-[#020617] lg:bg-transparent">
-      <div className="p-6 flex items-center justify-between lg:mb-4">
+    <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60">
+      <div className="p-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Activity className="h-7 w-7 text-cyan-400" strokeWidth={3} />
+          {/* Logo matches login/register page */}
+          <Activity className="h-7 w-7 text-teal-400" strokeWidth={3} />
           <span className="text-2xl font-bold text-white tracking-tight">
             HealthBot
           </span>
@@ -143,52 +142,36 @@ export default function Chat() {
           <span className="text-sm font-medium">Log Out</span>
         </button>
       </nav>
-
-      <div className="p-6 border-t border-slate-800/60 mt-auto">
-        <h4 className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-4">
-          Recent Chats
-        </h4>
-        <div className="space-y-3">
-          {["Fever and cough", "Headache relief"].map((c, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between text-xs text-slate-500 hover:text-slate-300 cursor-pointer"
-            >
-              <div className="flex items-center gap-2">
-                <MessageSquare size={12} /> {c}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative">
-      {/* Background Decor */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* MOBILE SIDEBAR OVERLAY */}
+      {/* MOBILE SIDEBAR */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         >
-          <div className="w-72 h-full" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="w-72 h-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <SidebarContent />
           </div>
         </div>
       )}
 
       {/* DESKTOP SIDEBAR */}
-      <aside className="w-72 border-r border-slate-800/60 bg-[#020617]/60 backdrop-blur-xl hidden lg:flex flex-col z-20">
+      <aside className="w-72 hidden lg:flex flex-col z-20">
         <SidebarContent />
       </aside>
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col h-screen relative z-10">
-        <header className="h-[64px] lg:h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617]/40 backdrop-blur-md">
+        <header className="h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617]/40 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button
               className="lg:hidden p-1 text-slate-400"
@@ -196,24 +179,29 @@ export default function Chat() {
             >
               <Menu size={24} />
             </button>
-            <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-              <Bot size={20} className="text-cyan-400" />
+            <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700">
+              {/* Logo icon matches the branding */}
+              <Activity size={22} className="text-teal-400" />
             </div>
             <div>
               <h3 className="text-white text-sm lg:text-base font-bold leading-none">
                 HealthBot
               </h3>
-              <p className="text-[9px] lg:text-[10px] text-cyan-400 font-bold uppercase mt-1 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse" />{" "}
+              <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />{" "}
                 Online
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 lg:gap-4">
-            <div className="hidden sm:block bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full text-[10px] font-bold text-slate-300">
+
+          {/* Header Right: Name + Profile Logo */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-slate-300 hidden sm:block uppercase tracking-wide">
               {user.name || "User"}
+            </span>
+            <div className="w-10 h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/50">
+              <UserCircle className="text-slate-500" size={28} />
             </div>
-            <UserCircle className="text-slate-500" size={28} />
           </div>
         </header>
 
@@ -231,19 +219,19 @@ export default function Chat() {
                 className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2`}
               >
                 <div
-                  className={`w-8 h-8 lg:w-9 lg:h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-cyan-500/10 border-cyan-500/20" : "bg-slate-800 border-slate-700"}`}
+                  className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : "bg-slate-800 border-slate-700"}`}
                 >
                   {msg.sender === "user" ? (
-                    <User size={16} className="text-cyan-400" />
+                    <User size={18} className="text-teal-400" />
                   ) : (
-                    <Bot size={16} className="text-cyan-400" />
+                    <Activity size={18} className="text-teal-400" />
                   )}
                 </div>
                 <div
                   className={`flex flex-col gap-1 ${msg.sender === "user" ? "items-end" : ""}`}
                 >
                   <div
-                    className={`p-3 lg:p-4 rounded-2xl text-xs lg:text-sm leading-relaxed ${msg.sender === "user" ? "bg-cyan-600 text-white rounded-tr-none" : "bg-slate-800/80 border border-slate-700/50 text-slate-200 rounded-tl-none"}`}
+                    className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none shadow-lg shadow-teal-500/10" : "bg-slate-800/80 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md"}`}
                   >
                     {msg.text}
                   </div>
@@ -256,8 +244,9 @@ export default function Chat() {
             {loading && (
               <div className="flex gap-4">
                 <div className="p-4 bg-slate-800/50 rounded-2xl flex gap-1 items-center">
-                  <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce" />
-                  <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce" />
+                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
                 </div>
               </div>
             )}
@@ -265,11 +254,30 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* INPUT & FEATURES */}
+        {/* INPUT & SUGGESTIONS */}
         <div className="p-4 lg:p-6 bg-gradient-to-t from-[#020617] to-transparent">
-          <div className="max-w-5xl mx-auto">
-            <div className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-1 lg:p-2 flex items-center gap-1 lg:gap-2 shadow-2xl mb-6">
-              <button className="p-2 text-slate-500 hover:text-cyan-400">
+          <div className="max-w-4xl mx-auto">
+            {/* Suggestion Chips */}
+            <div className="flex flex-wrap justify-center gap-2 mb-6">
+              {[
+                "I have a fever",
+                "stomach pain",
+                "fatigue",
+                "headache",
+                "itching",
+              ].map((symptom) => (
+                <button
+                  key={symptom}
+                  onClick={() => sendMessage(symptom)}
+                  className="bg-slate-800/40 border border-slate-700/50 px-4 py-2 rounded-full text-[11px] text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all flex items-center gap-1.5"
+                >
+                  {symptom} <ChevronRight size={10} />
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-1 lg:p-2 flex items-center gap-1 lg:gap-2 shadow-2xl mb-8">
+              <button className="p-2 text-slate-500 hover:text-teal-400">
                 <Paperclip size={18} />
               </button>
               <textarea
@@ -277,47 +285,29 @@ export default function Chat() {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyPress={(e) =>
-                  e.key === "Enter" && !e.shiftKey && sendMessage()
+                  e.key === "Enter" &&
+                  !e.shiftKey &&
+                  (e.preventDefault(), sendMessage())
                 }
                 placeholder="Describe symptoms..."
                 className="flex-1 bg-transparent border-none focus:ring-0 text-xs lg:text-sm text-white py-2 lg:py-3 resize-none scrollbar-hide"
               />
-              <button className="p-2 text-slate-500 hover:text-cyan-400">
+              <button className="p-2 text-slate-500 hover:text-teal-400">
                 <Mic size={18} />
               </button>
               <button
-                onClick={sendMessage}
-                className="bg-cyan-500 text-slate-900 p-2 rounded-xl transition-all"
+                onClick={() => sendMessage()}
+                className="bg-teal-500 text-slate-900 p-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-teal-500/20"
               >
                 <Send size={18} strokeWidth={3} />
               </button>
             </div>
 
-            {/* FEATURES GRID - MATCHES PHOTO 2 EXACTLY */}
-            <div className="border-t border-slate-800/60 pt-6 pb-2">
-              <div className="text-center mb-6">
-                <h4 className="text-cyan-400 font-bold text-[10px] lg:text-xs uppercase tracking-[0.2em] mb-1">
-                  These are more features we couldn't add
-                </h4>
-                <p className="text-slate-500 text-[8px] lg:text-[10px]">
-                  Due to time constraints and project scope, we couldn't
-                  implement the following advanced features.
-                </p>
-              </div>
-
-              {/* Force horizontal row on mobile with small scaling to match the 2nd photo */}
-              <div className="flex flex-row justify-between items-start gap-1 lg:gap-4 overflow-x-hidden">
-                <Feature icon={Mic} label="Voice Input" />
-                <Feature icon={ImageIcon} label="Image Analysis" />
-                <Feature icon={Bell} label="Med Reminder" />
-                <Feature icon={Video} label="Video Consult" />
-                <Feature icon={BarChart3} label="Health Insights" />
-              </div>
-
-              <p className="text-[8px] lg:text-[9px] text-slate-700 mt-6 text-center italic">
-                ⚠️ For guidance only. Not a substitute for a doctor.
-              </p>
-            </div>
+            {/* Disclaimer at the very bottom */}
+            <p className="text-[10px] text-slate-600 text-center italic mt-4 max-w-md mx-auto leading-relaxed border-t border-slate-800/60 pt-6">
+              ⚠️ For guidance only. Not a substitute for a doctor. Consult a
+              professional in serious cases.
+            </p>
           </div>
         </div>
       </main>
@@ -333,19 +323,8 @@ export default function Chat() {
 const SidebarBtn = ({ icon: Icon, label, active, onClick }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20" : "text-slate-400 hover:bg-slate-800/50"}`}
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "text-slate-400 hover:bg-slate-800/50"}`}
   >
     <Icon size={18} /> <span className="text-sm font-medium">{label}</span>
   </button>
-);
-
-const Feature = ({ icon: Icon, label }) => (
-  <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-    <div className="p-2 lg:p-3.5 bg-slate-900 rounded-xl border border-slate-800">
-      <Icon size={14} className="text-slate-500" />
-    </div>
-    <span className="text-[7px] lg:text-[9px] font-bold text-slate-400 uppercase text-center leading-none tracking-tighter whitespace-nowrap lg:whitespace-normal">
-      {label}
-    </span>
-  </div>
 );
