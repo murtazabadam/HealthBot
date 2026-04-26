@@ -1,4 +1,3 @@
-/* VERSION_CONTROL: 1.2.8_FOOTER_RESTORED */
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -298,7 +297,7 @@ export default function Register() {
         </div>
       </main>
 
-      {/* Footer - Restored to match Login page exactly */}
+      {/* Footer - Matches Login page exactly */}
       <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10">
         <p className="text-slate-400 text-xs font-medium">
           © 2026 HealthBot. All rights reserved.
@@ -318,7 +317,6 @@ export default function Register() {
             Terms of Service
           </Link>
         </div>
-        <p className="text-[10px] text-slate-600 opacity-50 mt-2">Ver 1.2.8</p>
       </footer>
     </div>
   );
