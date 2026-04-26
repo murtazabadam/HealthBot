@@ -1,6 +1,6 @@
-/* VERSION_CONTROL: 1.3.0_BLOOD_GROUP_COMPLETE */
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   Activity,
   Mail,
@@ -9,44 +9,99 @@ import {
   EyeOff,
   User,
   Calendar,
-  Phone,
   Droplet,
-  MapPin,
   ChevronDown,
+  CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
 
-  // State for password validation
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  // Form State
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    age: "",
+    phone: "",
+    gender: "",
+    bloodGroup: "",
+    address: "",
+    otp: "",
+  });
 
   const navigate = useNavigate();
 
-  const handleRegister = (e) => {
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const sendOTP = async () => {
+    if (!formData.email) {
+      setErrorMessage("Please enter a valid email address first.");
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
+      await axios.post(
+        "https://healthbot-production-3c7d.up.railway.app/api/auth/send-otp",
+        {
+          email: formData.email,
+        },
+      );
+      setOtpSent(true);
+      setSuccessMessage("Verification code sent to your email!");
+    } catch (error) {
+      setErrorMessage(
+        error.response?.data?.message || "Failed to send OTP. Try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e) => {
     e.preventDefault();
     setErrorMessage("");
 
-    // 1. Password Matching Logic
-    if (password !== confirmPassword) {
-      setErrorMessage("Passwords do not match. Please check again.");
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMessage("Passwords do not match.");
       return;
     }
 
-    // 2. Terms Validation
-    if (!agreedToTerms) {
-      setErrorMessage(
-        "You must agree to the Terms of Service and Privacy Policy.",
+    if (!otpSent) {
+      setErrorMessage("Please verify your email with an OTP first.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        "https://healthbot-production-3c7d.up.railway.app/api/auth/register",
+        formData,
       );
-      return;
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+        navigate("/chat");
+      }
+    } catch (error) {
+      setErrorMessage(
+        error.response?.data?.message || "Registration failed. Check your OTP.",
+      );
+    } finally {
+      setLoading(false);
     }
-
-    // Success redirect
-    navigate("/chat");
   };
 
   return (
@@ -54,7 +109,7 @@ export default function Register() {
       {/* Background Decor */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Navigation - Clean Logo */}
+      {/* Navigation */}
       <nav className="flex items-center justify-start px-6 py-6 lg:px-12 w-full z-50">
         <Link to="/" className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-7 w-7 text-teal-400" />
@@ -64,105 +119,150 @@ export default function Register() {
         </Link>
       </nav>
 
-      {/* Main Card */}
-      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-4 sm:my-10">
-        <div className="bg-[#111827]/90 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-12 w-full max-w-[850px] shadow-2xl relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
-
+      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-8">
+        <div className="bg-[#111827]/90 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-10 w-full max-w-[900px] shadow-2xl relative">
           <div className="flex flex-col items-center mb-8 text-center">
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
               Create Account
             </h1>
-            <p className="text-slate-400 text-xs sm:text-sm px-4">
-              Join HealthBot today and start your journey to better health.
+            <p className="text-slate-400 text-xs sm:text-sm">
+              Verified access to your personal AI Health Assistant.
             </p>
           </div>
 
-          <form
-            onSubmit={handleRegister}
-            className="flex flex-col gap-6 sm:gap-8"
-          >
+          <form onSubmit={handleRegister} className="flex flex-col gap-6">
             {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-lg text-center font-bold">
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-lg text-center font-bold animate-pulse">
                 {errorMessage}
               </div>
             )}
-
-            {/* Basic Required Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Full Name <span className="text-rose-500 font-bold">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-                  <input
-                    type="text"
-                    placeholder="Enter your full name"
-                    required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-all"
-                  />
-                </div>
+            {successMessage && (
+              <div className="bg-teal-500/10 border border-teal-500/50 text-teal-400 text-xs p-3 rounded-lg text-center font-bold">
+                {successMessage}
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Email Address{" "}
-                  <span className="text-rose-500 font-bold">*</span>
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-                  <input
-                    type="email"
-                    placeholder="name@example.com"
-                    required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-all"
-                  />
-                </div>
+            )}
+
+            {/* Row 1: Full Name */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
+                Full Name <span className="text-rose-500">*</span>
+              </label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
+                <input
+                  type="text"
+                  name="name"
+                  onChange={handleInputChange}
+                  placeholder="Enter full name"
+                  required
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                />
               </div>
             </div>
 
-            {/* Passwords */}
+            {/* Row 2: Email Address + Verify OTP Button Inline */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
+                Email Address <span className="text-rose-500">*</span>
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1 group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
+                  <input
+                    type="email"
+                    name="email"
+                    onChange={handleInputChange}
+                    placeholder="name@example.com"
+                    required
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={sendOTP}
+                  disabled={loading || otpSent}
+                  className={`px-6 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 min-w-[160px] ${
+                    otpSent
+                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-default"
+                      : "bg-teal-500 text-slate-900 hover:brightness-110 shadow-lg shadow-teal-500/10"
+                  }`}
+                >
+                  {loading ? (
+                    "Sending..."
+                  ) : otpSent ? (
+                    <>
+                      <CheckCircle2 size={16} /> Sent
+                    </>
+                  ) : (
+                    "Verify OTP"
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Conditional Row: OTP Input */}
+            {otpSent && (
+              <div className="flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
+                <label className="text-xs font-bold text-teal-400 uppercase tracking-widest">
+                  Enter 6-Digit Code
+                </label>
+                <div className="relative group">
+                  <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-teal-500" />
+                  <input
+                    type="text"
+                    name="otp"
+                    maxLength="6"
+                    onChange={handleInputChange}
+                    placeholder="0 0 0 0 0 0"
+                    className="w-full bg-[#0B1120] border-2 border-teal-500/30 rounded-xl py-4 pl-12 pr-4 text-lg tracking-[0.5em] font-mono text-white focus:outline-none focus:border-teal-400 transition-all text-center"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Row 3: Passwords */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Password <span className="text-rose-500 font-bold">*</span>
+                <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
+                  Password <span className="text-rose-500">*</span>
                 </label>
-                <div className="relative">
+                <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                   <input
                     type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Create a password"
+                    name="password"
+                    onChange={handleInputChange}
+                    placeholder="Create password"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-medium text-slate-300">
-                  Confirm Password
+                <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
+                  Confirm Password <span className="text-rose-500">*</span>
                 </label>
-                <div className="relative">
+                <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                   <input
                     type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm password"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500"
+                    name="confirmPassword"
+                    onChange={handleInputChange}
+                    placeholder="Confirm your password"
+                    required
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
                   >
                     {showConfirmPassword ? (
                       <EyeOff size={18} />
@@ -174,50 +274,39 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Optional Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Row 4: Age, Gender, Blood Group */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-medium text-slate-300">
+                <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
                   Age
                 </label>
-                <div className="relative">
+                <div className="relative group">
                   <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
                   <input
                     type="number"
-                    min="0"
-                    placeholder="Enter your age"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    name="age"
+                    min="1"
+                    max="120"
+                    onChange={handleInputChange}
+                    placeholder="Years"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400"
                   />
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-medium text-slate-300">
-                  Phone Number
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-                  <input
-                    type="tel"
-                    placeholder="Enter phone number"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Gender <span className="text-rose-500 font-bold">*</span>
+                <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
+                  Gender <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" />
                   <select
+                    name="gender"
+                    onChange={handleInputChange}
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 appearance-none cursor-pointer"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-400 appearance-none cursor-pointer"
                   >
                     <option value="" disabled selected>
-                      Select gender
+                      Select
                     </option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -225,17 +314,19 @@ export default function Register() {
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                 </div>
               </div>
-
-              {/* RESTORED AND COMPLETED BLOOD GROUP LIST */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-medium text-slate-300">
+                <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
                   Blood Group
                 </label>
                 <div className="relative">
                   <Droplet className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" />
-                  <select className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 appearance-none cursor-pointer">
+                  <select
+                    name="bloodGroup"
+                    onChange={handleInputChange}
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-400 appearance-none cursor-pointer"
+                  >
                     <option value="" disabled selected>
-                      Select group
+                      Group
                     </option>
                     <option value="A+">A+</option>
                     <option value="A-">A-</option>
@@ -249,66 +340,32 @@ export default function Register() {
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                 </div>
               </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-medium text-slate-300">
-                  Address
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
-                  <input
-                    type="text"
-                    placeholder="Enter address"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 py-2">
-              <input
-                type="checkbox"
-                id="terms"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="h-5 w-5 rounded border-slate-700 bg-[#0B1120] text-teal-500 cursor-pointer"
-              />
-              <label
-                htmlFor="terms"
-                className="text-[10px] sm:text-xs text-slate-400 cursor-pointer select-none"
-              >
-                I agree to the{" "}
-                <span className="text-teal-400 font-medium hover:underline">
-                  Terms & Privacy Policy
-                </span>
-                .
-              </label>
             </div>
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-teal-400 to-blue-500 text-slate-900 font-extrabold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 transition-all"
+              disabled={loading || !otpSent}
+              className="w-full bg-gradient-to-r from-teal-400 to-blue-500 text-slate-900 font-extrabold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 mt-4"
             >
-              Create Account →
+              {loading ? "Registering..." : "Create Account"}
             </button>
 
-            <div className="text-center pt-6 border-t border-slate-800/50 mt-2">
-              <p className="text-sm text-slate-400">
-                Already have an account?{" "}
-                <Link
-                  to="/login"
-                  className="text-teal-400 font-extrabold hover:underline transition-all"
-                >
-                  Log In
-                </Link>
-              </p>
-            </div>
+            <p className="text-center text-sm text-slate-400">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="text-teal-400 font-extrabold hover:underline transition-all"
+              >
+                Log In
+              </Link>
+            </p>
           </form>
         </div>
       </main>
 
-      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10">
-        <p className="text-slate-400 text-xs font-medium">
+      {/* Footer with Copyright and Links */}
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center">
+        <p className="text-slate-500 text-xs font-medium">
           © 2026 HealthBot. All rights reserved.
         </p>
         <div className="flex items-center gap-4 text-xs font-medium">
