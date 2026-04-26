@@ -1,4 +1,4 @@
-/* CACHE BUSTER: UPDATED_LAYOUT_V4_FINAL */
+/* VERSION_CONTROL_KEY: 1.0.5_STABLE_FIX */
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -31,6 +31,7 @@ export default function Register() {
       );
       return;
     }
+    // Success Logic
     navigate("/chat");
   };
 
@@ -39,7 +40,7 @@ export default function Register() {
       {/* Background Decor */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Navigation - STICKY LOGO ONLY */}
+      {/* Navigation - CLEANED: NO LINKS HERE */}
       <nav className="flex items-center justify-start px-6 py-6 lg:px-12 w-full z-50">
         <Link to="/" className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-7 w-7 text-teal-400" />
@@ -49,16 +50,16 @@ export default function Register() {
         </Link>
       </nav>
 
-      {/* Main Container */}
+      {/* Main Card */}
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-4 sm:my-10">
-        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-12 w-full max-w-[850px] shadow-[0_0_50px_rgba(13,148,136,0.1)] relative">
+        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-12 w-full max-w-[850px] shadow-2xl relative">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
           <div className="flex flex-col items-center mb-8 text-center">
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
               Create Account
             </h1>
-            <p className="text-slate-400 text-xs sm:text-sm">
+            <p className="text-slate-400 text-xs sm:text-sm px-4">
               Join HealthBot today and start your journey to better health.
             </p>
           </div>
@@ -73,7 +74,7 @@ export default function Register() {
               </div>
             )}
 
-            {/* Row 1: REQUIRED Fields (*) */}
+            {/* Row 1: REQUIRED Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
@@ -106,7 +107,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 2: Password REQUIRED, Confirm Optional */}
+            {/* Row 2: Password (REQUIRED) & Confirm (NOT REQUIRED) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
@@ -135,10 +136,10 @@ export default function Register() {
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+                  {/* REMOVED REQUIRED ATTRIBUTE */}
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Repeat password"
-                    title="Optional"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
                   />
                   <button
@@ -156,7 +157,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 3: Age & Phone (Optional) */}
+            {/* Row 3: Age & Phone (REMOVED REQUIRED ATTRIBUTE) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300">
@@ -283,13 +284,13 @@ export default function Register() {
               Create Account <span className="text-xl">→</span>
             </button>
 
-            {/* THE LOGIN LINK AT THE BOTTOM */}
-            <div className="text-center pt-4 border-t border-slate-800/60 mt-2">
+            {/* LOGIN LINK STRICTLY AT THE BOTTOM */}
+            <div className="text-center pt-4 border-t border-slate-800/50 mt-2">
               <p className="text-sm text-slate-400">
                 Already have an account?{" "}
                 <Link
                   to="/login"
-                  className="text-teal-400 hover:text-teal-300 font-extrabold transition-colors underline-offset-4 hover:underline"
+                  className="text-teal-400 hover:text-teal-300 font-extrabold transition-colors"
                 >
                   Log In
                 </Link>
@@ -299,19 +300,11 @@ export default function Register() {
         </div>
       </main>
 
+      {/* Footer */}
       <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 px-4">
         <p className="text-slate-500 text-[10px] sm:text-xs font-medium text-center opacity-60">
           © 2026 HealthBot Project. All rights reserved.
         </p>
-        <div className="flex items-center gap-4 text-[10px] sm:text-xs font-medium opacity-60">
-          <Link to="/privacy" className="hover:text-teal-400 transition-colors">
-            Privacy Policy
-          </Link>
-          <span className="text-slate-800">|</span>
-          <Link to="/terms" className="hover:text-teal-400 transition-colors">
-            Terms of Service
-          </Link>
-        </div>
       </footer>
     </div>
   );
