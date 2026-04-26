@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 export default function Chat() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Default open for desktop
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,7 +33,7 @@ export default function Chat() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
 
-  // Initial greeting with Full Name
+  // Initial greeting logic
   useEffect(() => {
     const now = new Date().toLocaleTimeString([], {
       hour: "2-digit",
@@ -49,6 +49,11 @@ export default function Chat() {
         time: now,
       },
     ]);
+
+    // On small screens, start with sidebar closed
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
   }, [user.name]);
 
   useEffect(() => {
@@ -109,7 +114,6 @@ export default function Chat() {
     <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60">
       <div className="p-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {/* Logo matches login/register page */}
           <Activity className="h-7 w-7 text-teal-400" strokeWidth={3} />
           <span className="text-2xl font-bold text-white tracking-tight">
             HealthBot
@@ -136,7 +140,7 @@ export default function Chat() {
             localStorage.clear();
             navigate("/login");
           }}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 mt-8 hover:bg-rose-500/10 transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 mt-8 hover:bg-rose-500/10 transition-all text-left"
         >
           <LogOut size={18} />{" "}
           <span className="text-sm font-medium">Log Out</span>
@@ -149,38 +153,39 @@ export default function Chat() {
     <div className="min-h-screen bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* MOBILE SIDEBAR */}
+      {/* DYNAMIC SIDEBAR (Works for both Mobile Drawer & Desktop Collapse) */}
+      <aside
+        className={`fixed lg:relative z-50 h-full transition-all duration-300 ease-in-out ${
+          isSidebarOpen
+            ? "w-72 translate-x-0"
+            : "w-0 -translate-x-full lg:translate-x-0 lg:w-0"
+        }`}
+      >
+        <div className="w-72 h-full">
+          <SidebarContent />
+        </div>
+      </aside>
+
+      {/* Overlay for mobile when sidebar is open */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
-        >
-          <div
-            className="w-72 h-full shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <SidebarContent />
-          </div>
-        </div>
+        />
       )}
-
-      {/* DESKTOP SIDEBAR */}
-      <aside className="w-72 hidden lg:flex flex-col z-20">
-        <SidebarContent />
-      </aside>
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col h-screen relative z-10">
         <header className="h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617]/40 backdrop-blur-md">
           <div className="flex items-center gap-3">
+            {/* Menu icon now toggles sidebar on BOTH desktop and mobile */}
             <button
-              className="lg:hidden p-1 text-slate-400"
-              onClick={() => setIsSidebarOpen(true)}
+              className="p-1.5 text-slate-400 hover:bg-slate-800 rounded-lg transition-colors"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             >
               <Menu size={24} />
             </button>
             <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700">
-              {/* Logo icon matches the branding */}
               <Activity size={22} className="text-teal-400" />
             </div>
             <div>
@@ -194,13 +199,13 @@ export default function Chat() {
             </div>
           </div>
 
-          {/* Header Right: Name + Profile Logo */}
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-slate-300 hidden sm:block uppercase tracking-wide">
+          <div className="flex items-center gap-2 lg:gap-3">
+            {/* Name visible in laptop AND mobile headers */}
+            <span className="text-[10px] lg:text-xs font-bold text-slate-200 uppercase tracking-wide truncate max-w-[100px] lg:max-w-none">
               {user.name || "User"}
             </span>
-            <div className="w-10 h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/50">
-              <UserCircle className="text-slate-500" size={28} />
+            <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/50 shadow-inner">
+              <UserCircle className="text-slate-500" size={24} />
             </div>
           </div>
         </header>
@@ -242,12 +247,9 @@ export default function Chat() {
               </div>
             ))}
             {loading && (
-              <div className="flex gap-4">
-                <div className="p-4 bg-slate-800/50 rounded-2xl flex gap-1 items-center">
-                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce" />
-                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
-                </div>
+              <div className="p-4 bg-slate-800/50 w-20 rounded-2xl flex gap-1 items-center ml-12">
+                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce" />
+                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
               </div>
             )}
             <div ref={bottomRef} />
@@ -257,7 +259,6 @@ export default function Chat() {
         {/* INPUT & SUGGESTIONS */}
         <div className="p-4 lg:p-6 bg-gradient-to-t from-[#020617] to-transparent">
           <div className="max-w-4xl mx-auto">
-            {/* Suggestion Chips */}
             <div className="flex flex-wrap justify-center gap-2 mb-6">
               {[
                 "I have a fever",
@@ -269,7 +270,7 @@ export default function Chat() {
                 <button
                   key={symptom}
                   onClick={() => sendMessage(symptom)}
-                  className="bg-slate-800/40 border border-slate-700/50 px-4 py-2 rounded-full text-[11px] text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all flex items-center gap-1.5"
+                  className="bg-slate-800/40 border border-slate-700/50 px-4 py-2 rounded-full text-[10px] lg:text-[11px] text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all flex items-center gap-1.5"
                 >
                   {symptom} <ChevronRight size={10} />
                 </button>
@@ -303,11 +304,16 @@ export default function Chat() {
               </button>
             </div>
 
-            {/* Disclaimer at the very bottom */}
-            <p className="text-[10px] text-slate-600 text-center italic mt-4 max-w-md mx-auto leading-relaxed border-t border-slate-800/60 pt-6">
-              ⚠️ For guidance only. Not a substitute for a doctor. Consult a
-              professional in serious cases.
-            </p>
+            {/* BRIGHT DISCLAIMER - High Contrast for visibility */}
+            <div className="flex justify-center mt-6 border-t border-slate-800/60 pt-6">
+              <div className="bg-slate-800/40 border border-teal-500/20 px-4 py-2 rounded-full">
+                <p className="text-[10px] lg:text-xs text-slate-100 font-semibold text-center italic flex items-center gap-2">
+                  <span className="text-yellow-400">⚠️</span> For guidance only.
+                  Not a substitute for a doctor. Consult a professional in
+                  serious cases.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </main>
@@ -323,7 +329,7 @@ export default function Chat() {
 const SidebarBtn = ({ icon: Icon, label, active, onClick }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "text-slate-400 hover:bg-slate-800/50"}`}
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active ? "bg-teal-500/10 text-teal-400 border border-teal-500/20 shadow-[0_0_15px_rgba(20,184,166,0.1)]" : "text-slate-400 hover:bg-slate-800/50"}`}
   >
     <Icon size={18} /> <span className="text-sm font-medium">{label}</span>
   </button>
