@@ -145,7 +145,7 @@ export default function Register() {
             {/* Row 1: Full Name */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Full Name
+                Full Name <span className="text-rose-500">*</span>
               </label>
               <div className="relative group">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
@@ -163,7 +163,7 @@ export default function Register() {
             {/* Row 2: Email Address + Verify OTP Button Inline */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
-                Email Address
+                Email Address <span className="text-rose-500">*</span>
               </label>
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1 group">
@@ -224,7 +224,7 @@ export default function Register() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Password
+                  Password <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
@@ -247,7 +247,7 @@ export default function Register() {
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Confirm Password
+                  Confirm Password <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
@@ -255,7 +255,7 @@ export default function Register() {
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
                     onChange={handleInputChange}
-                    placeholder="Repeat password"
+                    placeholder="Confirm your password"
                     required
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400"
                   />
@@ -295,7 +295,7 @@ export default function Register() {
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Gender
+                  Gender <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" />
@@ -347,7 +347,7 @@ export default function Register() {
               disabled={loading || !otpSent}
               className="w-full bg-gradient-to-r from-teal-400 to-blue-500 text-slate-900 font-extrabold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 mt-4"
             >
-              {loading ? "Registering..." : "Complete Registration →"}
+              {loading ? "Registering..." : "Create Account"}
             </button>
 
             <p className="text-center text-sm text-slate-400">
@@ -362,6 +362,28 @@ export default function Register() {
           </form>
         </div>
       </main>
+
+      {/* Footer with Copyright and Links */}
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center">
+        <p className="text-slate-500 text-xs font-medium">
+          © 2026 HealthBot. All rights reserved.
+        </p>
+        <div className="flex items-center gap-4 text-xs font-medium">
+          <Link
+            to="/privacy"
+            className="text-slate-500 hover:text-slate-400 transition-colors"
+          >
+            Privacy Policy
+          </Link>
+          <span className="text-slate-700">|</span>
+          <Link
+            to="/terms"
+            className="text-slate-500 hover:text-slate-400 transition-colors"
+          >
+            Terms of Service
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }
