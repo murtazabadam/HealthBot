@@ -27,7 +27,6 @@ export default function Register() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    confirmEmail: "",
     password: "",
     confirmPassword: "",
     age: "",
@@ -45,8 +44,8 @@ export default function Register() {
   };
 
   const sendOTP = async () => {
-    if (!formData.email || formData.email !== formData.confirmEmail) {
-      setErrorMessage("Please enter and confirm a valid email address first.");
+    if (!formData.email) {
+      setErrorMessage("Please enter a valid email address first.");
       return;
     }
 
@@ -54,7 +53,6 @@ export default function Register() {
     setErrorMessage("");
 
     try {
-      // Pointing to your Railway backend OTP service
       await axios.post(
         "https://healthbot-production-3c7d.up.railway.app/api/auth/send-otp",
         {
@@ -144,29 +142,31 @@ export default function Register() {
               </div>
             )}
 
-            {/* Row 1: Name & Email */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Full Name
-                </label>
-                <div className="relative group">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
-                  <input
-                    type="text"
-                    name="name"
-                    onChange={handleInputChange}
-                    placeholder="Enter full name"
-                    required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-all"
-                  />
-                </div>
+            {/* Row 1: Full Name */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
+                Full Name
+              </label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
+                <input
+                  type="text"
+                  name="name"
+                  onChange={handleInputChange}
+                  placeholder="Enter full name"
+                  required
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                />
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Email Address
-                </label>
-                <div className="relative group">
+            </div>
+
+            {/* Row 2: Email Address + Verify OTP Button Inline */}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
+                Email Address
+              </label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1 group">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <input
                     type="email"
@@ -174,57 +174,37 @@ export default function Register() {
                     onChange={handleInputChange}
                     placeholder="name@example.com"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={sendOTP}
+                  disabled={loading || otpSent}
+                  className={`px-6 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 min-w-[160px] ${
+                    otpSent
+                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-default"
+                      : "bg-teal-500 text-slate-900 hover:brightness-110 shadow-lg shadow-teal-500/10"
+                  }`}
+                >
+                  {loading ? (
+                    "Sending..."
+                  ) : otpSent ? (
+                    <>
+                      <CheckCircle2 size={16} /> Sent
+                    </>
+                  ) : (
+                    "Verify OTP"
+                  )}
+                </button>
               </div>
-            </div>
-
-            {/* Row 2: Confirm Email & OTP Trigger */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
-                  Confirm Email
-                </label>
-                <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
-                  <input
-                    type="email"
-                    name="confirmEmail"
-                    onChange={handleInputChange}
-                    placeholder="Repeat email"
-                    required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-all"
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={sendOTP}
-                disabled={loading || otpSent}
-                className={`py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
-                  otpSent
-                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-default"
-                    : "bg-teal-500 text-slate-900 hover:brightness-110 shadow-lg shadow-teal-500/10"
-                }`}
-              >
-                {loading ? (
-                  "Sending..."
-                ) : otpSent ? (
-                  <>
-                    <CheckCircle2 size={16} /> Code Sent
-                  </>
-                ) : (
-                  "Send Verification Code"
-                )}
-              </button>
             </div>
 
             {/* Conditional Row: OTP Input */}
             {otpSent && (
               <div className="flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
                 <label className="text-xs font-bold text-teal-400 uppercase tracking-widest">
-                  Enter 6-Digit OTP
+                  Enter 6-Digit Code
                 </label>
                 <div className="relative group">
                   <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-teal-500" />
@@ -234,7 +214,7 @@ export default function Register() {
                     maxLength="6"
                     onChange={handleInputChange}
                     placeholder="0 0 0 0 0 0"
-                    className="w-full bg-[#0B1120] border-2 border-teal-500/30 rounded-xl py-4 pl-12 pr-4 text-lg tracking-[0.5em] font-mono text-white focus:outline-none focus:border-teal-500 transition-all text-center"
+                    className="w-full bg-[#0B1120] border-2 border-teal-500/30 rounded-xl py-4 pl-12 pr-4 text-lg tracking-[0.5em] font-mono text-white focus:outline-none focus:border-teal-400 transition-all text-center"
                   />
                 </div>
               </div>
@@ -254,7 +234,7 @@ export default function Register() {
                     onChange={handleInputChange}
                     placeholder="Create password"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400"
                   />
                   <button
                     type="button"
@@ -277,7 +257,7 @@ export default function Register() {
                     onChange={handleInputChange}
                     placeholder="Repeat password"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400"
                   />
                   <button
                     type="button"
@@ -294,7 +274,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 4: Age, Gender, Blood Group (8 types) */}
+            {/* Row 4: Age, Gender, Blood Group */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-medium text-slate-300 uppercase tracking-wider">
@@ -305,9 +285,11 @@ export default function Register() {
                   <input
                     type="number"
                     name="age"
+                    min="1"
+                    max="120"
                     onChange={handleInputChange}
                     placeholder="Years"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400"
                   />
                 </div>
               </div>
@@ -321,7 +303,7 @@ export default function Register() {
                     name="gender"
                     onChange={handleInputChange}
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 appearance-none cursor-pointer"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-400 appearance-none cursor-pointer"
                   >
                     <option value="" disabled selected>
                       Select
@@ -341,7 +323,7 @@ export default function Register() {
                   <select
                     name="bloodGroup"
                     onChange={handleInputChange}
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 appearance-none cursor-pointer"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-400 appearance-none cursor-pointer"
                   >
                     <option value="" disabled selected>
                       Group
