@@ -1,3 +1,4 @@
+/* CACHE BUSTER: UPDATED_LAYOUT_V4_FINAL */
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -30,26 +31,16 @@ export default function Register() {
       );
       return;
     }
-    // Success Logic
-    console.log("Registration successful");
     navigate("/chat");
   };
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white relative flex flex-col items-center overflow-x-hidden">
-      {/* Background Glows */}
+      {/* Background Decor */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div
-        className="absolute inset-0 pointer-events-none opacity-10"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)",
-          backgroundSize: "40px 40px",
-        }}
-      />
 
-      {/* Navigation - LOGO ONLY */}
-      <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
+      {/* Navigation - STICKY LOGO ONLY */}
+      <nav className="flex items-center justify-start px-6 py-6 lg:px-12 w-full z-50">
         <Link to="/" className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-7 w-7 text-teal-400" />
           <span className="text-2xl font-bold tracking-tight text-white">
@@ -59,7 +50,7 @@ export default function Register() {
       </nav>
 
       {/* Main Container */}
-      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-6">
+      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-4 sm:my-10">
         <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-12 w-full max-w-[850px] shadow-[0_0_50px_rgba(13,148,136,0.1)] relative">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
@@ -82,11 +73,11 @@ export default function Register() {
               </div>
             )}
 
-            {/* Row 1: Full Name & Email (REQUIRED) */}
+            {/* Row 1: REQUIRED Fields (*) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Full Name <span className="text-rose-500">*</span>
+                  Full Name <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
@@ -100,7 +91,8 @@ export default function Register() {
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Email Address <span className="text-rose-500">*</span>
+                  Email Address{" "}
+                  <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
@@ -114,11 +106,11 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 2: Passwords (Password REQUIRED, Confirm Optional) */}
+            {/* Row 2: Password REQUIRED, Confirm Optional */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Password <span className="text-rose-500">*</span>
+                  Password <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
@@ -146,7 +138,7 @@ export default function Register() {
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Repeat password"
-                    title="Optional field"
+                    title="Optional"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
                   />
                   <button
@@ -164,7 +156,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 3: Age & Phone Number (Optional) */}
+            {/* Row 3: Age & Phone (Optional) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300">
@@ -175,9 +167,8 @@ export default function Register() {
                   <input
                     type="number"
                     min="0"
-                    max="120"
                     placeholder="Enter your age"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                 </div>
               </div>
@@ -190,23 +181,23 @@ export default function Register() {
                   <input
                     type="tel"
                     placeholder="Enter phone number"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Row 4: Gender (REQUIRED), Blood Group & Address (Optional) */}
+            {/* Row 4: Gender REQUIRED (*), Others Optional */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs sm:text-sm font-medium text-slate-300 flex gap-1">
-                  Gender <span className="text-rose-500">*</span>
+                  Gender <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" />
                   <select
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors appearance-none cursor-pointer"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 appearance-none cursor-pointer"
                   >
                     <option value="" disabled selected>
                       Select gender
@@ -224,9 +215,9 @@ export default function Register() {
                 </label>
                 <div className="relative">
                   <Droplet className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 pointer-events-none" />
-                  <select className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-10 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors appearance-none cursor-pointer">
+                  <select className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-10 text-sm text-white focus:outline-none appearance-none cursor-pointer">
                     <option value="" disabled selected>
-                      Select blood group
+                      Select blood
                     </option>
                     <option value="A+">A+</option>
                     <option value="A-">A-</option>
@@ -249,13 +240,12 @@ export default function Register() {
                   <input
                     type="text"
                     placeholder="Enter address"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500 transition-colors"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Terms and Conditions */}
             <div className="flex items-start gap-3 py-2">
               <div className="relative flex items-center">
                 <input
@@ -263,7 +253,7 @@ export default function Register() {
                   id="terms"
                   checked={agreedToTerms}
                   onChange={(e) => setAgreedToTerms(e.target.checked)}
-                  className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-700 bg-[#0B1120] checked:bg-teal-500 checked:border-teal-500 transition-all"
+                  className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-700 bg-[#0B1120] checked:bg-teal-500 transition-all"
                 />
                 <CheckCircle2
                   className="absolute h-3.5 w-3.5 text-slate-900 left-0.5 pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity"
@@ -275,11 +265,11 @@ export default function Register() {
                 className="text-[10px] sm:text-xs text-slate-400 leading-relaxed cursor-pointer select-none"
               >
                 I agree to the{" "}
-                <span className="text-teal-400 hover:underline">
+                <span className="text-teal-400 hover:underline font-medium">
                   Terms of Service
                 </span>{" "}
                 and{" "}
-                <span className="text-teal-400 hover:underline">
+                <span className="text-teal-400 hover:underline font-medium">
                   Privacy Policy
                 </span>
                 .
@@ -288,18 +278,18 @@ export default function Register() {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-teal-400 to-blue-500 hover:from-teal-300 hover:to-blue-400 text-slate-900 font-bold py-4 rounded-xl transition-all shadow-[0_0_25px_rgba(45,212,191,0.3)] flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-teal-400 to-blue-500 hover:from-teal-300 hover:to-blue-400 text-slate-900 font-extrabold py-4 rounded-xl transition-all shadow-[0_0_25px_rgba(45,212,191,0.3)] flex items-center justify-center gap-2 uppercase tracking-wide"
             >
-              Create Account <span className="text-xl leading-none">→</span>
+              Create Account <span className="text-xl">→</span>
             </button>
 
-            {/* MOVED TO BOTTOM & STYLED FOR MOBILE */}
-            <div className="text-center pt-2 border-t border-slate-800/50 mt-2">
-              <p className="text-xs sm:text-sm text-slate-400">
+            {/* THE LOGIN LINK AT THE BOTTOM */}
+            <div className="text-center pt-4 border-t border-slate-800/60 mt-2">
+              <p className="text-sm text-slate-400">
                 Already have an account?{" "}
                 <Link
                   to="/login"
-                  className="text-teal-400 hover:text-teal-300 font-bold transition-colors"
+                  className="text-teal-400 hover:text-teal-300 font-extrabold transition-colors underline-offset-4 hover:underline"
                 >
                   Log In
                 </Link>
@@ -309,23 +299,16 @@ export default function Register() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 px-4">
-        <p className="text-slate-500 text-[10px] sm:text-xs font-medium text-center">
+        <p className="text-slate-500 text-[10px] sm:text-xs font-medium text-center opacity-60">
           © 2026 HealthBot Project. All rights reserved.
         </p>
-        <div className="flex items-center gap-4 text-[10px] sm:text-xs font-medium">
-          <Link
-            to="/privacy"
-            className="text-slate-600 hover:text-slate-400 transition-colors"
-          >
+        <div className="flex items-center gap-4 text-[10px] sm:text-xs font-medium opacity-60">
+          <Link to="/privacy" className="hover:text-teal-400 transition-colors">
             Privacy Policy
           </Link>
           <span className="text-slate-800">|</span>
-          <Link
-            to="/terms"
-            className="text-slate-600 hover:text-slate-400 transition-colors"
-          >
+          <Link to="/terms" className="hover:text-teal-400 transition-colors">
             Terms of Service
           </Link>
         </div>
