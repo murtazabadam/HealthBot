@@ -1,102 +1,330 @@
-import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import {
+  Activity,
+  MessageSquare,
+  History,
+  Bookmark,
+  FolderHeart,
+  Bell,
+  User,
+  Settings,
+  LogOut,
+  Send,
+  Paperclip,
+  Mic,
+  UserCircle,
+  Menu,
+  X,
+  ChevronRight,
+} from "lucide-react";
 
 export default function Chat() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+  const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
+
   const bottomRef = useRef(null);
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const token = localStorage.getItem('token');
+
+  // Get user data from localStorage
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const token = localStorage.getItem("token");
+
+  // Initial greeting with Full Name
+  useEffect(() => {
+    const now = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const fullName = user.name || "User";
+
+    setMessages([
+      {
+        id: "welcome",
+        sender: "bot",
+        text: `Hello ${fullName}! I am your HealthBot. Please describe your symptoms.`,
+        time: now,
+      },
+    ]);
+  }, [user.name]);
 
   useEffect(() => {
-    // Welcome message
-    setMessages([{ sender: 'bot', text: "Hello! I'm HealthBot 🤖 Describe your symptoms and I'll help analyze them. Example: \"I have fever, cough and fatigue\"" }]);
-  }, []);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  const sendMessage = async (textOverride = null) => {
+    const textToSend = textOverride || inputText;
+    if (!textToSend.trim() || loading) return;
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-    const userMsg = { sender: 'user', text: input };
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
+    const now = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now(), sender: "user", text: textToSend, time: now },
+    ]);
+    setInputText("");
     setLoading(true);
+
     try {
-      const res = await axios.post('https://healthbot-production-3c7d.up.railway.app/api/chat/message',
-        { text: input },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await axios.post(
+        "https://healthbot-production-3c7d.up.railway.app/api/chat/message",
+        { text: textToSend },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-      setMessages(prev => [...prev, { sender: 'bot', text: res.data.reply }]);
-    } catch {
-      setMessages(prev => [...prev, { sender: 'bot', text: 'Sorry, something went wrong. Please try again.' }]);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: "bot",
+          text: res.data.reply,
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 2,
+          sender: "bot",
+          text: "⚠️ Connection error. Please ensure the Python backend is live.",
+          time: now,
+        },
+      ]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const handleKey = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60">
+      <div className="p-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {/* Logo matches login/register page */}
+          <Activity className="h-7 w-7 text-teal-400" strokeWidth={3} />
+          <span className="text-2xl font-bold text-white tracking-tight">
+            HealthBot
+          </span>
+        </div>
+        <button
+          className="lg:hidden text-slate-400"
+          onClick={() => setIsSidebarOpen(false)}
+        >
+          <X size={24} />
+        </button>
+      </div>
 
-  const logout = () => { localStorage.clear(); navigate('/login'); };
+      <nav className="flex-1 px-4 space-y-1">
+        <SidebarBtn icon={MessageSquare} label="New Chat" active />
+        <SidebarBtn icon={History} label="Chat History" />
+        <SidebarBtn icon={Bookmark} label="Saved Conversations" />
+        <SidebarBtn icon={FolderHeart} label="Health Records" />
+        <SidebarBtn icon={Bell} label="Reminders" />
+        <SidebarBtn icon={User} label="Profile" />
+        <SidebarBtn icon={Settings} label="Settings" />
+        <button
+          onClick={() => {
+            localStorage.clear();
+            navigate("/login");
+          }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 mt-8 hover:bg-rose-500/10 transition-all"
+        >
+          <LogOut size={18} />{" "}
+          <span className="text-sm font-medium">Log Out</span>
+        </button>
+      </nav>
+    </div>
+  );
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <div style={styles.headerLeft}>
-          <span style={styles.logo}>⚕️ HealthBot</span>
-          <span style={styles.online}>● Online</span>
-        </div>
-        <div style={styles.headerRight}>
-          <span style={styles.userName}>{user.name}</span>
-          <button style={styles.logoutBtn} onClick={logout}>Logout</button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative">
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      <div style={styles.messages}>
-        {messages.map((msg, i) => (
-          <div key={i} style={{ display:'flex', justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start', marginBottom:'12px' }}>
-            {msg.sender === 'bot' && <div style={styles.avatar}>🤖</div>}
-            <div style={msg.sender === 'user' ? styles.userBubble : styles.botBubble}>
-              {msg.text}
+      {/* MOBILE SIDEBAR */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        >
+          <div
+            className="w-72 h-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SidebarContent />
+          </div>
+        </div>
+      )}
+
+      {/* DESKTOP SIDEBAR */}
+      <aside className="w-72 hidden lg:flex flex-col z-20">
+        <SidebarContent />
+      </aside>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 flex flex-col h-screen relative z-10">
+        <header className="h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617]/40 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <button
+              className="lg:hidden p-1 text-slate-400"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu size={24} />
+            </button>
+            <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700">
+              {/* Logo icon matches the branding */}
+              <Activity size={22} className="text-teal-400" />
+            </div>
+            <div>
+              <h3 className="text-white text-sm lg:text-base font-bold leading-none">
+                HealthBot
+              </h3>
+              <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />{" "}
+                Online
+              </p>
             </div>
           </div>
-        ))}
-        {loading && (
-          <div style={{ display:'flex', marginBottom:'12px' }}>
-            <div style={styles.avatar}>🤖</div>
-            <div style={styles.botBubble}>Analyzing symptoms...</div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
 
-      <div style={styles.inputArea}>
-        <textarea style={styles.textarea} rows={1}
-          placeholder="Describe your symptoms... (e.g. I have fever and cough)"
-          value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey} />
-        <button style={styles.sendBtn} onClick={sendMessage} disabled={loading}>Send</button>
-      </div>
+          {/* Header Right: Name + Profile Logo */}
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-slate-300 hidden sm:block uppercase tracking-wide">
+              {user.name || "User"}
+            </span>
+            <div className="w-10 h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/50">
+              <UserCircle className="text-slate-500" size={28} />
+            </div>
+          </div>
+        </header>
+
+        {/* CHAT MESSAGES */}
+        <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 scrollbar-hide">
+          <div className="max-w-4xl mx-auto space-y-6">
+            <div className="flex justify-center">
+              <span className="text-[9px] lg:text-[10px] bg-slate-800/50 px-3 py-1 rounded-full text-slate-500 font-bold uppercase tracking-widest">
+                Today
+              </span>
+            </div>
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2`}
+              >
+                <div
+                  className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : "bg-slate-800 border-slate-700"}`}
+                >
+                  {msg.sender === "user" ? (
+                    <User size={18} className="text-teal-400" />
+                  ) : (
+                    <Activity size={18} className="text-teal-400" />
+                  )}
+                </div>
+                <div
+                  className={`flex flex-col gap-1 ${msg.sender === "user" ? "items-end" : ""}`}
+                >
+                  <div
+                    className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none shadow-lg shadow-teal-500/10" : "bg-slate-800/80 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md"}`}
+                  >
+                    {msg.text}
+                  </div>
+                  <span className="text-[8px] text-slate-600 font-bold uppercase">
+                    {msg.time}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="flex gap-4">
+                <div className="p-4 bg-slate-800/50 rounded-2xl flex gap-1 items-center">
+                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce" />
+                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+        </div>
+
+        {/* INPUT & SUGGESTIONS */}
+        <div className="p-4 lg:p-6 bg-gradient-to-t from-[#020617] to-transparent">
+          <div className="max-w-4xl mx-auto">
+            {/* Suggestion Chips */}
+            <div className="flex flex-wrap justify-center gap-2 mb-6">
+              {[
+                "I have a fever",
+                "stomach pain",
+                "fatigue",
+                "headache",
+                "itching",
+              ].map((symptom) => (
+                <button
+                  key={symptom}
+                  onClick={() => sendMessage(symptom)}
+                  className="bg-slate-800/40 border border-slate-700/50 px-4 py-2 rounded-full text-[11px] text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all flex items-center gap-1.5"
+                >
+                  {symptom} <ChevronRight size={10} />
+                </button>
+              ))}
+            </div>
+
+            <div className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-1 lg:p-2 flex items-center gap-1 lg:gap-2 shadow-2xl mb-8">
+              <button className="p-2 text-slate-500 hover:text-teal-400">
+                <Paperclip size={18} />
+              </button>
+              <textarea
+                rows={1}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyPress={(e) =>
+                  e.key === "Enter" &&
+                  !e.shiftKey &&
+                  (e.preventDefault(), sendMessage())
+                }
+                placeholder="Describe symptoms..."
+                className="flex-1 bg-transparent border-none focus:ring-0 text-xs lg:text-sm text-white py-2 lg:py-3 resize-none scrollbar-hide"
+              />
+              <button className="p-2 text-slate-500 hover:text-teal-400">
+                <Mic size={18} />
+              </button>
+              <button
+                onClick={() => sendMessage()}
+                className="bg-teal-500 text-slate-900 p-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-teal-500/20"
+              >
+                <Send size={18} strokeWidth={3} />
+              </button>
+            </div>
+
+            {/* Disclaimer at the very bottom */}
+            <p className="text-[10px] text-slate-600 text-center italic mt-4 max-w-md mx-auto leading-relaxed border-t border-slate-800/60 pt-6">
+              ⚠️ For guidance only. Not a substitute for a doctor. Consult a
+              professional in serious cases.
+            </p>
+          </div>
+        </div>
+      </main>
+
+      <style>{`
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 }
 
-const styles = {
-  container: { display:'flex', flexDirection:'column', height:'100vh', background:'#0f172a', color:'#e2e8f0' },
-  header: { display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 24px', background:'#1e293b', borderBottom:'1px solid #334155' },
-  headerLeft: { display:'flex', alignItems:'center', gap:'12px' },
-  headerRight: { display:'flex', alignItems:'center', gap:'12px' },
-  logo: { fontSize:'20px', fontWeight:'700', color:'#38bdf8' },
-  online: { fontSize:'12px', color:'#22c55e' },
-  userName: { fontSize:'13px', color:'#94a3b8' },
-  logoutBtn: { padding:'6px 14px', background:'transparent', border:'1px solid #334155', color:'#94a3b8', borderRadius:'6px', cursor:'pointer', fontSize:'12px' },
-  messages: { flex:1, overflowY:'auto', padding:'24px', display:'flex', flexDirection:'column' },
-  avatar: { width:'32px', height:'32px', borderRadius:'50%', background:'#1e40af', display:'flex', alignItems:'center', justifyContent:'center', marginRight:'8px', flexShrink:0, fontSize:'16px' },
-  botBubble: { maxWidth:'70%', padding:'12px 16px', background:'#1e293b', borderRadius:'0 12px 12px 12px', fontSize:'14px', lineHeight:'1.6', border:'1px solid #334155', whiteSpace:'pre-wrap' },
-  userBubble: { maxWidth:'70%', padding:'12px 16px', background:'#0369a1', borderRadius:'12px 0 12px 12px', fontSize:'14px', lineHeight:'1.6', whiteSpace:'pre-wrap' },
-  inputArea: { display:'flex', gap:'12px', padding:'16px 24px', background:'#1e293b', borderTop:'1px solid #334155' },
-  textarea: { flex:1, padding:'12px 16px', background:'#0f172a', border:'1px solid #334155', borderRadius:'8px', color:'#e2e8f0', fontSize:'14px', resize:'none', outline:'none' },
-  sendBtn: { padding:'12px 24px', background:'#0ea5e9', color:'#fff', border:'none', borderRadius:'8px', fontWeight:'600', cursor:'pointer', fontSize:'14px' }
-};
+const SidebarBtn = ({ icon: Icon, label, active, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "text-slate-400 hover:bg-slate-800/50"}`}
+  >
+    <Icon size={18} /> <span className="text-sm font-medium">{label}</span>
+  </button>
+);
