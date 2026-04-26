@@ -1,4 +1,4 @@
-/* VERSION_CONTROL: 1.2.0_FORCED_UPDATE */
+/* VERSION_CONTROL: 1.2.2_BUILD_FIX */
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -12,7 +12,6 @@ import {
   Phone,
   Droplet,
   MapPin,
-  CheckCircle2,
   ChevronDown,
 } from "lucide-react";
 
@@ -282,7 +281,7 @@ export default function Register() {
 
       <footer className="pb-10 pt-4 opacity-50 flex flex-col items-center">
         <p className="text-[10px] text-slate-500">
-          © 2026 HealthBot • V1.2 - ACTIVE
+          © 2026 HealthBot • V1.2.2 - BUILD READY
         </p>
       </footer>
     </div>
