@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 export default function Chat() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Default open for desktop
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,6 +49,11 @@ export default function Chat() {
         time: now,
       },
     ]);
+
+    // On mobile, start with sidebar closed
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
   }, [user.name]);
 
   useEffect(() => {
@@ -105,9 +110,8 @@ export default function Chat() {
     }
   };
 
-  // Sidebar Component used for both Desktop and Mobile
-  const SidebarContent = ({ isMobile }) => (
-    <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60 z-50">
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60 transition-all duration-300">
       <div className="p-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" strokeWidth={3} />
@@ -115,14 +119,13 @@ export default function Chat() {
             HealthBot
           </span>
         </div>
-        {isMobile && (
-          <button
-            className="text-slate-400 p-1 hover:bg-slate-800 rounded-lg"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <X size={24} />
-          </button>
-        )}
+        {/* Toggle button inside sidebar for easy closing on mobile/desktop */}
+        <button
+          className="text-slate-400 p-1 hover:bg-slate-800 rounded-lg transition-colors"
+          onClick={() => setIsSidebarOpen(false)}
+        >
+          <X size={24} />
+        </button>
       </div>
 
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
@@ -150,39 +153,36 @@ export default function Chat() {
     <div className="min-h-screen bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* MOBILE SIDEBAR OVERLAY */}
+      {/* SIDEBAR OVERLAY / PERMANENT SIDEBAR */}
       <div
-        className={`fixed inset-0 z-[60] transition-opacity duration-300 lg:hidden ${isSidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+          isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"
+        } overflow-hidden`}
       >
-        <div
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-        <div
-          className={`absolute left-0 top-0 bottom-0 w-72 transition-transform duration-300 ease-in-out transform ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
-        >
-          <SidebarContent isMobile />
+        {/* For mobile, show dark background overlay */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm lg:hidden z-40"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+        <div className="relative z-50 h-full w-72">
+          <SidebarContent />
         </div>
       </div>
 
-      {/* DESKTOP SIDEBAR */}
-      <aside className="w-72 hidden lg:flex flex-col z-20">
-        <SidebarContent isMobile={false} />
-      </aside>
-
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col h-screen relative z-10">
+      <main className="flex-1 flex flex-col h-screen relative z-10 overflow-hidden">
         <header className="h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617]/40 backdrop-blur-md">
           <div className="flex items-center gap-3">
-            {/* Hamburger only shows when sidebar is not permanently visible */}
+            {/* Menu button now visible even on Laptop view to hide sidebar */}
             <button
-              className="lg:hidden p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-colors"
+              className={`p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-all ${isSidebarOpen ? "opacity-0 pointer-events-none lg:hidden" : "opacity-100"}`}
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu size={24} />
             </button>
 
-            {/* Logo and Status */}
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700">
                 <Activity size={22} className="text-teal-400" />
@@ -199,9 +199,8 @@ export default function Chat() {
             </div>
           </div>
 
-          {/* Header Right: Name + Profile Icon */}
           <div className="flex items-center gap-2 lg:gap-3">
-            <span className="text-[10px] lg:text-xs font-bold text-slate-100 uppercase tracking-wide truncate max-w-[100px] lg:max-w-none">
+            <span className="text-[10px] lg:text-xs font-bold text-slate-100 uppercase tracking-wide truncate max-w-[80px] lg:max-w-none">
               {user.name || "User"}
             </span>
             <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/50">
@@ -210,7 +209,6 @@ export default function Chat() {
           </div>
         </header>
 
-        {/* MESSAGES VIEW */}
         <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 scrollbar-hide no-scrollbar">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex justify-center">
@@ -261,10 +259,8 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* INPUT BAR & SUGGESTIONS */}
         <div className="p-4 lg:p-6 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent">
           <div className="max-w-4xl mx-auto">
-            {/* Symptom Chips - Matching requested labels */}
             <div className="flex flex-wrap justify-center gap-2 mb-6">
               {[
                 "I have a fever",
@@ -276,7 +272,7 @@ export default function Chat() {
                 <button
                   key={symptom}
                   onClick={() => sendMessage(symptom)}
-                  className="bg-slate-800/60 border border-slate-700/50 px-4 py-2 rounded-full text-[10px] lg:text-[11px] text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all flex items-center gap-1.5"
+                  className="bg-slate-800/40 border border-slate-700/50 px-4 py-2 rounded-full text-[10px] lg:text-[11px] text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all flex items-center gap-1.5"
                 >
                   {symptom} <ChevronRight size={10} />
                 </button>
@@ -310,11 +306,10 @@ export default function Chat() {
               </button>
             </div>
 
-            {/* BRIGHTER Disclaimer at the very bottom */}
+            {/* BRIGHT ONE-LINE Medical Disclaimer */}
             <div className="flex justify-center mt-6 border-t border-slate-800/60 pt-6">
-              <p className="text-[10px] lg:text-[11px] text-slate-100 font-bold text-center italic max-w-md mx-auto leading-relaxed drop-shadow-sm">
-                ⚠️ For guidance only. Not a substitute for a doctor. Consult a
-                professional in serious cases.
+              <p className="text-[10px] lg:text-[11px] text-teal-400 font-bold text-center whitespace-nowrap overflow-hidden text-ellipsis drop-shadow-[0_0_8px_rgba(45,212,191,0.2)]">
+                🩺 General guidance only. Consult a professional if serious.
               </p>
             </div>
           </div>
