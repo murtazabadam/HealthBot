@@ -14,8 +14,6 @@ import {
   Lock,
   Eye,
   EyeOff,
-  ChevronRight,
-  ShieldCheck,
   Paperclip,
   Mic,
 } from "lucide-react";
@@ -25,28 +23,35 @@ const getFirstName = (name) => (name ? name.trim().split(" ")[0] : "User");
 
 // --- COMPONENTS ---
 
+// MATCHING IMAGE: WhatsApp Image 2026-04-28 at 22.33.51.jpeg
 const Home = ({ setPage }) => (
-  <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+  <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center justify-center p-6 text-center relative overflow-hidden font-sans">
+    {/* Subtle Background Glow */}
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-    <div className="relative z-10 flex flex-col items-center">
-      <Activity className="h-32 w-32 text-teal-400 mb-12" strokeWidth={1.5} />
-      <h1 className="text-5xl font-bold mb-6 tracking-tight">HealthBot AI</h1>
-      <p className="text-slate-400 max-w-xs mb-12 leading-relaxed text-lg">
+    <div className="relative z-10 flex flex-col items-center max-w-sm">
+      <Activity
+        className="h-32 w-32 text-teal-400 mb-16 animate-pulse"
+        strokeWidth={1.5}
+      />
+      <h1 className="text-[3.5rem] font-bold mb-6 tracking-tight leading-none">
+        HealthBot AI
+      </h1>
+      <p className="text-slate-400 text-lg mb-16 leading-relaxed">
         Your personal AI health assistant for symptoms, guidance, and wellness
         tracking.
       </p>
 
-      <div className="flex flex-col w-full max-w-[320px] gap-4">
+      <div className="flex gap-4 w-full">
         <button
           onClick={() => setPage("login")}
-          className="w-full py-4 bg-teal-500 text-[#0B1120] font-bold rounded-2xl text-xl hover:brightness-110 transition-all shadow-lg shadow-teal-500/20"
+          className="flex-1 py-4 bg-teal-400 text-[#0B1120] font-bold rounded-xl text-xl hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10"
         >
           Log In
         </button>
         <button
           onClick={() => setPage("register")}
-          className="w-full py-4 border-2 border-teal-500 text-teal-400 font-bold rounded-2xl text-xl hover:bg-teal-500/10 transition-all"
+          className="flex-1 py-4 border-2 border-teal-400 text-teal-400 font-bold rounded-xl text-xl hover:bg-teal-400/10 transition-all"
         >
           Sign Up
         </button>
@@ -55,6 +60,7 @@ const Home = ({ setPage }) => (
   </div>
 );
 
+// MATCHING IMAGE: WhatsApp Image 2026-04-28 at 22.33.53.jpeg
 const Login = ({ setPage }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -97,80 +103,86 @@ const Login = ({ setPage }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center relative overflow-hidden">
+    <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center relative font-sans">
       <nav className="w-full p-6 flex items-center gap-2 z-50">
         <Activity className="h-7 w-7 text-teal-400" />
         <span className="text-2xl font-bold">HealthBot</span>
       </nav>
 
-      <div className="flex-1 flex items-center justify-center w-full p-4 z-10">
-        <div className="bg-[#111827]/90 backdrop-blur-xl p-8 sm:p-12 rounded-[2.5rem] border border-slate-700/50 w-full max-w-[480px] shadow-2xl">
-          <div className="flex flex-col items-center mb-10">
-            <h2 className="text-4xl font-bold mb-3">Welcome Back</h2>
-            <p className="text-slate-400 text-center text-sm">
+      <div className="flex-1 flex items-center justify-center w-full p-6 z-10">
+        <div className="bg-[#111827] border border-slate-800 rounded-[2.5rem] p-10 w-full max-w-[440px] shadow-2xl">
+          <div className="flex flex-col items-center mb-12">
+            <h2 className="text-[2.75rem] font-bold mb-4 tracking-tight">
+              Welcome Back
+            </h2>
+            <p className="text-slate-400 text-center text-base">
               Secure login to your health assistant.
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-8">
             {errorMessage && (
               <div className="p-4 bg-red-500/10 border border-red-500/50 text-red-400 text-xs rounded-xl text-center font-bold">
                 {errorMessage}
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-slate-300 uppercase tracking-widest ml-1">
                 Email
               </label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-teal-400">
+                  <Mail size={20} />
+                </div>
                 <input
                   name="email"
                   type="email"
                   required
                   placeholder="name@example.com"
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-teal-400 outline-none transition-all"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 text-base focus:border-teal-400 outline-none transition-all"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-slate-300 uppercase tracking-widest ml-1">
                 Password
               </label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-teal-400">
+                  <Lock size={20} />
+                </div>
                 <input
                   name="password"
                   type={showPassword ? "text" : "password"}
                   required
                   placeholder="••••••••"
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-4 pl-12 pr-12 text-sm focus:border-teal-400 outline-none transition-all"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-12 text-base focus:border-teal-400 outline-none transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"
+                  className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
 
             <button
               disabled={loading}
-              className="w-full py-4 bg-teal-500 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.2em] text-lg hover:brightness-110 transition-all shadow-lg shadow-teal-500/10"
+              className="w-full py-5 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.2em] text-xl hover:bg-teal-300 transition-all mt-4"
             >
-              {loading ? "Authenticating..." : "Log In"}
+              {loading ? "AUTHENTICATING..." : "LOG IN"}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-slate-400">
+          <p className="mt-10 text-center text-base text-slate-400">
             Don't have an account?{" "}
             <button
               onClick={() => setPage("register")}
-              className="text-teal-400 font-bold hover:underline"
+              className="text-teal-400 font-bold hover:underline ml-1"
             >
               Sign Up
             </button>
@@ -181,6 +193,7 @@ const Login = ({ setPage }) => {
   );
 };
 
+// MATCHING IMAGE: WhatsApp Image 2026-04-28 at 22.33.53 (1).jpeg
 const Register = ({ setPage }) => {
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -217,24 +230,26 @@ const Register = ({ setPage }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center overflow-x-hidden">
+    <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center font-sans">
       <nav className="w-full p-6 flex items-center gap-2 z-50">
         <Activity className="h-7 w-7 text-teal-400" />
         <span className="text-2xl font-bold">HealthBot</span>
       </nav>
 
-      <div className="flex-1 flex items-center justify-center w-full p-4 overflow-y-auto">
-        <div className="bg-[#111827]/90 backdrop-blur-xl p-8 sm:p-12 rounded-[2.5rem] border border-slate-700/50 w-full max-w-[540px] shadow-2xl my-10">
-          <div className="text-center mb-10">
-            <h2 className="text-4xl font-bold mb-3">Create Account</h2>
-            <p className="text-slate-400 text-sm">
+      <div className="flex-1 flex items-center justify-center w-full p-6 overflow-y-auto">
+        <div className="bg-[#111827] border border-slate-800 rounded-[2.5rem] p-10 w-full max-w-[500px] shadow-2xl my-10">
+          <div className="text-center mb-12">
+            <h2 className="text-[2.75rem] font-bold mb-4 tracking-tight">
+              Create Account
+            </h2>
+            <p className="text-slate-400 text-base">
               Personalized AI Health Assistant.
             </p>
           </div>
 
-          <form onSubmit={handleRegister} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+          <form onSubmit={handleRegister} className="space-y-8">
+            <div className="space-y-3">
+              <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
                 Full Name <span className="text-rose-500">*</span>
               </label>
               <input
@@ -244,12 +259,12 @@ const Register = ({ setPage }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-4 px-5 text-sm focus:border-teal-400 outline-none transition-all"
+                className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 px-6 text-base focus:border-teal-400 outline-none transition-all"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+            <div className="space-y-3">
+              <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
                 Email Address <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
@@ -260,7 +275,7 @@ const Register = ({ setPage }) => {
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-4 px-5 pr-28 text-sm focus:border-teal-400 outline-none transition-all"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 px-6 pr-32 text-base focus:border-teal-400 outline-none transition-all"
                 />
                 <button
                   type="button"
@@ -268,7 +283,7 @@ const Register = ({ setPage }) => {
                     setOtpSent(true);
                     alert("OTP sent!");
                   }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-[10px] font-bold text-teal-400 uppercase tracking-tighter hover:bg-slate-700"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 px-4 py-2.5 bg-[#1E293B] border border-slate-700 rounded-xl text-[11px] font-bold text-teal-400 uppercase tracking-tighter hover:bg-slate-700 transition-colors"
                 >
                   {otpSent ? "Resend" : "Verify OTP"}
                 </button>
@@ -276,8 +291,8 @@ const Register = ({ setPage }) => {
             </div>
 
             {otpSent && (
-              <div className="space-y-2 animate-in slide-in-from-top-2">
-                <label className="text-[10px] font-bold text-teal-400 uppercase tracking-widest ml-1">
+              <div className="space-y-3 animate-in slide-in-from-top-2">
+                <label className="text-[11px] font-bold text-teal-400 uppercase tracking-widest ml-1">
                   Verification Code
                 </label>
                 <input
@@ -288,13 +303,13 @@ const Register = ({ setPage }) => {
                   onChange={(e) =>
                     setFormData({ ...formData, otp: e.target.value })
                   }
-                  className="w-full bg-teal-500/5 border-2 border-teal-500/20 rounded-xl py-4 px-5 text-center text-2xl font-mono tracking-[0.5em] focus:border-teal-400 outline-none transition-all"
+                  className="w-full bg-teal-500/5 border-2 border-teal-500/30 rounded-2xl py-4 px-6 text-center text-3xl font-mono tracking-[0.5em] focus:border-teal-400 outline-none transition-all"
                 />
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+            <div className="space-y-3">
+              <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
                 Password <span className="text-rose-500">*</span>
               </label>
               <input
@@ -304,16 +319,16 @@ const Register = ({ setPage }) => {
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-4 px-5 text-sm focus:border-teal-400 outline-none transition-all"
+                className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 px-6 text-base focus:border-teal-400 outline-none transition-all"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-5 bg-teal-500 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.2em] text-lg hover:brightness-110 transition-all shadow-lg shadow-teal-500/10"
+              className="w-full py-5 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.2em] text-xl hover:bg-teal-300 transition-all mt-4"
             >
-              {loading ? "Creating..." : "Create Account"}
+              {loading ? "CREATING..." : "CREATE ACCOUNT"}
             </button>
           </form>
         </div>
@@ -390,7 +405,7 @@ const Chat = ({ setPage }) => {
         {
           id: Date.now() + 2,
           sender: "bot",
-          text: "⚠️ Connection error. Check server.",
+          text: "⚠️ Server connection error.",
           time: now,
         },
       ]);
@@ -411,9 +426,9 @@ const Chat = ({ setPage }) => {
           />
         )}
         <div className="h-full w-72 bg-[#020617] border-r border-slate-800/60 flex flex-col p-6 shadow-2xl">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-2">
-              <Activity className="h-7 w-7 text-teal-400" strokeWidth={3} />
+              <Activity className="h-8 w-8 text-teal-400" strokeWidth={3} />
               <span className="text-2xl font-bold tracking-tight">
                 HealthBot
               </span>
@@ -423,7 +438,7 @@ const Chat = ({ setPage }) => {
               onClick={() => setIsSidebarOpen(false)}
             />
           </div>
-          <nav className="flex-1 space-y-2">
+          <nav className="flex-1 space-y-3">
             <div className="flex items-center gap-3 p-4 rounded-2xl bg-teal-500/10 text-teal-400 border border-teal-500/20 font-bold">
               <MessageSquare size={20} /> New Chat
             </div>
@@ -447,99 +462,98 @@ const Chat = ({ setPage }) => {
       </aside>
 
       <main className="flex-1 flex flex-col h-full relative overflow-hidden">
-        {/* FIXED STICKY HEADER */}
-        <header className="sticky top-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617]/95 backdrop-blur-md">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-6 lg:px-10 bg-[#020617]/95 backdrop-blur-md">
+          <div className="flex items-center gap-4">
             {!isSidebarOpen && (
               <Menu
                 className="cursor-pointer text-slate-400"
                 onClick={() => setIsSidebarOpen(true)}
               />
             )}
-            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shadow-inner">
-              <Activity size={22} className="text-teal-400" />
+            <div className="w-11 h-11 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shadow-inner">
+              <Activity size={24} className="text-teal-400" />
             </div>
             <div>
               <h3 className="text-white text-base font-bold leading-none">
                 HealthBot
               </h3>
-              <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />{" "}
+              <p className="text-[10px] text-teal-400 font-bold uppercase mt-1.5 flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />{" "}
                 Online
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-[11px] font-bold text-slate-300 uppercase hidden sm:block tracking-wide">
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-bold text-slate-300 uppercase hidden sm:block tracking-widest">
               {user.name || "User"}
             </span>
-            <div className="w-10 h-10 rounded-full border border-slate-700 bg-slate-800/50 flex items-center justify-center">
-              <UserCircle size={28} className="text-slate-500" />
+            <div className="w-11 h-11 rounded-full border border-slate-700 bg-slate-800/50 flex items-center justify-center">
+              <UserCircle size={32} className="text-slate-500" />
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 no-scrollbar">
-          <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 lg:px-8 py-8 no-scrollbar">
+          <div className="max-w-4xl mx-auto space-y-8">
             <div className="flex justify-center">
-              <span className="text-[9px] font-bold bg-slate-800/50 px-3 py-1 rounded-full text-slate-500 uppercase tracking-widest border border-slate-700/50">
+              <span className="text-[10px] font-bold bg-slate-800/50 px-4 py-1.5 rounded-full text-slate-500 uppercase tracking-widest border border-slate-800">
                 Today
               </span>
             </div>
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2`}
+                className={`flex gap-4 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2`}
               >
                 <div
-                  className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : "bg-slate-800 border-slate-700"}`}
+                  className={`w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : "bg-slate-800 border-slate-700"}`}
                 >
                   {msg.sender === "user" ? (
-                    <User size={18} className="text-teal-400" />
+                    <User size={20} className="text-teal-400" />
                   ) : (
-                    <Activity size={18} className="text-teal-400" />
+                    <Activity size={20} className="text-teal-400" />
                   )}
                 </div>
                 <div
-                  className={`max-w-[85%] flex flex-col gap-1 ${msg.sender === "user" ? "items-end" : ""}`}
+                  className={`max-w-[85%] flex flex-col gap-2 ${msg.sender === "user" ? "items-end" : ""}`}
                 >
                   <div
-                    className={`p-4 rounded-2xl text-sm leading-relaxed shadow-xl ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : "bg-slate-800/80 border border-slate-700 text-slate-200 rounded-tl-none"}`}
+                    className={`p-5 rounded-[1.5rem] text-[15px] leading-relaxed shadow-xl ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : "bg-[#111827] border border-slate-800 text-slate-200 rounded-tl-none"}`}
                   >
                     {msg.text}
                   </div>
-                  <span className="text-[8px] text-slate-600 font-bold uppercase">
+                  <span className="text-[10px] text-slate-600 font-bold uppercase tracking-tighter">
                     {msg.time}
                   </span>
                 </div>
               </div>
             ))}
             {loading && (
-              <div className="flex gap-1.5 p-4 bg-slate-800/50 rounded-2xl w-fit">
-                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce" />
-                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+              <div className="flex gap-2 p-5 bg-slate-900 border border-slate-800 rounded-[1.5rem] w-fit">
+                <span className="w-2 h-2 bg-teal-400 rounded-full animate-bounce" />
+                <span className="w-2 h-2 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
               </div>
             )}
             <div ref={bottomRef} />
           </div>
         </div>
 
-        <div className="p-4 lg:p-6 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent shrink-0">
+        <div className="p-6 lg:p-10 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent shrink-0">
           <div className="max-w-4xl mx-auto">
-            <div className="flex flex-wrap justify-center gap-2 mb-6">
-              {["Headache", "Fever", "Fatigue", "Itching"].map((s) => (
+            <div className="flex flex-wrap justify-center gap-3 mb-8">
+              {["Headache", "Fever", "Fatigue", "Cough"].map((s) => (
                 <button
                   key={s}
                   onClick={() => sendMessage(s)}
-                  className="bg-slate-800/40 border border-slate-700/50 px-5 py-2 rounded-full text-[11px] font-bold text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all"
+                  className="bg-slate-900 border border-slate-800 px-6 py-2.5 rounded-full text-xs font-bold text-slate-400 hover:text-teal-400 transition-all"
                 >
                   {s}
                 </button>
               ))}
             </div>
-            <div className="bg-slate-900 border border-slate-700/50 rounded-2xl p-2 flex items-center gap-2 shadow-2xl mb-4 focus-within:border-teal-500/30 transition-all">
-              <button className="p-2 text-slate-500 hover:text-teal-400">
-                <Paperclip size={20} />
+            <div className="bg-[#111827] border border-slate-800 rounded-[2rem] p-2.5 flex items-center gap-3 shadow-2xl focus-within:border-teal-500/30 transition-all">
+              <button className="p-2.5 text-slate-500 hover:text-teal-400">
+                <Paperclip size={22} />
               </button>
               <textarea
                 rows={1}
@@ -551,19 +565,19 @@ const Chat = ({ setPage }) => {
                   (e.preventDefault(), sendMessage())
                 }
                 placeholder="Describe symptoms..."
-                className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white py-3 resize-none no-scrollbar"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-base text-white py-3 resize-none no-scrollbar"
               />
-              <button className="p-2 text-slate-500 hover:text-teal-400">
-                <Mic size={20} />
+              <button className="p-2.5 text-slate-500 hover:text-teal-400">
+                <Mic size={22} />
               </button>
               <button
                 onClick={() => sendMessage()}
-                className="bg-teal-500 text-[#020617] p-3 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-teal-500/20"
+                className="bg-teal-400 text-[#020617] p-4 rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-teal-500/20"
               >
-                <Send size={20} strokeWidth={3} />
+                <Send size={24} strokeWidth={3} />
               </button>
             </div>
-            <p className="text-[10px] text-teal-400/80 font-bold text-center italic drop-shadow-[0_0_8px_rgba(45,212,191,0.2)]">
+            <p className="text-[11px] text-teal-400 font-bold text-center italic mt-8 drop-shadow-[0_0_8px_rgba(45,212,191,0.2)] uppercase tracking-widest">
               🩺 General guidance only. Consult a professional if serious.
             </p>
           </div>
@@ -598,6 +612,8 @@ export default function App() {
   };
 
   return (
-    <div className="font-sans antialiased bg-[#0B1120]">{renderPage()}</div>
+    <div className="font-sans antialiased bg-[#0B1120] selection:bg-teal-500/30 selection:text-teal-200">
+      {renderPage()}
+    </div>
   );
 }
