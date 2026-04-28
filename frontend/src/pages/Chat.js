@@ -37,7 +37,7 @@ export default function Chat() {
       hour: "2-digit",
       minute: "2-digit",
     });
-    // Logic: Greeting calls user by First Name only
+    // CALLING USER BY FIRST NAME ONLY
     const firstName = user.name ? user.name.trim().split(" ")[0] : "User";
 
     setMessages([
@@ -115,7 +115,7 @@ export default function Chat() {
           </span>
         </div>
         <button
-          className="lg:hidden text-slate-400 p-1 hover:bg-slate-800 rounded-lg transition-colors"
+          className="lg:hidden text-slate-400 p-1 hover:bg-slate-800 rounded-lg"
           onClick={() => setIsSidebarOpen(false)}
         >
           <X size={24} />
@@ -143,9 +143,10 @@ export default function Chat() {
   );
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative">
+    <div className="h-screen w-full bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
+      {/* SIDEBAR NAVIGATION */}
       <div
         className={`fixed inset-y-0 left-0 z-[60] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
       >
@@ -158,9 +159,9 @@ export default function Chat() {
         <SidebarContent />
       </div>
 
-      <main className="flex-1 flex flex-col h-screen relative z-10 overflow-hidden">
-        {/* FIXED STICKY HEADER */}
-        <header className="sticky top-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617]/95 backdrop-blur-md">
+      <main className="flex-1 flex flex-col h-full relative z-10 overflow-hidden">
+        {/* FIXED HEADER - LOCKED AT TOP ON MOBILE AND LAPTOP */}
+        <header className="sticky top-0 left-0 right-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617] backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button
               className={`p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-all ${isSidebarOpen ? "lg:hidden" : "block"}`}
@@ -184,7 +185,7 @@ export default function Chat() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-[11px] lg:text-xs font-bold text-slate-100 uppercase tracking-wide truncate max-w-[100px] lg:max-w-none">
+            <span className="text-[11px] lg:text-xs font-bold text-slate-300 uppercase tracking-wide">
               {user.name || "User"}
             </span>
             <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/50">
@@ -193,6 +194,7 @@ export default function Chat() {
           </div>
         </header>
 
+        {/* MESSAGES - ONLY THIS AREA SCROLLS */}
         <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 no-scrollbar">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex justify-center">
@@ -218,11 +220,11 @@ export default function Chat() {
                   className={`flex flex-col gap-1 ${msg.sender === "user" ? "items-end" : ""}`}
                 >
                   <div
-                    className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none shadow-lg shadow-teal-500/10" : "bg-slate-800/80 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md"}`}
+                    className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : "bg-slate-800/80 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md"}`}
                   >
                     {msg.text}
                   </div>
-                  <span className="text-[8px] text-slate-600 font-bold uppercase tracking-tighter">
+                  <span className="text-[8px] text-slate-600 font-bold uppercase">
                     {msg.time}
                   </span>
                 </div>
@@ -232,7 +234,8 @@ export default function Chat() {
           </div>
         </div>
 
-        <div className="p-4 lg:p-6 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent">
+        {/* INPUT AREA */}
+        <div className="p-4 lg:p-6 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent shrink-0">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-wrap justify-center gap-2 mb-6">
               {[
@@ -251,7 +254,6 @@ export default function Chat() {
                 </button>
               ))}
             </div>
-
             <div className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-1 lg:p-2 flex items-center gap-1 lg:gap-2 shadow-2xl mb-8">
               <button className="p-2.5 text-slate-500 hover:text-teal-400 transition-colors">
                 <Paperclip size={20} />
@@ -273,12 +275,11 @@ export default function Chat() {
               </button>
               <button
                 onClick={() => sendMessage()}
-                className="bg-teal-500 text-slate-900 p-2.5 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-teal-500/20"
+                className="bg-teal-500 text-slate-900 p-2.5 rounded-xl transition-all shadow-lg shadow-teal-500/20"
               >
                 <Send size={20} strokeWidth={3} />
               </button>
             </div>
-
             <div className="flex justify-center mt-6 border-t border-slate-800/60 pt-6">
               <p className="text-[10px] lg:text-[11px] text-teal-400 font-bold text-center italic max-w-md mx-auto leading-relaxed drop-shadow-[0_0_8px_rgba(45,212,191,0.2)]">
                 🩺 General guidance only. Consult a professional if serious.
