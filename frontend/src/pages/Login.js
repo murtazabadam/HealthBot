@@ -133,8 +133,7 @@ export default function Login() {
                 </label>
                 <Link
                   to="/forgot-password"
-                  weights="bold"
-                  className="text-[10px] text-teal-400 hover:underline uppercase tracking-tighter"
+                  className="text-[10px] text-teal-400 hover:underline uppercase tracking-tighter font-bold"
                 >
                   Forgot?
                 </Link>
@@ -219,23 +218,18 @@ export default function Login() {
       </main>
 
       {/* Page Footer */}
-      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center">
-        <p className="text-slate-500 text-xs font-bold uppercase tracking-tighter">
-          © 2026 HealthBot
-        </p>
-        <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-xs font-medium">
+        <p>© 2026 HealthBot. All rights reserved.</p>
+        <div className="flex items-center gap-4">
           <Link
             to="/privacy"
-            className="text-slate-500 hover:text-teal-400 transition-colors"
+            className="hover:text-slate-400 transition-colors"
           >
-            Privacy
+            Privacy Policy
           </Link>
-          <span className="text-slate-800">/</span>
-          <Link
-            to="/terms"
-            className="text-slate-500 hover:text-teal-400 transition-colors"
-          >
-            Terms
+          <span className="text-slate-700">|</span>
+          <Link to="/terms" className="hover:text-slate-400 transition-colors">
+            Terms of Service
           </Link>
         </div>
       </footer>
