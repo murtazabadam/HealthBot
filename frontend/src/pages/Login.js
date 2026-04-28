@@ -221,7 +221,7 @@ export default function Login() {
       {/* Page Footer */}
       <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center">
         <p className="text-slate-500 text-xs font-bold uppercase tracking-tighter">
-          © 2026 HealthBot AI
+          © 2026 HealthBot
         </p>
         <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
           <Link
