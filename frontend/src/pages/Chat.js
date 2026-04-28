@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 export default function Chat() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,12 +32,12 @@ export default function Chat() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
 
-  // Logic: Greeting calls user by First Name only
   useEffect(() => {
     const now = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
+    // Logic: Greeting calls user by First Name only
     const firstName = user.name ? user.name.trim().split(" ")[0] : "User";
 
     setMessages([
@@ -49,9 +49,7 @@ export default function Chat() {
       },
     ]);
 
-    if (window.innerWidth >= 1024) {
-      setIsSidebarOpen(true);
-    }
+    if (window.innerWidth < 1024) setIsSidebarOpen(false);
   }, [user.name]);
 
   useEffect(() => {
@@ -117,13 +115,12 @@ export default function Chat() {
           </span>
         </div>
         <button
-          className="lg:hidden text-slate-400 p-1 hover:bg-slate-800 rounded-lg"
+          className="lg:hidden text-slate-400 p-1 hover:bg-slate-800 rounded-lg transition-colors"
           onClick={() => setIsSidebarOpen(false)}
         >
           <X size={24} />
         </button>
       </div>
-
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar">
         <SidebarBtn icon={MessageSquare} label="New Chat" active />
         <SidebarBtn icon={History} label="Chat History" />
@@ -149,7 +146,6 @@ export default function Chat() {
     <div className="min-h-screen bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* SIDEBAR NAVIGATION */}
       <div
         className={`fixed inset-y-0 left-0 z-[60] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
       >
@@ -163,7 +159,7 @@ export default function Chat() {
       </div>
 
       <main className="flex-1 flex flex-col h-screen relative z-10 overflow-hidden">
-        {/* FIXED HEADER */}
+        {/* FIXED STICKY HEADER */}
         <header className="sticky top-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617]/95 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button
@@ -172,22 +168,23 @@ export default function Chat() {
             >
               <Menu size={24} />
             </button>
-            <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700">
-              <Activity size={22} className="text-teal-400" />
-            </div>
-            <div>
-              <h3 className="text-white text-sm lg:text-base font-bold leading-none">
-                HealthBot
-              </h3>
-              <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />{" "}
-                Online
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700">
+                <Activity size={22} className="text-teal-400" />
+              </div>
+              <div>
+                <h3 className="text-white text-sm lg:text-base font-bold leading-none">
+                  HealthBot
+                </h3>
+                <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />{" "}
+                  Online
+                </p>
+              </div>
             </div>
           </div>
-
           <div className="flex items-center gap-3">
-            <span className="text-[11px] lg:text-xs font-bold text-slate-300 uppercase tracking-wide truncate max-w-[100px] lg:max-w-none">
+            <span className="text-[11px] lg:text-xs font-bold text-slate-100 uppercase tracking-wide truncate max-w-[100px] lg:max-w-none">
               {user.name || "User"}
             </span>
             <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/50">
@@ -196,7 +193,6 @@ export default function Chat() {
           </div>
         </header>
 
-        {/* SCROLLABLE MESSAGES */}
         <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 no-scrollbar">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex justify-center">
@@ -236,7 +232,6 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* INPUT BAR */}
         <div className="p-4 lg:p-6 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-wrap justify-center gap-2 mb-6">
