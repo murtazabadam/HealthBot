@@ -14,6 +14,10 @@ import {
   Lock,
   Eye,
   EyeOff,
+  ChevronRight,
+  ShieldCheck,
+  Paperclip,
+  Mic,
 } from "lucide-react";
 
 // --- HELPERS ---
@@ -24,25 +28,29 @@ const getFirstName = (name) => (name ? name.trim().split(" ")[0] : "User");
 const Home = ({ setPage }) => (
   <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
-    <Activity className="h-20 w-20 text-teal-400 mb-8 relative z-10" />
-    <h1 className="text-5xl font-bold mb-4 relative z-10">HealthBot AI</h1>
-    <p className="text-slate-400 max-w-lg mb-8 leading-relaxed relative z-10">
-      Your personal AI health assistant for symptoms, guidance, and wellness
-      tracking.
-    </p>
-    <div className="flex gap-4 relative z-10">
-      <button
-        onClick={() => setPage("login")}
-        className="px-8 py-3 bg-teal-500 text-slate-900 font-bold rounded-xl hover:brightness-110 transition-all"
-      >
-        Log In
-      </button>
-      <button
-        onClick={() => setPage("register")}
-        className="px-8 py-3 border border-teal-500 text-teal-400 font-bold rounded-xl hover:bg-teal-500/10 transition-all"
-      >
-        Sign Up
-      </button>
+
+    <div className="relative z-10 flex flex-col items-center">
+      <Activity className="h-32 w-32 text-teal-400 mb-12" strokeWidth={1.5} />
+      <h1 className="text-5xl font-bold mb-6 tracking-tight">HealthBot AI</h1>
+      <p className="text-slate-400 max-w-xs mb-12 leading-relaxed text-lg">
+        Your personal AI health assistant for symptoms, guidance, and wellness
+        tracking.
+      </p>
+
+      <div className="flex flex-col w-full max-w-[320px] gap-4">
+        <button
+          onClick={() => setPage("login")}
+          className="w-full py-4 bg-teal-500 text-[#0B1120] font-bold rounded-2xl text-xl hover:brightness-110 transition-all shadow-lg shadow-teal-500/20"
+        >
+          Log In
+        </button>
+        <button
+          onClick={() => setPage("register")}
+          className="w-full py-4 border-2 border-teal-500 text-teal-400 font-bold rounded-2xl text-xl hover:bg-teal-500/10 transition-all"
+        >
+          Sign Up
+        </button>
+      </div>
     </div>
   </div>
 );
@@ -56,8 +64,8 @@ const Login = ({ setPage }) => {
     e.preventDefault();
     setErrorMessage("");
     setLoading(true);
-    const email = e.target[0].value;
-    const password = e.target[1].value;
+    const email = e.target.email.value;
+    const password = e.target.password.value;
 
     try {
       const res = await fetch(
@@ -89,53 +97,56 @@ const Login = ({ setPage }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center">
-      <nav className="w-full p-6 flex justify-between items-center border-b border-slate-800/50">
-        <div
-          onClick={() => setPage("home")}
-          className="flex items-center gap-2 cursor-pointer"
-        >
-          <Activity className="h-7 w-7 text-teal-400" />
-          <span className="text-2xl font-bold">HealthBot</span>
-        </div>
+    <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center relative overflow-hidden">
+      <nav className="w-full p-6 flex items-center gap-2 z-50">
+        <Activity className="h-7 w-7 text-teal-400" />
+        <span className="text-2xl font-bold">HealthBot</span>
       </nav>
-      <div className="flex-1 flex items-center justify-center w-full p-4">
-        <div className="bg-[#111827]/80 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/50 w-full max-w-md shadow-2xl">
-          <h2 className="text-3xl font-bold mb-2 text-center">Welcome Back</h2>
-          <p className="text-slate-400 text-center text-sm mb-8">
-            Secure login to your health assistant.
-          </p>
-          <form onSubmit={handleLogin} className="space-y-5">
+
+      <div className="flex-1 flex items-center justify-center w-full p-4 z-10">
+        <div className="bg-[#111827]/90 backdrop-blur-xl p-8 sm:p-12 rounded-[2.5rem] border border-slate-700/50 w-full max-w-[480px] shadow-2xl">
+          <div className="flex flex-col items-center mb-10">
+            <h2 className="text-4xl font-bold mb-3">Welcome Back</h2>
+            <p className="text-slate-400 text-center text-sm">
+              Secure login to your health assistant.
+            </p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
             {errorMessage && (
-              <div className="p-3 bg-red-500/10 border border-red-500/50 text-red-400 text-xs rounded-xl text-center font-bold">
+              <div className="p-4 bg-red-500/10 border border-red-500/50 text-red-400 text-xs rounded-xl text-center font-bold">
                 {errorMessage}
               </div>
             )}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300 uppercase">
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">
                 Email
               </label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
                 <input
+                  name="email"
                   type="email"
                   required
                   placeholder="name@example.com"
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-sm focus:border-teal-400 outline-none"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-sm focus:border-teal-400 outline-none transition-all"
                 />
               </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300 uppercase">
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">
                 Password
               </label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500" />
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
                 <input
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   required
                   placeholder="••••••••"
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-12 text-sm focus:border-teal-400 outline-none"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-4 pl-12 pr-12 text-sm focus:border-teal-400 outline-none transition-all"
                 />
                 <button
                   type="button"
@@ -146,14 +157,16 @@ const Login = ({ setPage }) => {
                 </button>
               </div>
             </div>
+
             <button
               disabled={loading}
-              className="w-full py-4 bg-teal-500 text-slate-900 font-extrabold rounded-xl uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50"
+              className="w-full py-4 bg-teal-500 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.2em] text-lg hover:brightness-110 transition-all shadow-lg shadow-teal-500/10"
             >
-              {loading ? "Logging in..." : "Log In"}
+              {loading ? "Authenticating..." : "Log In"}
             </button>
           </form>
-          <p className="mt-6 text-center text-sm text-slate-400">
+
+          <p className="mt-8 text-center text-sm text-slate-400">
             Don't have an account?{" "}
             <button
               onClick={() => setPage("register")}
@@ -190,10 +203,10 @@ const Register = ({ setPage }) => {
           body: JSON.stringify(formData),
         },
       );
-      const data = await res.json();
       if (res.ok) {
         setPage("login");
       } else {
+        const data = await res.json();
         alert(data.message || "Registration failed");
       }
     } catch (err) {
@@ -203,102 +216,104 @@ const Register = ({ setPage }) => {
     }
   };
 
-  const sendOTP = async () => {
-    if (!formData.email) return alert("Enter email first");
-    setOtpSent(true);
-    alert("Verification code sent to your email!");
-  };
-
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center">
-      <nav className="w-full p-6 flex justify-between items-center border-b border-slate-800/50">
-        <div
-          onClick={() => setPage("home")}
-          className="flex items-center gap-2 cursor-pointer"
-        >
-          <Activity className="h-7 w-7 text-teal-400" />
-          <span className="text-2xl font-bold">HealthBot</span>
-        </div>
+    <div className="min-h-screen bg-[#0B1120] text-white flex flex-col items-center overflow-x-hidden">
+      <nav className="w-full p-6 flex items-center gap-2 z-50">
+        <Activity className="h-7 w-7 text-teal-400" />
+        <span className="text-2xl font-bold">HealthBot</span>
       </nav>
+
       <div className="flex-1 flex items-center justify-center w-full p-4 overflow-y-auto">
-        <div className="bg-[#111827]/80 backdrop-blur-xl p-8 rounded-3xl border border-slate-700/50 w-full max-w-lg shadow-2xl my-10">
-          <h2 className="text-3xl font-bold mb-2 text-center">
-            Create Account
-          </h2>
-          <p className="text-slate-400 text-center text-sm mb-8">
-            Personalized AI Health Assistant.
-          </p>
-          <form onSubmit={handleRegister} className="space-y-5">
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300 uppercase">
+        <div className="bg-[#111827]/90 backdrop-blur-xl p-8 sm:p-12 rounded-[2.5rem] border border-slate-700/50 w-full max-w-[540px] shadow-2xl my-10">
+          <div className="text-center mb-10">
+            <h2 className="text-4xl font-bold mb-3">Create Account</h2>
+            <p className="text-slate-400 text-sm">
+              Personalized AI Health Assistant.
+            </p>
+          </div>
+
+          <form onSubmit={handleRegister} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">
                 Full Name <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 required
+                placeholder="Enter full name"
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none"
+                className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-4 px-5 text-sm focus:border-teal-400 outline-none transition-all"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300 uppercase">
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">
                 Email Address <span className="text-rose-500">*</span>
               </label>
-              <div className="flex gap-2">
+              <div className="relative">
                 <input
                   type="email"
                   required
+                  placeholder="name@example.com"
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className="flex-1 bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-4 px-5 pr-28 text-sm focus:border-teal-400 outline-none transition-all"
                 />
                 <button
                   type="button"
-                  onClick={sendOTP}
-                  className="px-4 bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-teal-400"
+                  onClick={() => {
+                    setOtpSent(true);
+                    alert("OTP sent!");
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-[10px] font-bold text-teal-400 uppercase tracking-tighter hover:bg-slate-700"
                 >
-                  Verify OTP
+                  {otpSent ? "Resend" : "Verify OTP"}
                 </button>
               </div>
             </div>
+
             {otpSent && (
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-teal-400 uppercase tracking-widest">
-                  Enter Code
+              <div className="space-y-2 animate-in slide-in-from-top-2">
+                <label className="text-[10px] font-bold text-teal-400 uppercase tracking-widest ml-1">
+                  Verification Code
                 </label>
                 <input
                   type="text"
                   required
                   maxLength="6"
+                  placeholder="0 0 0 0 0 0"
                   onChange={(e) =>
                     setFormData({ ...formData, otp: e.target.value })
                   }
-                  className="w-full bg-[#0B1120] border-2 border-teal-500/20 rounded-xl py-3 px-4 text-center text-xl font-mono focus:border-teal-400 outline-none"
+                  className="w-full bg-teal-500/5 border-2 border-teal-500/20 rounded-xl py-4 px-5 text-center text-2xl font-mono tracking-[0.5em] focus:border-teal-400 outline-none transition-all"
                 />
               </div>
             )}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-300 uppercase">
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest ml-1">
                 Password <span className="text-rose-500">*</span>
               </label>
               <input
                 type="password"
                 required
+                placeholder="••••••••"
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none"
+                className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-4 px-5 text-sm focus:border-teal-400 outline-none transition-all"
               />
             </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-teal-500 text-slate-900 font-extrabold rounded-xl uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50"
+              className="w-full py-5 bg-teal-500 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.2em] text-lg hover:brightness-110 transition-all shadow-lg shadow-teal-500/10"
             >
-              {loading ? "Registering..." : "Create Account"}
+              {loading ? "Creating..." : "Create Account"}
             </button>
           </form>
         </div>
@@ -375,7 +390,7 @@ const Chat = ({ setPage }) => {
         {
           id: Date.now() + 2,
           sender: "bot",
-          text: "⚠️ Connection error.",
+          text: "⚠️ Connection error. Check server.",
           time: now,
         },
       ]);
@@ -385,8 +400,7 @@ const Chat = ({ setPage }) => {
   };
 
   return (
-    <div className="h-screen bg-[#020617] text-slate-200 flex overflow-hidden">
-      {/* Sidebar */}
+    <div className="h-screen bg-[#020617] text-slate-200 flex overflow-hidden font-sans">
       <aside
         className={`fixed inset-y-0 left-0 z-[60] transform transition-transform duration-300 lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full w-0"}`}
       >
@@ -396,11 +410,13 @@ const Chat = ({ setPage }) => {
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
-        <div className="h-full w-72 bg-[#020617] border-r border-slate-800/60 flex flex-col p-6">
+        <div className="h-full w-72 bg-[#020617] border-r border-slate-800/60 flex flex-col p-6 shadow-2xl">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-2">
-              <Activity className="h-7 w-7 text-teal-400" />
-              <span className="text-2xl font-bold">HealthBot</span>
+              <Activity className="h-7 w-7 text-teal-400" strokeWidth={3} />
+              <span className="text-2xl font-bold tracking-tight">
+                HealthBot
+              </span>
             </div>
             <X
               className="lg:hidden cursor-pointer text-slate-400"
@@ -408,14 +424,14 @@ const Chat = ({ setPage }) => {
             />
           </div>
           <nav className="flex-1 space-y-2">
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-teal-500/10 text-teal-400 border border-teal-500/20">
-              <MessageSquare size={18} /> New Chat
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-teal-500/10 text-teal-400 border border-teal-500/20 font-bold">
+              <MessageSquare size={20} /> New Chat
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800/50">
-              <History size={18} /> History
+            <div className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:bg-slate-800 transition-all font-medium">
+              <History size={20} /> History
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-xl text-slate-400 hover:bg-slate-800/50">
-              <User size={18} /> Profile
+            <div className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:bg-slate-800 transition-all font-medium">
+              <User size={20} /> Profile
             </div>
           </nav>
           <button
@@ -423,15 +439,15 @@ const Chat = ({ setPage }) => {
               localStorage.clear();
               setPage("login");
             }}
-            className="flex items-center gap-3 p-3 rounded-xl text-rose-400 hover:bg-rose-500/10 mt-auto"
+            className="flex items-center gap-3 p-4 rounded-2xl text-rose-400 hover:bg-rose-500/10 mt-auto font-bold"
           >
-            <LogOut size={18} /> Log Out
+            <LogOut size={20} /> Log Out
           </button>
         </div>
       </aside>
 
       <main className="flex-1 flex flex-col h-full relative overflow-hidden">
-        {/* FIXED HEADER: Logo and user info stay at top during scroll */}
+        {/* FIXED STICKY HEADER */}
         <header className="sticky top-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617]/95 backdrop-blur-md">
           <div className="flex items-center gap-3">
             {!isSidebarOpen && (
@@ -440,11 +456,11 @@ const Chat = ({ setPage }) => {
                 onClick={() => setIsSidebarOpen(true)}
               />
             )}
-            <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-              <Activity size={20} className="text-teal-400" />
+            <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shadow-inner">
+              <Activity size={22} className="text-teal-400" />
             </div>
             <div>
-              <h3 className="text-white text-sm font-bold leading-none">
+              <h3 className="text-white text-base font-bold leading-none">
                 HealthBot
               </h3>
               <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 flex items-center gap-1">
@@ -454,25 +470,26 @@ const Chat = ({ setPage }) => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs font-bold text-slate-300 uppercase hidden sm:block">
+            <span className="text-[11px] font-bold text-slate-300 uppercase hidden sm:block tracking-wide">
               {user.name || "User"}
             </span>
-            <UserCircle size={32} className="text-slate-500" />
+            <div className="w-10 h-10 rounded-full border border-slate-700 bg-slate-800/50 flex items-center justify-center">
+              <UserCircle size={28} className="text-slate-500" />
+            </div>
           </div>
         </header>
 
-        {/* Scrollable chat area */}
         <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 no-scrollbar">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex justify-center">
-              <span className="text-[9px] bg-slate-800/50 px-3 py-1 rounded-full text-slate-500 font-bold uppercase tracking-widest">
+              <span className="text-[9px] font-bold bg-slate-800/50 px-3 py-1 rounded-full text-slate-500 uppercase tracking-widest border border-slate-700/50">
                 Today
               </span>
             </div>
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""}`}
+                className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2`}
               >
                 <div
                   className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : "bg-slate-800 border-slate-700"}`}
@@ -484,10 +501,10 @@ const Chat = ({ setPage }) => {
                   )}
                 </div>
                 <div
-                  className={`max-w-[80%] flex flex-col gap-1 ${msg.sender === "user" ? "items-end" : ""}`}
+                  className={`max-w-[85%] flex flex-col gap-1 ${msg.sender === "user" ? "items-end" : ""}`}
                 >
                   <div
-                    className={`p-4 rounded-2xl text-sm leading-relaxed ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : "bg-slate-800/80 border border-slate-700 text-slate-200 rounded-tl-none"}`}
+                    className={`p-4 rounded-2xl text-sm leading-relaxed shadow-xl ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : "bg-slate-800/80 border border-slate-700 text-slate-200 rounded-tl-none"}`}
                   >
                     {msg.text}
                   </div>
@@ -498,7 +515,7 @@ const Chat = ({ setPage }) => {
               </div>
             ))}
             {loading && (
-              <div className="flex gap-2 p-4 bg-slate-800/50 rounded-2xl w-fit">
+              <div className="flex gap-1.5 p-4 bg-slate-800/50 rounded-2xl w-fit">
                 <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce" />
                 <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
               </div>
@@ -507,21 +524,23 @@ const Chat = ({ setPage }) => {
           </div>
         </div>
 
-        {/* Footer Input Area */}
         <div className="p-4 lg:p-6 bg-gradient-to-t from-[#020617] via-[#020617] to-transparent shrink-0">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-wrap justify-center gap-2 mb-6">
-              {["Headache", "Fever", "Fatigue", "Cough"].map((s) => (
+              {["Headache", "Fever", "Fatigue", "Itching"].map((s) => (
                 <button
                   key={s}
                   onClick={() => sendMessage(s)}
-                  className="bg-slate-800/60 border border-slate-700/50 px-4 py-2 rounded-full text-[10px] text-slate-400 hover:text-teal-400 transition-all"
+                  className="bg-slate-800/40 border border-slate-700/50 px-5 py-2 rounded-full text-[11px] font-bold text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all"
                 >
                   {s}
                 </button>
               ))}
             </div>
-            <div className="bg-slate-900 border border-slate-700/50 rounded-2xl p-2 flex items-center gap-2 shadow-2xl mb-4">
+            <div className="bg-slate-900 border border-slate-700/50 rounded-2xl p-2 flex items-center gap-2 shadow-2xl mb-4 focus-within:border-teal-500/30 transition-all">
+              <button className="p-2 text-slate-500 hover:text-teal-400">
+                <Paperclip size={20} />
+              </button>
               <textarea
                 rows={1}
                 value={inputText}
@@ -534,14 +553,17 @@ const Chat = ({ setPage }) => {
                 placeholder="Describe symptoms..."
                 className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-white py-3 resize-none no-scrollbar"
               />
+              <button className="p-2 text-slate-500 hover:text-teal-400">
+                <Mic size={20} />
+              </button>
               <button
                 onClick={() => sendMessage()}
-                className="bg-teal-500 text-slate-900 p-2.5 rounded-xl"
+                className="bg-teal-500 text-[#020617] p-3 rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-teal-500/20"
               >
                 <Send size={20} strokeWidth={3} />
               </button>
             </div>
-            <p className="text-[10px] text-teal-400 font-bold text-center italic drop-shadow-[0_0_8px_rgba(45,212,191,0.2)]">
+            <p className="text-[10px] text-teal-400/80 font-bold text-center italic drop-shadow-[0_0_8px_rgba(45,212,191,0.2)]">
               🩺 General guidance only. Consult a professional if serious.
             </p>
           </div>
