@@ -158,7 +158,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
-      {/* Global CSS fix for Chrome/Mobile Autofill white background bug */}
+      {/* Autofill CSS Fix */}
       <style>{`
         input:-webkit-autofill,
         input:-webkit-autofill:hover, 
@@ -170,10 +170,10 @@ export default function Register() {
         }
       `}</style>
 
-      {/* Background Decor - Ambient Glow */}
+      {/* Background Decor - Ambient Glow (Matches Login) */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Dotted Pattern Overlay */}
+      {/* Dotted Pattern Overlay (Matches Login) */}
       <div
         className="absolute inset-0 pointer-events-none opacity-20"
         style={{
@@ -221,12 +221,12 @@ export default function Register() {
 
           <form onSubmit={handleRegister} className="flex flex-col gap-6">
             {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-4 rounded-xl text-center font-bold animate-pulse">
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-4 rounded-xl text-center font-bold animate-pulse">
                 {errorMessage}
               </div>
             )}
 
-            {/* Row 1: Name & Email + Send OTP */}
+            {/* Fields Row 1: Name & Email */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
@@ -272,15 +272,12 @@ export default function Register() {
                     <span>{timer > 0 ? `${timer}s` : "Send OTP"}</span>
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-400 text-center md:text-left mt-1">
-                  We will send a 6-digit OTP to your email
-                </p>
               </div>
             </div>
 
-            {/* OTP Input (Appears when OTP is sent) */}
+            {/* OTP Section */}
             {otpSent && (
-              <div className="flex flex-col gap-3 animate-in fade-in zoom-in duration-300 md:col-start-2 md:-mt-4 mb-2 md:ml-[50%]">
+              <div className="flex flex-col gap-3 animate-in fade-in zoom-in duration-300 md:ml-[50%]">
                 <label className="text-xs font-bold text-teal-400 flex items-center gap-2 uppercase tracking-wider">
                   <ShieldCheck size={14} /> Enter Verification Code
                 </label>
@@ -301,7 +298,7 @@ export default function Register() {
               </div>
             )}
 
-            {/* Row 2: Passwords */}
+            {/* Fields Row 2: Passwords */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
@@ -324,13 +321,6 @@ export default function Register() {
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
-                </div>
-                <div className="flex items-start gap-2 mt-1 px-1">
-                  <ShieldCheck className="h-3 w-3 text-teal-400 shrink-0 mt-0.5" />
-                  <p className="text-[10px] text-slate-400 leading-tight">
-                    Use at least 8 characters with a mix of letters, numbers &
-                    symbols
-                  </p>
                 </div>
               </div>
               <div className="flex flex-col gap-2">
@@ -362,103 +352,48 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 3: Age, Phone, Address */}
+            {/* Row 3: Personal Info */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Age
                 </label>
-                <div className="relative group">
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
-                  <input
-                    type="number"
-                    name="age"
-                    placeholder="Enter your age"
-                    onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
-                  />
-                </div>
+                <input
+                  type="number"
+                  name="age"
+                  placeholder="Age"
+                  onChange={handleChange}
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Phone Number
+                  Phone
                 </label>
-                <div className="relative group">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
-                  <input
-                    type="tel"
-                    name="phoneNumber"
-                    placeholder="Enter phone"
-                    onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
-                  />
-                </div>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  placeholder="Phone"
+                  onChange={handleChange}
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400"
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Address
                 </label>
-                <div className="relative group">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
-                  <input
-                    type="text"
-                    name="address"
-                    placeholder="Enter address"
-                    onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
-                  />
-                </div>
+                <input
+                  type="text"
+                  name="address"
+                  placeholder="City/Address"
+                  onChange={handleChange}
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400"
+                />
               </div>
             </div>
 
-            {/* Row 4: Gender, Blood Group */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Gender <span className="text-red-500">*</span>
-                </label>
-                <div className="relative group">
-                  <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
-                  <select
-                    name="gender"
-                    onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-10 text-sm text-slate-400 focus:outline-none focus:border-teal-400 appearance-none transition-all cursor-pointer"
-                  >
-                    <option value="">Select gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Blood Group
-                </label>
-                <div className="relative group">
-                  <Droplet className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
-                  <select
-                    name="bloodGroup"
-                    onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-10 text-sm text-slate-400 focus:outline-none focus:border-teal-400 appearance-none transition-all cursor-pointer"
-                  >
-                    <option value="">Select blood group</option>
-                    {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
-                      (bg) => (
-                        <option key={bg} value={bg}>
-                          {bg}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
-                </div>
-              </div>
-              <div className="hidden sm:block"></div>
-            </div>
-
-            {/* Terms Checkbox */}
-            <div className="flex items-center gap-3 mt-2">
+            {/* Terms */}
+            <div className="flex items-center gap-3 mt-1">
               <div
                 className={`w-5 h-5 rounded border transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? "bg-teal-500 border-teal-500" : "bg-[#0B1120] border-slate-700"}`}
                 onClick={() => setAgreedToTerms(!agreedToTerms)}
@@ -493,25 +428,24 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-4 bg-gradient-to-r from-teal-400 to-blue-500 text-slate-900 font-extrabold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center"
+              className="w-full mt-2 bg-gradient-to-r from-teal-400 to-blue-500 text-slate-900 font-extrabold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
             >
               {loading ? "Processing..." : "Create Account"}
             </button>
 
-            {/* Social Divider */}
-            <div className="relative flex items-center gap-4 my-3">
+            {/* Spacing adjusted for Social Section (Matches Login) */}
+            <div className="relative flex items-center gap-4 my-2">
               <div className="h-[1px] flex-1 bg-slate-800"></div>
-              <span className="text-xs text-slate-500 font-medium">
-                or continue with
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                or
               </span>
               <div className="h-[1px] flex-1 bg-slate-800"></div>
             </div>
 
-            {/* Google Button */}
             <button
               type="button"
               onClick={handleGoogleSignUp}
-              className="w-full flex items-center justify-center gap-3 bg-[#0B1120] border border-slate-800 hover:bg-slate-800/50 rounded-xl py-3.5 transition-all text-sm font-semibold text-white"
+              className="w-full flex items-center justify-center gap-3 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-xl py-3.5 transition-all text-sm font-bold text-slate-300"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -534,9 +468,8 @@ export default function Register() {
               Continue with Google
             </button>
 
-            {/* Bottom Form Links */}
-            <div className="mt-3 text-center flex flex-col sm:flex-row items-center justify-center gap-2 text-sm text-slate-400 font-medium">
-              <span>
+            <div className="mt-4 text-center">
+              <p className="text-sm text-slate-400 font-medium">
                 Already have an account?{" "}
                 <Link
                   to="/login"
@@ -544,13 +477,13 @@ export default function Register() {
                 >
                   Log In
                 </Link>
-              </span>
+              </p>
             </div>
           </form>
         </div>
       </main>
 
-      {/* Page Footer */}
+      {/* Page Footer (Matches Login Exactly) */}
       <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-xs font-medium">
         <p>© 2026 HealthBot. All rights reserved.</p>
         <div className="flex items-center gap-4">
