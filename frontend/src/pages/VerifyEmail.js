@@ -49,7 +49,7 @@ export default function VerifyEmail() {
     }
 
     verifyEmail(token);
-  }, []);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
