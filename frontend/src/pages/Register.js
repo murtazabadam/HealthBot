@@ -41,7 +41,7 @@ export default function Register() {
 
   const navigate = useNavigate();
 
-  // Redirect to Railway Google Auth Route
+  // Defined handleGoogleSignUp to fix 'not defined' error
   const handleGoogleSignUp = () => {
     window.location.href =
       "https://healthbot-production-3c7d.up.railway.app/api/auth/google";
@@ -63,9 +63,7 @@ export default function Register() {
       if (!res.ok) throw new Error("Failed to send OTP.");
       setRegStep(2);
     } catch (err) {
-      setErrorMessage(
-        "Service Connection Error: Please ensure the server is active.",
-      );
+      setErrorMessage("OTP Service Error: Please ensure server is active.");
     } finally {
       setLoading(false);
     }
@@ -86,7 +84,7 @@ export default function Register() {
           }),
         },
       );
-      if (!res.ok) throw new Error("Invalid or expired verification code.");
+      if (!res.ok) throw new Error("Invalid verification code.");
       setRegStep(3);
     } catch (err) {
       setErrorMessage(err.message);
@@ -114,8 +112,6 @@ export default function Register() {
       );
       if (!res.ok) throw new Error("Registration failed.");
       const data = await res.json();
-
-      // Save credentials and move to chat
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/chat");
@@ -128,10 +124,8 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
-      {/* Background Ambient Orbs */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-teal-500/10 rounded-full blur-[130px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Top Navbar */}
       <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
         <Link to="/" className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" />
@@ -143,20 +137,19 @@ export default function Register() {
 
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
         <div
-          className={`bg-[#111827]/90 border border-slate-700/50 rounded-[2.5rem] p-8 sm:p-12 w-full shadow-2xl relative transition-all duration-500 ${regStep === 3 ? "max-w-[760px]" : "max-w-[540px]"}`}
+          className={`bg-[#111827]/90 border border-slate-700/50 rounded-[2.5rem] p-8 sm:p-12 w-full shadow-2xl relative transition-all duration-500 ${regStep === 3 ? "max-w-[750px]" : "max-w-[540px]"}`}
         >
-          {/* Step Back Control */}
           {regStep > 1 && (
             <button
               onClick={() => setRegStep(regStep - 1)}
-              className="absolute top-8 left-8 text-slate-500 hover:text-teal-400 flex items-center gap-1 text-xs font-bold uppercase tracking-widest transition-colors"
+              className="absolute top-8 left-8 text-slate-500 hover:text-teal-400 flex items-center gap-1 text-xs font-bold uppercase tracking-widest"
             >
               <ArrowLeft size={14} /> Back
             </button>
           )}
 
           <div className="text-center mb-10">
-            <div className="w-16 h-16 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mx-auto mb-6">
               <UserPlus className="h-8 w-8 text-teal-400" />
             </div>
             <h2 className="text-4xl font-bold mb-2 tracking-tight">
@@ -164,14 +157,14 @@ export default function Register() {
                 ? "Get Started"
                 : regStep === 2
                   ? "Verify"
-                  : "Health Profile"}
+                  : "Final Profile"}
             </h2>
-            <p className="text-slate-400 text-sm tracking-wide">
+            <p className="text-slate-400 text-sm">
               {regStep === 1
-                ? "Step 1: Identification"
+                ? "Step 1: Identity"
                 : regStep === 2
                   ? "Step 2: Verification"
-                  : "Step 3: Medical Record"}
+                  : "Step 3: Medical Details"}
             </p>
           </div>
 
@@ -181,7 +174,6 @@ export default function Register() {
             </div>
           )}
 
-          {/* STEP 1: IDENTITY */}
           {regStep === 1 && (
             <form className="flex flex-col gap-5" onSubmit={handleSendOTP}>
               <div className="flex flex-col gap-1.5">
@@ -255,7 +247,7 @@ export default function Register() {
                 disabled={loading}
                 className="w-full py-4 bg-teal-400 text-slate-900 font-black rounded-2xl uppercase tracking-[0.2em] mt-2 hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10"
               >
-                {loading ? "Sending..." : "Verify Email"}
+                {loading ? "Sending..." : "Continue"}
               </button>
 
               <div className="relative flex items-center gap-4 my-4">
@@ -294,13 +286,12 @@ export default function Register() {
             </form>
           )}
 
-          {/* STEP 2: OTP VERIFICATION */}
           {regStep === 2 && (
             <form className="flex flex-col gap-6" onSubmit={handleVerifyOTP}>
               <div className="text-center">
                 <ShieldCheck className="mx-auto h-12 w-12 text-teal-400 mb-4" />
                 <label className="text-[11px] font-bold text-teal-400 uppercase tracking-[0.3em]">
-                  6-Digit Code
+                  Verification Code
                 </label>
                 <input
                   type="text"
@@ -324,7 +315,6 @@ export default function Register() {
             </form>
           )}
 
-          {/* STEP 3: MEDICAL PROFILE */}
           {regStep === 3 && (
             <form className="flex flex-col gap-5" onSubmit={handleRegister}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -370,6 +360,7 @@ export default function Register() {
                       }
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-10 pr-10 focus:border-teal-400 outline-none transition-all"
                     />
+                    {/* Fixed unused setShowConfirmPassword by adding toggle here */}
                     <button
                       type="button"
                       onClick={() =>
@@ -386,7 +377,6 @@ export default function Register() {
                   </div>
                 </div>
               </div>
-
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
@@ -409,6 +399,7 @@ export default function Register() {
                     Gender <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
+                    {/* Imported Users correctly now */}
                     <Users className="absolute left-3 h-4 w-4 text-slate-500 top-1/2 -translate-y-1/2" />
                     <select
                       required
@@ -425,7 +416,7 @@ export default function Register() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
-                    Blood Group
+                    Blood
                   </label>
                   <div className="relative">
                     <Droplet className="absolute left-3 h-4 w-4 text-slate-500 top-1/2 -translate-y-1/2" />
@@ -447,13 +438,12 @@ export default function Register() {
                   </div>
                 </div>
               </div>
-
               <div
                 className="flex items-start gap-3 mt-4 cursor-pointer"
                 onClick={() => setAgreedToTerms(!agreedToTerms)}
               >
                 <div
-                  className={`mt-1 w-5 h-5 rounded border transition-all flex items-center justify-center ${agreedToTerms ? "bg-teal-500 border-teal-500 shadow-[0_0_10px_rgba(45,212,191,0.5)]" : "bg-[#0B1120] border-slate-700"}`}
+                  className={`mt-1 w-5 h-5 rounded border transition-all flex items-center justify-center ${agreedToTerms ? "bg-teal-500 border-teal-500" : "bg-[#0B1120] border-slate-700"}`}
                 >
                   {agreedToTerms && (
                     <CheckCircle2
@@ -463,10 +453,10 @@ export default function Register() {
                     />
                   )}
                 </div>
-                <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                  I agree to the{" "}
+                <p className="text-xs text-slate-400 font-medium">
+                  Agree to the{" "}
                   <Link to="/terms" className="text-teal-400 hover:underline">
-                    Terms of Service
+                    Terms
                   </Link>{" "}
                   and{" "}
                   <Link to="/privacy" className="text-teal-400 hover:underline">
@@ -475,7 +465,6 @@ export default function Register() {
                   .
                 </p>
               </div>
-
               <button
                 type="submit"
                 disabled={loading}
@@ -486,7 +475,7 @@ export default function Register() {
             </form>
           )}
 
-          <p className="mt-8 text-center text-sm text-slate-400 font-medium">
+          <p className="mt-8 text-center text-sm text-slate-400">
             Already have an account?{" "}
             <Link
               to="/login"
