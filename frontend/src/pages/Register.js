@@ -157,73 +157,31 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020817] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
-      {/* Background Decor - Ambient Center Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-cyan-500/10 rounded-full blur-[150px] pointer-events-none" />
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
+      {/* Global CSS fix for Chrome/Mobile Autofill white background bug */}
+      <style>{`
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+          -webkit-box-shadow: 0 0 0 30px #0B1120 inset !important;
+          -webkit-text-fill-color: white !important;
+          transition: background-color 5000s ease-in-out 0s;
+        }
+      `}</style>
 
-      {/* Background Decor - Abstract Side Waves matching the image */}
-      <div className="absolute left-0 top-1/4 bottom-1/4 w-[300px] pointer-events-none opacity-40 overflow-hidden">
-        <svg
-          viewBox="0 0 200 800"
-          className="w-full h-full text-cyan-400"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M-50,200 C50,300 100,500 -50,600"
-            stroke="currentColor"
-            strokeWidth="3"
-            fill="none"
-            opacity="0.6"
-            style={{ filter: "blur(2px)" }}
-          />
-          <path
-            d="M-50,250 C80,350 120,450 -50,550"
-            stroke="currentColor"
-            strokeWidth="2"
-            fill="none"
-            opacity="0.4"
-            style={{ filter: "blur(1px)" }}
-          />
-          <path
-            d="M-50,150 C120,300 150,500 -50,650"
-            stroke="currentColor"
-            strokeWidth="1"
-            fill="none"
-            opacity="0.2"
-          />
-        </svg>
-      </div>
-      <div className="absolute right-0 top-1/4 bottom-1/4 w-[300px] pointer-events-none opacity-40 overflow-hidden transform scale-x-[-1]">
-        <svg
-          viewBox="0 0 200 800"
-          className="w-full h-full text-blue-500"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M-50,200 C50,300 100,500 -50,600"
-            stroke="currentColor"
-            strokeWidth="3"
-            fill="none"
-            opacity="0.6"
-            style={{ filter: "blur(2px)" }}
-          />
-          <path
-            d="M-50,250 C80,350 120,450 -50,550"
-            stroke="currentColor"
-            strokeWidth="2"
-            fill="none"
-            opacity="0.4"
-            style={{ filter: "blur(1px)" }}
-          />
-          <path
-            d="M-50,150 C120,300 150,500 -50,650"
-            stroke="currentColor"
-            strokeWidth="1"
-            fill="none"
-            opacity="0.2"
-          />
-        </svg>
-      </div>
+      {/* Background Decor - Ambient Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Dotted Pattern Overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-20"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)",
+          backgroundSize: "40px 40px",
+        }}
+      />
 
       {/* Top Navbar */}
       <nav className="relative z-10 w-full flex items-center justify-between px-6 py-6 lg:px-12 max-w-[1400px]">
@@ -262,51 +220,51 @@ export default function Register() {
             {/* Row 1: Name & Email + Send OTP */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-200">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Full Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <input
                     type="text"
                     name="name"
                     required
                     placeholder="Enter your full name"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-200">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Email Address <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex gap-2">
                   <div className="relative flex-1 group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                     <input
                       type="email"
                       name="email"
                       required
                       placeholder="Enter your email address"
                       onChange={handleChange}
-                      className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-[105px] text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-[90px] sm:pr-[105px] text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                     />
                     <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
                       <button
                         type="button"
                         disabled={timer > 0 || loading}
                         onClick={handleSendOTP}
-                        className="flex items-center gap-1.5 h-9 px-3 bg-transparent border border-cyan-500/50 text-cyan-400 rounded-lg text-xs font-bold hover:bg-cyan-500/10 transition-all disabled:opacity-50 whitespace-nowrap"
+                        className="flex items-center justify-center gap-1 sm:gap-1.5 h-9 px-2 sm:px-3 bg-[#0B1120] border border-teal-500/50 text-teal-400 rounded-lg text-[10px] sm:text-[11px] font-bold hover:bg-teal-500/10 transition-all disabled:opacity-50 whitespace-nowrap shadow-sm"
                       >
-                        <Send size={14} />
-                        {timer > 0 ? `${timer}s` : "Send OTP"}
+                        <Send size={12} className="shrink-0" />
+                        <span>{timer > 0 ? `${timer}s` : "Send OTP"}</span>
                       </button>
                     </div>
                   </div>
                 </div>
-                <p className="text-[11px] text-slate-400 text-center md:text-left mt-1">
+                <p className="text-[10px] text-slate-400 text-center md:text-left mt-1">
                   We will send a 6-digit OTP to your email
                 </p>
               </div>
@@ -533,28 +491,8 @@ export default function Register() {
               <span className="text-xl">→</span>
             </button>
 
-            {/* Form Links (Moved Above Google) */}
-            <div className="mt-5 text-center flex flex-col sm:flex-row items-center justify-center gap-2 text-sm text-slate-400 font-medium">
-              <span>
-                Already have an account?{" "}
-                <Link
-                  to="/login"
-                  className="text-cyan-400 font-bold hover:underline ml-1"
-                >
-                  Log In
-                </Link>
-              </span>
-              <span className="hidden sm:inline text-slate-700">|</span>
-              <Link
-                to="/forgot-password"
-                className="text-cyan-400 font-bold hover:underline"
-              >
-                Forgot Password?
-              </Link>
-            </div>
-
             {/* Social Divider */}
-            <div className="relative flex items-center gap-4 mt-4 mb-2">
+            <div className="relative flex items-center gap-4 my-3">
               <div className="h-[1px] flex-1 bg-slate-800"></div>
               <span className="text-xs text-slate-500 font-medium">
                 or continue with
@@ -588,13 +526,33 @@ export default function Register() {
               </svg>
               Continue with Google
             </button>
+
+            {/* Bottom Form Links */}
+            <div className="mt-3 text-center flex flex-col sm:flex-row items-center justify-center gap-2 text-sm text-slate-400 font-medium">
+              <span>
+                Already have an account?{" "}
+                <Link
+                  to="/login"
+                  className="text-cyan-400 font-bold hover:underline ml-1"
+                >
+                  Log In
+                </Link>
+              </span>
+              <span className="hidden sm:inline text-slate-700">|</span>
+              <Link
+                to="/forgot-password"
+                className="text-cyan-400 font-bold hover:underline"
+              >
+                Forgot Password?
+              </Link>
+            </div>
           </form>
         </div>
       </main>
 
-      {/* Page Footer (Matches Login Exactly) */}
-      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-sm">
-        <p>© 2026 HealthBot AI. All rights reserved.</p>
+      {/* Page Footer */}
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-xs font-medium">
+        <p>© 2026 HealthBot. All rights reserved.</p>
         <div className="flex items-center gap-4">
           <Link
             to="/privacy"
