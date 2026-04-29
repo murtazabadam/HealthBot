@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Activity,
@@ -16,6 +16,7 @@ import {
   UserPlus,
   Droplet,
   Calendar,
+  RefreshCw,
 } from "lucide-react";
 
 export default function Register() {
@@ -25,6 +26,7 @@ export default function Register() {
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [timer, setTimer] = useState(0);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -41,14 +43,27 @@ export default function Register() {
 
   const navigate = useNavigate();
 
-  // Defined handleGoogleSignUp to fix 'not defined' error
+  // Timer logic for Resend OTP
+  useEffect(() => {
+    let interval;
+    if (timer > 0) {
+      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
+
   const handleGoogleSignUp = () => {
     window.location.href =
       "https://healthbot-production-3c7d.up.railway.app/api/auth/google";
   };
 
   const handleSendOTP = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (!formData.email) {
+      setErrorMessage("Please enter your email first.");
+      return;
+    }
+
     setLoading(true);
     setErrorMessage("");
     try {
@@ -60,10 +75,14 @@ export default function Register() {
           body: JSON.stringify({ email: formData.email.trim() }),
         },
       );
-      if (!res.ok) throw new Error("Failed to send OTP.");
+
+      if (!res.ok)
+        throw new Error("Failed to send OTP. Please check your email.");
+
       setRegStep(2);
+      setTimer(60); // Start 60s cooldown for resend
     } catch (err) {
-      setErrorMessage("OTP Service Error: Please ensure server is active.");
+      setErrorMessage("Service Error: Ensure backend is active.");
     } finally {
       setLoading(false);
     }
@@ -84,7 +103,7 @@ export default function Register() {
           }),
         },
       );
-      if (!res.ok) throw new Error("Invalid verification code.");
+      if (!res.ok) throw new Error("Invalid or expired code.");
       setRegStep(3);
     } catch (err) {
       setErrorMessage(err.message);
@@ -122,14 +141,18 @@ export default function Register() {
     }
   };
 
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-teal-500/10 rounded-full blur-[130px] pointer-events-none" />
 
       <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
         <Link to="/" className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" />
-          <span className="text-2xl font-bold tracking-tight text-white">
+          <span className="text-2xl font-bold tracking-tight text-white uppercase">
             HealthBot
           </span>
         </Link>
@@ -137,19 +160,19 @@ export default function Register() {
 
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
         <div
-          className={`bg-[#111827]/90 border border-slate-700/50 rounded-[2.5rem] p-8 sm:p-12 w-full shadow-2xl relative transition-all duration-500 ${regStep === 3 ? "max-w-[750px]" : "max-w-[540px]"}`}
+          className={`bg-[#111827]/90 border border-slate-700/50 rounded-[2.5rem] p-8 sm:p-12 w-full shadow-2xl relative transition-all duration-500 ${regStep === 3 ? "max-w-[800px]" : "max-w-[540px]"}`}
         >
           {regStep > 1 && (
             <button
               onClick={() => setRegStep(regStep - 1)}
-              className="absolute top-8 left-8 text-slate-500 hover:text-teal-400 flex items-center gap-1 text-xs font-bold uppercase tracking-widest"
+              className="absolute top-8 left-8 text-slate-500 hover:text-teal-400 flex items-center gap-1 text-xs font-bold uppercase tracking-widest transition-colors"
             >
               <ArrowLeft size={14} /> Back
             </button>
           )}
 
           <div className="text-center mb-10">
-            <div className="w-16 h-16 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mx-auto mb-6">
+            <div className="w-16 h-16 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mx-auto mb-4">
               <UserPlus className="h-8 w-8 text-teal-400" />
             </div>
             <h2 className="text-4xl font-bold mb-2 tracking-tight">
@@ -157,9 +180,9 @@ export default function Register() {
                 ? "Get Started"
                 : regStep === 2
                   ? "Verify"
-                  : "Final Profile"}
+                  : "Health Profile"}
             </h2>
-            <p className="text-slate-400 text-sm">
+            <p className="text-slate-400 text-sm tracking-wide">
               {regStep === 1
                 ? "Step 1: Identity"
                 : regStep === 2
@@ -174,6 +197,7 @@ export default function Register() {
             </div>
           )}
 
+          {/* STEP 1: IDENTITY */}
           {regStep === 1 && (
             <form className="flex flex-col gap-5" onSubmit={handleSendOTP}>
               <div className="flex flex-col gap-1.5">
@@ -184,11 +208,11 @@ export default function Register() {
                   <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <input
                     type="text"
+                    name="name"
                     required
                     placeholder="Full Name"
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
+                    value={formData.name}
+                    onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 outline-none focus:border-teal-400 transition-all"
                   />
                 </div>
@@ -201,11 +225,11 @@ export default function Register() {
                   <Mail className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <input
                     type="email"
+                    name="email"
                     required
                     placeholder="Email"
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
+                    value={formData.email}
+                    onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 outline-none focus:border-teal-400 transition-all"
                   />
                 </div>
@@ -218,10 +242,10 @@ export default function Register() {
                   <Phone className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
                   <input
                     type="tel"
-                    placeholder="Phone"
-                    onChange={(e) =>
-                      setFormData({ ...formData, phoneNumber: e.target.value })
-                    }
+                    name="phoneNumber"
+                    placeholder="Phone Number"
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 outline-none focus:border-teal-400"
                   />
                 </div>
@@ -234,10 +258,10 @@ export default function Register() {
                   <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
                   <input
                     type="text"
+                    name="address"
                     placeholder="Full Address"
-                    onChange={(e) =>
-                      setFormData({ ...formData, address: e.target.value })
-                    }
+                    value={formData.address}
+                    onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 outline-none focus:border-teal-400"
                   />
                 </div>
@@ -247,7 +271,7 @@ export default function Register() {
                 disabled={loading}
                 className="w-full py-4 bg-teal-400 text-slate-900 font-black rounded-2xl uppercase tracking-[0.2em] mt-2 hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10"
               >
-                {loading ? "Sending..." : "Continue"}
+                {loading ? "Sending..." : "Verify Email"}
               </button>
 
               <div className="relative flex items-center gap-4 my-4">
@@ -286,22 +310,22 @@ export default function Register() {
             </form>
           )}
 
+          {/* STEP 2: OTP VERIFICATION + RESEND */}
           {regStep === 2 && (
             <form className="flex flex-col gap-6" onSubmit={handleVerifyOTP}>
               <div className="text-center">
                 <ShieldCheck className="mx-auto h-12 w-12 text-teal-400 mb-4" />
                 <label className="text-[11px] font-bold text-teal-400 uppercase tracking-[0.3em]">
-                  Verification Code
+                  6-Digit Code
                 </label>
                 <input
                   type="text"
+                  name="otp"
                   maxLength="6"
                   placeholder="000000"
                   required
                   autoFocus
-                  onChange={(e) =>
-                    setFormData({ ...formData, otp: e.target.value })
-                  }
+                  onChange={handleChange}
                   className="w-full bg-transparent border-b-2 border-slate-700 text-center text-5xl py-4 outline-none focus:border-teal-400 font-mono tracking-widest transition-all"
                 />
               </div>
@@ -312,9 +336,25 @@ export default function Register() {
               >
                 {loading ? "Checking..." : "Verify Code"}
               </button>
+
+              <div className="text-center mt-2">
+                <button
+                  type="button"
+                  disabled={timer > 0 || loading}
+                  onClick={handleSendOTP}
+                  className="text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 mx-auto disabled:opacity-50 text-slate-400 hover:text-teal-400 transition-colors"
+                >
+                  <RefreshCw
+                    size={14}
+                    className={loading ? "animate-spin" : ""}
+                  />
+                  {timer > 0 ? `Resend Code in ${timer}s` : "Resend OTP Code"}
+                </button>
+              </div>
             </form>
           )}
 
+          {/* STEP 3: HEALTH PROFILE */}
           {regStep === 3 && (
             <form className="flex flex-col gap-5" onSubmit={handleRegister}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -326,11 +366,10 @@ export default function Register() {
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                     <input
                       type={showPassword ? "text" : "password"}
+                      name="password"
                       required
                       placeholder="•••••"
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
+                      onChange={handleChange}
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-10 pr-10 focus:border-teal-400 outline-none transition-all"
                     />
                     <button
@@ -344,23 +383,18 @@ export default function Register() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
-                    Confirm <span className="text-rose-500">*</span>
+                    Confirm Password <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                     <input
                       type={showConfirmPassword ? "text" : "password"}
+                      name="confirmPassword"
                       required
                       placeholder="•••••"
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          confirmPassword: e.target.value,
-                        })
-                      }
+                      onChange={handleChange}
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-10 pr-10 focus:border-teal-400 outline-none transition-all"
                     />
-                    {/* Fixed unused setShowConfirmPassword by adding toggle here */}
                     <button
                       type="button"
                       onClick={() =>
@@ -377,6 +411,7 @@ export default function Register() {
                   </div>
                 </div>
               </div>
+
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
@@ -386,10 +421,9 @@ export default function Register() {
                     <Calendar className="absolute left-3 h-4 w-4 text-slate-500 top-1/2 -translate-y-1/2" />
                     <input
                       type="number"
+                      name="age"
                       placeholder="Age"
-                      onChange={(e) =>
-                        setFormData({ ...formData, age: e.target.value })
-                      }
+                      onChange={handleChange}
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-9 pr-2 text-xs focus:border-teal-400 outline-none transition-all"
                     />
                   </div>
@@ -399,13 +433,11 @@ export default function Register() {
                     Gender <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
-                    {/* Imported Users correctly now */}
                     <Users className="absolute left-3 h-4 w-4 text-slate-500 top-1/2 -translate-y-1/2" />
                     <select
+                      name="gender"
                       required
-                      onChange={(e) =>
-                        setFormData({ ...formData, gender: e.target.value })
-                      }
+                      onChange={handleChange}
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-9 pr-2 text-xs focus:border-teal-400 outline-none appearance-none transition-all"
                     >
                       <option value="">Select</option>
@@ -416,14 +448,13 @@ export default function Register() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
-                    Blood
+                    Blood Group
                   </label>
                   <div className="relative">
                     <Droplet className="absolute left-3 h-4 w-4 text-slate-500 top-1/2 -translate-y-1/2" />
                     <select
-                      onChange={(e) =>
-                        setFormData({ ...formData, bloodGroup: e.target.value })
-                      }
+                      name="bloodGroup"
+                      onChange={handleChange}
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-9 pr-2 text-xs focus:border-teal-400 outline-none appearance-none transition-all"
                     >
                       <option value="">Select</option>
@@ -438,12 +469,13 @@ export default function Register() {
                   </div>
                 </div>
               </div>
+
               <div
                 className="flex items-start gap-3 mt-4 cursor-pointer"
                 onClick={() => setAgreedToTerms(!agreedToTerms)}
               >
                 <div
-                  className={`mt-1 w-5 h-5 rounded border transition-all flex items-center justify-center ${agreedToTerms ? "bg-teal-500 border-teal-500" : "bg-[#0B1120] border-slate-700"}`}
+                  className={`mt-1 w-5 h-5 rounded border transition-all flex items-center justify-center ${agreedToTerms ? "bg-teal-500 border-teal-500 shadow-[0_0_10px_rgba(45,212,191,0.5)]" : "bg-[#0B1120] border-slate-700"}`}
                 >
                   {agreedToTerms && (
                     <CheckCircle2
@@ -465,6 +497,7 @@ export default function Register() {
                   .
                 </p>
               </div>
+
               <button
                 type="submit"
                 disabled={loading}
@@ -487,8 +520,23 @@ export default function Register() {
         </div>
       </main>
 
-      <footer className="w-full pb-8 pt-4 text-center text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] relative z-10">
-        © 2026 HealthBot. All rights reserved.
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+        <p>© 2026 HealthBot AI. All rights reserved.</p>
+        <div className="flex items-center gap-4">
+          <Link
+            to="/privacy"
+            className="hover:text-slate-300 transition-colors font-bold"
+          >
+            Privacy Policy
+          </Link>
+          <span className="text-slate-800">|</span>
+          <Link
+            to="/terms"
+            className="hover:text-slate-300 transition-colors font-bold"
+          >
+            Terms of Service
+          </Link>
+        </div>
       </footer>
     </div>
   );
