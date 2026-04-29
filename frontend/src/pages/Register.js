@@ -11,14 +11,19 @@ import {
   ArrowLeft,
   ShieldCheck,
   CheckCircle2,
+  Droplet,
+  Users,
+  MapPin,
+  Phone,
 } from "lucide-react";
 
 export default function Register() {
-  const [regStep, setRegStep] = useState(1); // 1: Identity, 2: OTP, 3: Security/Final
+  const [regStep, setRegStep] = useState(1); // 1: Identity, 2: OTP, 3: Full Profile
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -26,6 +31,10 @@ export default function Register() {
     password: "",
     confirmPassword: "",
     age: "",
+    gender: "",
+    bloodGroup: "",
+    address: "",
+    phoneNumber: "",
     otp: "",
   });
 
@@ -53,15 +62,12 @@ export default function Register() {
       );
 
       const data = await res.json();
-      if (!res.ok)
-        throw new Error(
-          data.message || "Failed to send OTP. Please check your connection.",
-        );
+      if (!res.ok) throw new Error(data.message || "Failed to send OTP.");
 
-      setRegStep(2); // Move to OTP tab
+      setRegStep(2);
     } catch (err) {
       setErrorMessage(
-        err.message || "Failed to fetch. Ensure the backend server is online.",
+        err.message || "Connection error. Ensure server is online.",
       );
     } finally {
       setLoading(false);
@@ -92,7 +98,7 @@ export default function Register() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Invalid or expired OTP.");
 
-      setRegStep(3); // Move to Password/Age tab
+      setRegStep(3);
     } catch (err) {
       setErrorMessage(err.message);
     } finally {
@@ -103,8 +109,19 @@ export default function Register() {
   // STEP 3: FINAL REGISTRATION
   const handleRegister = async (e) => {
     e.preventDefault();
+
     if (formData.password !== formData.confirmPassword) {
       setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    if (!formData.gender) {
+      setErrorMessage("Please select your gender.");
+      return;
+    }
+
+    if (!agreedToTerms) {
+      setErrorMessage("You must agree to the Terms and Privacy Policy.");
       return;
     }
 
@@ -132,10 +149,8 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
-      {/* Background Decor */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
         <Link to="/" className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" />
@@ -152,8 +167,9 @@ export default function Register() {
       </nav>
 
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
-        <div className="bg-[#111827]/90 border border-slate-800 rounded-[2.5rem] p-8 sm:p-12 w-full max-w-[500px] shadow-2xl relative">
-          {/* Back Button for multi-step */}
+        <div
+          className={`bg-[#111827]/90 border border-slate-800 rounded-[2.5rem] p-8 sm:p-12 w-full shadow-2xl relative transition-all duration-500 ${regStep === 3 ? "max-w-[750px]" : "max-w-[540px]"}`}
+        >
           {regStep > 1 && (
             <button
               onClick={() => setRegStep(regStep - 1)}
@@ -167,13 +183,12 @@ export default function Register() {
             <h2 className="text-4xl font-bold mb-3 tracking-tight">
               {regStep === 1 && "Create Account"}
               {regStep === 2 && "Verify Email"}
-              {regStep === 3 && "Final Details"}
+              {regStep === 3 && "Complete Profile"}
             </h2>
             <p className="text-slate-400 text-sm">
-              {regStep === 1 && "Start your journey to better health with AI."}
-              {regStep === 2 &&
-                `We've sent a 6-digit code to ${formData.email}`}
-              {regStep === 3 && "Secure your account and provide your age."}
+              {regStep === 1 && "Step 1: Your identity details."}
+              {regStep === 2 && `Step 2: Enter code sent to your email.`}
+              {regStep === 3 && "Step 3: Secure your account and medical info."}
             </p>
           </div>
 
@@ -204,7 +219,6 @@ export default function Register() {
                   />
                 </div>
               </div>
-
               <div className="flex flex-col gap-2">
                 <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
                   Email Address <span className="text-rose-500">*</span>
@@ -223,11 +237,10 @@ export default function Register() {
                   />
                 </div>
               </div>
-
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.1em] text-lg hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10 disabled:opacity-50"
+                className="w-full py-4 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.1em] text-lg hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10"
               >
                 {loading ? "Sending..." : "SEND OTP"}
               </button>
@@ -236,15 +249,12 @@ export default function Register() {
 
           {/* STEP 2: VERIFICATION */}
           {regStep === 2 && (
-            <form
-              className="flex flex-col gap-6 animate-in fade-in zoom-in duration-300"
-              onSubmit={handleVerifyOTP}
-            >
-              <div className="flex flex-col gap-3">
+            <form className="flex flex-col gap-6" onSubmit={handleVerifyOTP}>
+              <div className="flex flex-col gap-3 text-center">
                 <div className="w-16 h-16 bg-teal-500/10 rounded-full flex items-center justify-center mx-auto mb-2 border border-teal-500/20">
                   <ShieldCheck className="text-teal-400 h-8 w-8" />
                 </div>
-                <label className="text-[11px] font-bold text-teal-400 uppercase tracking-widest text-center">
+                <label className="text-[11px] font-bold text-teal-400 uppercase tracking-widest">
                   Verification Code
                 </label>
                 <input
@@ -259,122 +269,223 @@ export default function Register() {
                   className="w-full bg-teal-500/5 border-2 border-teal-500/30 rounded-2xl py-5 px-6 text-center text-3xl font-mono tracking-[0.5em] focus:border-teal-400 outline-none transition-all"
                 />
               </div>
-
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.1em] text-lg hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10 disabled:opacity-50"
+                className="w-full py-4 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.1em] text-lg hover:bg-teal-300 transition-all"
               >
                 {loading ? "Verifying..." : "VERIFY OTP"}
               </button>
-
-              <p className="text-center text-xs text-slate-500 font-medium">
-                Didn't receive the code?
-                <button
-                  type="button"
-                  onClick={handleSendOTP}
-                  className="text-teal-400 hover:underline ml-1 uppercase font-bold"
-                >
-                  Resend
-                </button>
-              </p>
             </form>
           )}
 
-          {/* STEP 3: SECURITY & FINAL */}
+          {/* STEP 3: FULL PROFILE */}
           {regStep === 3 && (
-            <form
-              className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300"
-              onSubmit={handleRegister}
-            >
-              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl mb-2">
+            <form className="flex flex-col gap-6" onSubmit={handleRegister}>
+              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl mb-1">
                 <CheckCircle2 className="text-emerald-400 h-5 w-5" />
-                <span className="text-emerald-400 text-xs font-bold uppercase">
+                <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
                   Email Verified Successfully
                 </span>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
-                  Password <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative group">
-                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="•••••"
-                    required
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-12 text-base focus:border-teal-400 outline-none transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500"
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
+              {/* Row 1: Passwords (MANDATORY) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold text-slate-300 uppercase ml-1">
+                    Password <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-teal-400" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      placeholder="•••••"
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-11 pr-10 text-sm focus:border-teal-400 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold text-slate-300 uppercase ml-1">
+                    Confirm Password <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-teal-400" />
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      placeholder="•••••"
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          confirmPassword: e.target.value,
+                        })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-11 pr-10 text-sm focus:border-teal-400 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
-                  Confirm Password <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative group">
-                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm your password"
-                    required
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        confirmPassword: e.target.value,
-                      })
-                    }
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-12 text-base focus:border-teal-400 outline-none transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff size={20} />
-                    ) : (
-                      <Eye size={20} />
-                    )}
-                  </button>
+              {/* Row 2: Phone & Address */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold text-slate-300 uppercase ml-1">
+                    Phone Number
+                  </label>
+                  <div className="relative group">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-teal-400" />
+                    <input
+                      type="tel"
+                      placeholder="Enter phone"
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          phoneNumber: e.target.value,
+                        })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-11 pr-4 text-sm focus:border-teal-400 outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold text-slate-300 uppercase ml-1">
+                    Address
+                  </label>
+                  <div className="relative group">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-teal-400" />
+                    <input
+                      type="text"
+                      placeholder="Enter full address"
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-11 pr-4 text-sm focus:border-teal-400 outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
-                  Age <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative group">
-                  <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
-                  <input
-                    type="number"
-                    placeholder="Enter your age"
-                    required
-                    onChange={(e) =>
-                      setFormData({ ...formData, age: e.target.value })
-                    }
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 text-base focus:border-teal-400 outline-none transition-all"
-                  />
+              {/* Row 3: Age, Gender, Blood Group */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold text-slate-300 uppercase ml-1">
+                    Age
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    <input
+                      type="number"
+                      placeholder="Age"
+                      onChange={(e) =>
+                        setFormData({ ...formData, age: e.target.value })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-9 pr-2 text-sm focus:border-teal-400 outline-none"
+                    />
+                  </div>
                 </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold text-slate-300 uppercase ml-1">
+                    Gender <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    <select
+                      required
+                      onChange={(e) =>
+                        setFormData({ ...formData, gender: e.target.value })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-9 pr-2 text-sm focus:border-teal-400 outline-none appearance-none text-slate-300"
+                    >
+                      <option value="">Select</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold text-slate-300 uppercase ml-1">
+                    Blood Group
+                  </label>
+                  <div className="relative">
+                    <Droplet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                    <select
+                      onChange={(e) =>
+                        setFormData({ ...formData, bloodGroup: e.target.value })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-9 pr-2 text-sm focus:border-teal-400 outline-none appearance-none text-slate-300"
+                    >
+                      <option value="">Select</option>
+                      {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
+                        (bg) => (
+                          <option key={bg} value={bg}>
+                            {bg}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms Checkbox */}
+              <div
+                className="flex items-start gap-3 mt-2 group cursor-pointer"
+                onClick={() => setAgreedToTerms(!agreedToTerms)}
+              >
+                <div
+                  className={`mt-1 w-5 h-5 rounded border transition-all flex items-center justify-center ${agreedToTerms ? "bg-teal-500 border-teal-500" : "bg-[#0B1120] border-slate-700 group-hover:border-teal-500"}`}
+                >
+                  {agreedToTerms && (
+                    <CheckCircle2
+                      size={14}
+                      className="text-slate-900"
+                      strokeWidth={3}
+                    />
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  I agree to the{" "}
+                  <span className="text-teal-400 font-bold hover:underline">
+                    Terms of Service
+                  </span>{" "}
+                  and{" "}
+                  <span className="text-teal-400 font-bold hover:underline">
+                    Privacy Policy
+                  </span>
+                  .
+                </p>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-5 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.2em] text-xl hover:bg-teal-300 transition-all mt-4"
+                className="w-full py-5 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.2em] text-xl hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10 mt-4"
               >
-                {loading ? "Creating..." : "CREATE ACCOUNT"}
+                {loading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
               </button>
             </form>
           )}
@@ -391,7 +502,6 @@ export default function Register() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-xs font-medium">
         <p>© 2026 HealthBot. All rights reserved.</p>
         <div className="flex items-center gap-4">
