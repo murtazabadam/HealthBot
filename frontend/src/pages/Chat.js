@@ -28,10 +28,10 @@ export default function Chat() {
   const bottomRef = useRef(null);
   const navigate = useNavigate();
 
-  // Safely get user data
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
-  const firstName = user.name ? user.name.trim().split(" ")[0] : "User";
+  const fullName = user.name || "User";
+  const firstName = fullName.trim().split(" ")[0];
 
   useEffect(() => {
     const now = new Date().toLocaleTimeString([], {
@@ -97,7 +97,7 @@ export default function Chat() {
         {
           id: Date.now() + 2,
           sender: "bot",
-          text: "⚠️ I'm having trouble connecting to my brain. Please check your internet or try again later.",
+          text: "⚠️ Connection error. Please try again later.",
           time: now,
         },
       ]);
@@ -146,7 +146,7 @@ export default function Chat() {
     <div className="h-screen w-full bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Sidebar */}
+      {/* Sidebar Navigation */}
       <div
         className={`fixed inset-y-0 left-0 z-[60] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
       >
@@ -160,8 +160,8 @@ export default function Chat() {
       </div>
 
       <main className="flex-1 flex flex-col h-full relative z-10 overflow-hidden">
-        {/* FIXED HEADER - NAME AT TOP RIGHT */}
-        <header className="sticky top-0 left-0 right-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617] backdrop-blur-md">
+        {/* --- FIXED HEADER (Locked at top) --- */}
+        <header className="sticky top-0 left-0 right-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617] shadow-lg">
           <div className="flex items-center gap-3">
             <button
               className={`p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-all ${isSidebarOpen ? "lg:hidden" : "block"}`}
@@ -169,33 +169,33 @@ export default function Chat() {
             >
               <Menu size={24} />
             </button>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-slate-800/50 flex items-center justify-center border border-teal-500/20">
                 <Activity size={22} className="text-teal-400" />
               </div>
-              <h3 className="text-white text-sm lg:text-lg font-bold leading-none tracking-tight">
+              <h3 className="text-white text-base lg:text-lg font-bold tracking-tight">
                 HealthBot
               </h3>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex flex-col items-end">
-              <span className="text-[11px] lg:text-xs font-bold text-slate-300 uppercase tracking-wide">
-                {firstName}
+            <div className="flex flex-col items-end text-right">
+              <span className="text-[11px] lg:text-xs font-black text-white uppercase tracking-wider">
+                {fullName}
               </span>
-              <p className="text-[9px] text-teal-400 font-bold uppercase flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />{" "}
-                ONLINE
+              <p className="text-[9px] text-teal-400 font-bold uppercase flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />
+                Online
               </p>
             </div>
-            <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/50">
-              <UserCircle className="text-slate-500" size={24} />
+            <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/80 shadow-md">
+              <UserCircle className="text-slate-400" size={26} />
             </div>
           </div>
         </header>
 
-        {/* CHAT AREA */}
+        {/* --- SCROLLABLE CHAT MESSAGES --- */}
         <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex justify-center">
@@ -249,8 +249,8 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* INPUT AREA */}
-        <div className="p-4 lg:p-6 bg-[#020617] shrink-0 border-t border-slate-800/30">
+        {/* --- FIXED INPUT AREA --- */}
+        <div className="p-4 lg:p-6 bg-[#020617] shrink-0 border-t border-slate-800/30 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-wrap justify-center gap-2 mb-4">
               {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
@@ -278,7 +278,7 @@ export default function Chat() {
                   (e.preventDefault(), sendMessage())
                 }
                 placeholder="Describe your health concern..."
-                className="flex-1 bg-transparent border-none focus:ring-0 text-xs lg:text-sm text-white py-3 resize-none no-scrollbar"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-xs lg:text-sm text-white py-3 resize-none no-scrollbar placeholder-slate-600"
               />
               <button className="p-2.5 text-slate-500 hover:text-teal-400 transition-colors">
                 <Mic size={20} />
