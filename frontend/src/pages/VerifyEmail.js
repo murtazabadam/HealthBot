@@ -1,137 +1,155 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import {
-  Activity,
-  ShieldCheck,
-  Loader2,
-  AlertCircle,
-  ArrowRight,
-} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Activity, CheckCircle2, XCircle } from "lucide-react";
 
 export default function VerifyEmail() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
-  const [status, setStatus] = useState("verifying"); // 'verifying', 'success', 'error'
+  const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
-    const verifyToken = async () => {
-      if (!token) {
-        setStatus("error");
-        setMessage("No verification token found in the link.");
-        return;
-      }
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
 
+    if (!token) {
+      setStatus("error");
+      setMessage("No verification token found. Please check your email link.");
+      return;
+    }
+
+    let redirectTimer;
+
+    const verifyEmail = async () => {
       try {
         const res = await fetch(
-          `https://healthbot-production-3c7d.up.railway.app/api/auth/verify-email?token=${token}`,
+          `https://healthbot-production-3c7d.up.railway.app/api/auth/verify-email?token=${token}`
         );
         const data = await res.json();
 
-        if (res.ok && data.token) {
-          // Store session data exactly like the login page
+        if (!res.ok) {
+          setStatus("error");
+          setMessage(data.message || "Verification failed.");
+          return;
+        }
+
+        if (data.token) {
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
-
-          setStatus("success");
-          setMessage("Your email has been verified successfully!");
-
-          // Auto-redirect after 3 seconds
-          setTimeout(() => {
-            navigate("/chat");
-          }, 3000);
-        } else {
-          setStatus("error");
-          setMessage(
-            data.message || "Verification failed. The link may be expired.",
-          );
         }
+
+        setStatus("success");
+        setMessage(data.message || "Email verified successfully!");
+        redirectTimer = setTimeout(() => navigate("/chat"), 3000);
       } catch (err) {
         setStatus("error");
-        setMessage("Connection error. Please try again later.");
+        setMessage("Something went wrong. Please try again.");
       }
     };
 
-    verifyToken();
-  }, [token, navigate]);
+    verifyEmail();
+
+    return () => {
+      if (redirectTimer) clearTimeout(redirectTimer);
+    };
+  }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center justify-center p-4">
-      {/* Background Decor */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div
+        className="absolute inset-0 pointer-events-none opacity-20"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)",
+          backgroundSize: "40px 40px",
+        }}
+      />
 
-      <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 sm:p-12 w-full max-w-[480px] shadow-2xl text-center z-10 relative">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
+      <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
+        <Link to="/" className="flex items-center gap-2 cursor-pointer">
+          <Activity className="h-7 w-7 text-teal-400" />
+          <span className="text-2xl font-bold tracking-tight text-white">
+            HealthBot
+          </span>
+        </Link>
+      </nav>
 
-        <div className="flex flex-col items-center">
-          <div className="w-20 h-20 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mb-8">
-            <Activity className="h-10 w-10 text-teal-400" />
-          </div>
+      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10">
+        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-10 w-full max-w-[480px] shadow-[0_0_40px_rgba(13,148,136,0.1)] relative text-center">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
-          {status === "verifying" && (
-            <div className="animate-in fade-in duration-500">
-              <Loader2 className="h-12 w-12 text-teal-400 animate-spin mx-auto mb-6" />
+          {status === "loading" && (
+            <>
+              <div className="w-20 h-20 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mx-auto mb-6">
+                <Activity className="h-10 w-10 text-teal-400 animate-pulse" />
+              </div>
               <h1 className="text-2xl font-bold text-white mb-3">
-                Verifying Account
+                Verifying your email...
               </h1>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                Please wait while we secure your connection and verify your
-                email address...
+              <p className="text-slate-400 text-sm">
+                Please wait while we verify your account.
               </p>
-            </div>
+            </>
           )}
 
           {status === "success" && (
-            <div className="animate-in zoom-in duration-500">
-              <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-500/30">
-                <ShieldCheck className="h-8 w-8 text-emerald-400" />
+            <>
+              <div className="w-20 h-20 rounded-full border border-green-500/30 bg-green-500/10 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="h-10 w-10 text-green-400" />
               </div>
-              <h1 className="text-2xl font-bold text-white mb-3">Verified!</h1>
-              <p className="text-slate-400 text-sm mb-8">
-                {message} <br /> Redirecting you to the HealthBot chat...
-              </p>
+              <h1 className="text-2xl font-bold text-white mb-3">
+                Email Verified!
+              </h1>
+              <p className="text-slate-400 text-sm mb-6">{message}</p>
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-6">
+                <p className="text-green-400 text-sm">
+                  Redirecting you to chat in 3 seconds...
+                </p>
+              </div>
               <Link
                 to="/chat"
-                className="inline-flex items-center gap-2 bg-teal-500 text-slate-900 px-8 py-3 rounded-xl font-extrabold uppercase text-xs tracking-widest hover:brightness-110 transition-all"
+                className="inline-block bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-900 font-bold py-3 px-8 rounded-lg transition-all"
               >
-                Go to Chat <ArrowRight size={16} />
+                Go to Chat Now
               </Link>
-            </div>
+            </>
           )}
 
           {status === "error" && (
-            <div className="animate-in slide-in-from-top-4 duration-500">
-              <div className="w-16 h-16 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-rose-500/30">
-                <AlertCircle className="h-8 w-8 text-rose-400" />
+            <>
+              <div className="w-20 h-20 rounded-full border border-red-500/30 bg-red-500/10 flex items-center justify-center mx-auto mb-6">
+                <XCircle className="h-10 w-10 text-red-400" />
               </div>
               <h1 className="text-2xl font-bold text-white mb-3">
                 Verification Failed
               </h1>
-              <p className="text-rose-400/80 text-sm mb-8 font-medium italic">
-                {message}
-              </p>
+              <p className="text-slate-400 text-sm mb-6">{message}</p>
               <div className="flex flex-col gap-3">
                 <Link
-                  to="/register"
-                  className="bg-slate-800 text-white px-8 py-3 rounded-xl font-bold text-sm hover:bg-slate-700 transition-all"
-                >
-                  Back to Sign Up
-                </Link>
-                <Link
                   to="/login"
-                  className="text-teal-400 text-xs font-bold uppercase hover:underline"
+                  className="inline-block bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-900 font-bold py-3 px-8 rounded-lg transition-all"
                 >
-                  Already verified? Log In
+                  Back to Login
                 </Link>
+                <p className="text-slate-500 text-xs">
+                  Need a new link?{" "}
+                  <Link
+                    to="/login"
+                    className="text-teal-400 hover:text-teal-300"
+                  >
+                    Login to resend
+                  </Link>
+                </p>
               </div>
-            </div>
+            </>
           )}
         </div>
-      </div>
+      </main>
 
-      <footer className="mt-8 text-slate-500 text-[10px] font-bold uppercase tracking-widest z-10">
-        © 2026 HealthBot AI Assistant
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10">
+        <p className="text-slate-400 text-xs font-medium">
+          © 2026 HealthBot. All rights reserved.
+        </p>
       </footer>
     </div>
   );
