@@ -5,72 +5,69 @@ import { Activity, Mail, Lock, Eye, EyeOff } from "lucide-react";
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
+  const [showVerificationBanner, setShowVerificationBanner] = useState(false);
+  const [resendStatus, setResendStatus] = useState("");
   const navigate = useNavigate();
-  const [unverifiedEmail, setUnverifiedEmail] = useState('');
-const [showVerificationBanner, setShowVerificationBanner] = useState(false);
-const [resendStatus, setResendStatus] = useState('');
 
   const handleGoogleLogin = () => {
     window.location.href =
       "https://healthbot-production-3c7d.up.railway.app/api/auth/google";
   };
 
- const handleLogin = async (e) => {
-  e.preventDefault();
-  setErrorMessage('');
-  setLoading(true);
-  const email = e.target[0].value;
-  const password = e.target[1].value;
-  try {
-    const res = await fetch('https://healthbot-production-3c7d.up.railway.app/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      if (data.requiresVerification) {
-        setErrorMessage('');
-        setUnverifiedEmail(data.email);
-        setShowVerificationBanner(true);
-        return;
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setErrorMessage("");
+    setShowVerificationBanner(false);
+    const email = e.target[0].value;
+    const password = e.target[1].value;
+    try {
+      const res = await fetch(
+        "https://healthbot-production-3c7d.up.railway.app/api/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.requiresVerification) {
+          setUnverifiedEmail(data.email || email);
+          setShowVerificationBanner(true);
+          return;
+        }
+        throw new Error(data.message || "Login failed");
       }
-      throw new Error(data.message || 'Login failed');
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      navigate("/chat");
+    } catch (err) {
+      setErrorMessage(err.message);
     }
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
-    navigate('/chat');
-  } catch (err) {
-    setErrorMessage(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-const handleResend = async () => {
-  setResendStatus('Sending...');
-  try {
-    const res = await fetch('https://healthbot-production-3c7d.up.railway.app/api/auth/resend-verification', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: unverifiedEmail })
-    });
-    const data = await res.json();
-    setResendStatus(data.message || 'Sent!');
-  } catch {
-    setResendStatus('Failed to resend. Try again.');
-  }
-};
-
-
+  const handleResend = async () => {
+    setResendStatus("Sending...");
+    try {
+      const res = await fetch(
+        "https://healthbot-production-3c7d.up.railway.app/api/auth/resend-verification",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: unverifiedEmail }),
+        }
+      );
+      const data = await res.json();
+      setResendStatus(data.message || "Sent!");
+    } catch {
+      setResendStatus("Failed to resend. Try again.");
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
-      {/* Background Decor - Ambient Glow */}
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white relative flex flex-col items-center overflow-x-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
-
-      {/* Dotted Pattern Overlay */}
       <div
         className="absolute inset-0 pointer-events-none opacity-20"
         style={{
@@ -80,8 +77,7 @@ const handleResend = async () => {
         }}
       />
 
-      {/* Navigation Bar - Sticky at top */}
-      <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-6 lg:px-12 w-full bg-[#0B1120]/80 backdrop-blur-md border-b border-slate-800/50">
+      <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
         <Link to="/" className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-7 w-7 text-teal-400" />
           <span className="text-2xl font-bold tracking-tight text-white">
@@ -90,128 +86,141 @@ const handleResend = async () => {
         </Link>
         <Link
           to="/register"
-          className="px-6 py-2.5 text-sm font-bold text-white border border-teal-500 hover:bg-teal-500/10 rounded-xl transition-all"
+          className="px-6 py-2.5 text-sm font-semibold text-white bg-transparent border border-teal-500 hover:bg-teal-500/10 rounded-md transition-all"
         >
           Sign Up
         </Link>
       </nav>
 
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
-        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 sm:p-12 w-full max-w-[480px] shadow-2xl relative">
-          {/* Top border highlight */}
+        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 sm:p-12 w-full max-w-[480px] shadow-[0_0_40px_rgba(13,148,136,0.1)] relative">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
-          {/* Header Section */}
           <div className="flex flex-col items-center mb-8">
             <div className="w-16 h-16 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mb-6">
               <Activity className="h-8 w-8 text-teal-400" />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-            <p className="text-slate-400 text-center text-sm">
-              Securely login to your health dashboard.
+            <h1 className="text-3xl font-bold text-white mb-3">
+              Welcome Back!
+            </h1>
+            <p className="text-slate-400 text-center text-sm leading-relaxed max-w-[280px]">
+              Login to your account and continue your health journey with{" "}
+              <span className="text-teal-400 font-medium">HealthBot</span>.
             </p>
           </div>
 
           <form className="flex flex-col gap-5" onSubmit={handleLogin}>
-            {/* Error Message Alert */}
+            {/* Error Message */}
             {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-4 rounded-xl text-center font-bold animate-pulse">
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center">
                 {errorMessage}
               </div>
             )}
 
-{/* Verification Banner */}
-{showVerificationBanner && (
-  <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-4">
-    <p className="text-yellow-400 text-sm font-medium mb-2">
-      ⚠️ Email not verified
-    </p>
-    <p className="text-slate-400 text-xs mb-3">
-      Please check your inbox and verify your email before logging in.
-    </p>
-    <button
-      type="button"
-      onClick={handleResend}
-      className="text-xs text-teal-400 hover:text-teal-300 font-medium underline"
-    >
-      Resend verification email
-    </button>
-    {resendStatus && (
-      <p className="text-xs text-green-400 mt-2">{resendStatus}</p>
-    )}
-  </div>
-)}
+            {/* Verification Banner */}
+            {showVerificationBanner && (
+              <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-4">
+                <p className="text-yellow-400 text-sm font-medium mb-1">
+                  ⚠️ Email not verified
+                </p>
+                <p className="text-slate-400 text-xs mb-3">
+                  Please check your inbox and verify your email before logging
+                  in.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  className="text-xs text-teal-400 hover:text-teal-300 font-medium underline"
+                >
+                  Resend verification email
+                </button>
+                {resendStatus && (
+                  <p className="text-xs text-green-400 mt-2">{resendStatus}</p>
+                )}
+              </div>
+            )}
 
-            {/* Email Field */}
+            {/* Email */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              <label className="text-sm font-medium text-slate-300">
                 Email Address
               </label>
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-slate-500" />
+                </div>
                 <input
                   type="email"
-                  placeholder="name@example.com"
+                  placeholder="Enter your email"
                   required
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
                 />
               </div>
             </div>
 
-            {/* Password Field */}
+            {/* Password */}
             <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Password
-                </label>
-                <Link
-                  to="/forgot-password"
-                  className="text-[10px] text-teal-400 hover:underline uppercase tracking-tighter font-bold"
-                >
-                  Forgot?
-                </Link>
-              </div>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
+              <label className="text-sm font-medium text-slate-300">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-slate-500" />
+                </div>
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   required
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3.5 pl-12 pr-12 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-4 bg-gradient-to-r from-teal-400 to-blue-500 text-slate-900 font-extrabold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
-            >
-              {loading ? "Authenticating..." : "Log In"}
-            </button>
-
-            {/* Social Divider */}
-            <div className="relative flex items-center gap-4 my-2">
-              <div className="h-[1px] flex-1 bg-slate-800"></div>
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                or
-              </span>
-              <div className="h-[1px] flex-1 bg-slate-800"></div>
+            {/* Forgot Password */}
+            <div className="flex justify-end">
+              <Link
+                to="/forgot-password"
+                className="text-xs text-teal-400 hover:text-teal-300 font-medium transition-colors"
+              >
+                Forgot Password?
+              </Link>
             </div>
 
-            {/* Google Login Button */}
+            {/* Login Button */}
+            <button
+              type="submit"
+              className="w-full mt-2 bg-gradient-to-r from-teal-400 to-cyan-500 hover:from-teal-300 hover:to-cyan-400 text-slate-900 font-bold py-3.5 rounded-lg transition-all shadow-[0_0_20px_rgba(45,212,191,0.3)] flex items-center justify-center gap-2"
+            >
+              Log In <span className="text-xl leading-none">→</span>
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-4 my-2">
+              <div className="h-[1px] flex-1 bg-slate-700/50"></div>
+              <span className="text-xs text-slate-500 font-medium">
+                or continue with
+              </span>
+              <div className="h-[1px] flex-1 bg-slate-700/50"></div>
+            </div>
+          </form>
+
+          {/* Google Button */}
+          <div className="flex flex-col gap-4 mb-6">
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center gap-3 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-xl py-3.5 transition-all text-sm font-bold text-slate-300"
+              className="w-full flex items-center justify-center gap-2 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-lg py-3 transition-colors text-sm font-medium text-slate-300"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -233,35 +242,39 @@ const handleResend = async () => {
               </svg>
               Continue with Google
             </button>
-          </form>
+          </div>
 
-          {/* Footer Link */}
-          <div className="mt-8 text-center">
-            <p className="text-sm text-slate-400 font-medium">
+          {/* Register Link */}
+          <div className="text-center">
+            <span className="text-sm text-slate-400">
               Don't have an account?{" "}
-              <Link
-                to="/register"
-                className="text-teal-400 font-extrabold hover:underline ml-1"
-              >
-                Sign Up Free
-              </Link>
-            </p>
+            </span>
+            <Link
+              to="/register"
+              className="text-sm text-teal-400 hover:text-teal-300 font-medium transition-colors"
+            >
+              Sign Up
+            </Link>
           </div>
         </div>
       </main>
 
-      {/* Page Footer */}
-      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-xs font-medium">
-        <p>© 2026 HealthBot. All rights reserved.</p>
-        <div className="flex items-center gap-4">
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10">
+        <p className="text-slate-400 text-xs font-medium">
+          © 2026 HealthBot. All rights reserved.
+        </p>
+        <div className="flex items-center gap-4 text-xs font-medium">
           <Link
             to="/privacy"
-            className="hover:text-slate-400 transition-colors"
+            className="text-slate-500 hover:text-slate-400 transition-colors"
           >
             Privacy Policy
           </Link>
           <span className="text-slate-700">|</span>
-          <Link to="/terms" className="hover:text-slate-400 transition-colors">
+          <Link
+            to="/terms"
+            className="text-slate-500 hover:text-slate-400 transition-colors"
+          >
             Terms of Service
           </Link>
         </div>
