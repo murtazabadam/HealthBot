@@ -59,11 +59,7 @@ export default function Register() {
 
   const handleSendOTP = async (e) => {
     if (e) e.preventDefault();
-    if (!formData.email) {
-      setErrorMessage("Please enter your email first.");
-      return;
-    }
-
+    if (!formData.email) return setErrorMessage("Please enter your email.");
     setLoading(true);
     setErrorMessage("");
     try {
@@ -75,14 +71,11 @@ export default function Register() {
           body: JSON.stringify({ email: formData.email.trim() }),
         },
       );
-
-      if (!res.ok)
-        throw new Error("Failed to send OTP. Please check your email.");
-
+      if (!res.ok) throw new Error("Failed to send OTP.");
       setRegStep(2);
-      setTimer(60); // Start 60s cooldown for resend
+      setTimer(60);
     } catch (err) {
-      setErrorMessage("Service Error: Ensure backend is active.");
+      setErrorMessage("Service Connection Error. Backend might be offline.");
     } finally {
       setLoading(false);
     }
@@ -103,7 +96,7 @@ export default function Register() {
           }),
         },
       );
-      if (!res.ok) throw new Error("Invalid or expired code.");
+      if (!res.ok) throw new Error("Invalid code.");
       setRegStep(3);
     } catch (err) {
       setErrorMessage(err.message);
@@ -152,7 +145,7 @@ export default function Register() {
       <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
         <Link to="/" className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" />
-          <span className="text-2xl font-bold tracking-tight text-white uppercase">
+          <span className="text-2xl font-bold tracking-tight text-white uppercase tracking-tighter">
             HealthBot
           </span>
         </Link>
@@ -182,12 +175,12 @@ export default function Register() {
                   ? "Verify"
                   : "Health Profile"}
             </h2>
-            <p className="text-slate-400 text-sm tracking-wide">
+            <p className="text-slate-400 text-sm">
               {regStep === 1
                 ? "Step 1: Identity"
                 : regStep === 2
                   ? "Step 2: Verification"
-                  : "Step 3: Medical Details"}
+                  : "Step 3: Medical Record"}
             </p>
           </div>
 
@@ -281,7 +274,6 @@ export default function Register() {
                 </span>
                 <div className="h-[1px] flex-1 bg-slate-800"></div>
               </div>
-
               <button
                 type="button"
                 onClick={handleGoogleSignUp}
@@ -310,7 +302,7 @@ export default function Register() {
             </form>
           )}
 
-          {/* STEP 2: OTP VERIFICATION + RESEND */}
+          {/* STEP 2: VERIFICATION + RESEND */}
           {regStep === 2 && (
             <form className="flex flex-col gap-6" onSubmit={handleVerifyOTP}>
               <div className="text-center">
@@ -336,25 +328,22 @@ export default function Register() {
               >
                 {loading ? "Checking..." : "Verify Code"}
               </button>
-
-              <div className="text-center mt-2">
-                <button
-                  type="button"
-                  disabled={timer > 0 || loading}
-                  onClick={handleSendOTP}
-                  className="text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 mx-auto disabled:opacity-50 text-slate-400 hover:text-teal-400 transition-colors"
-                >
-                  <RefreshCw
-                    size={14}
-                    className={loading ? "animate-spin" : ""}
-                  />
-                  {timer > 0 ? `Resend Code in ${timer}s` : "Resend OTP Code"}
-                </button>
-              </div>
+              <button
+                type="button"
+                disabled={timer > 0 || loading}
+                onClick={handleSendOTP}
+                className="text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 mx-auto disabled:opacity-50 text-slate-400 hover:text-teal-400 transition-colors"
+              >
+                <RefreshCw
+                  size={14}
+                  className={loading ? "animate-spin" : ""}
+                />
+                {timer > 0 ? `Resend Code in ${timer}s` : "Resend Code"}
+              </button>
             </form>
           )}
 
-          {/* STEP 3: HEALTH PROFILE */}
+          {/* STEP 3: FULL MEDICAL PROFILE */}
           {regStep === 3 && (
             <form className="flex flex-col gap-5" onSubmit={handleRegister}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -383,7 +372,7 @@ export default function Register() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
-                    Confirm Password <span className="text-rose-500">*</span>
+                    Confirm <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative group">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
@@ -411,7 +400,6 @@ export default function Register() {
                   </div>
                 </div>
               </div>
-
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
@@ -448,7 +436,7 @@ export default function Register() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
-                    Blood Group
+                    Blood
                   </label>
                   <div className="relative">
                     <Droplet className="absolute left-3 h-4 w-4 text-slate-500 top-1/2 -translate-y-1/2" />
@@ -469,7 +457,6 @@ export default function Register() {
                   </div>
                 </div>
               </div>
-
               <div
                 className="flex items-start gap-3 mt-4 cursor-pointer"
                 onClick={() => setAgreedToTerms(!agreedToTerms)}
@@ -497,7 +484,6 @@ export default function Register() {
                   .
                 </p>
               </div>
-
               <button
                 type="submit"
                 disabled={loading}
@@ -508,32 +494,38 @@ export default function Register() {
             </form>
           )}
 
-          <p className="mt-8 text-center text-sm text-slate-400">
-            Already have an account?{" "}
+          <div className="mt-8 text-center flex flex-col gap-3">
+            <p className="text-sm text-slate-400 font-medium">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="text-teal-400 font-extrabold hover:underline ml-1"
+              >
+                Log In
+              </Link>
+            </p>
             <Link
-              to="/login"
-              className="text-teal-400 font-extrabold hover:underline ml-1"
+              to="/forgot-password"
+              size={12}
+              className="text-[10px] font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors"
             >
-              Log In
+              Forgot Password?
             </Link>
-          </p>
+          </div>
         </div>
       </main>
 
-      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-[10px] font-bold uppercase tracking-widest relative">
         <p>© 2026 HealthBot AI. All rights reserved.</p>
         <div className="flex items-center gap-4">
           <Link
             to="/privacy"
-            className="hover:text-slate-300 transition-colors font-bold"
+            className="hover:text-slate-300 transition-colors"
           >
             Privacy Policy
           </Link>
           <span className="text-slate-800">|</span>
-          <Link
-            to="/terms"
-            className="hover:text-slate-300 transition-colors font-bold"
-          >
+          <Link to="/terms" className="hover:text-slate-300 transition-colors">
             Terms of Service
           </Link>
         </div>
