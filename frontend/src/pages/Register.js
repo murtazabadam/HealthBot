@@ -121,7 +121,6 @@ export default function Register() {
     setLoading(true);
     setErrorMessage("");
     try {
-      // Assuming your backend expects the full object including the otp code
       const payload = { ...formData, otp: otpString };
 
       const res = await fetch(
@@ -132,9 +131,12 @@ export default function Register() {
           body: JSON.stringify(payload),
         },
       );
-      if (!res.ok)
-        throw new Error("Registration failed. Check your OTP and try again.");
+
       const data = await res.json();
+
+      if (!res.ok)
+        throw new Error(data.message || "Registration failed. Check your OTP.");
+
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/chat");
@@ -156,57 +158,103 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-[#020817] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
+      {/* Background Decor - Ambient Center Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-cyan-500/10 rounded-full blur-[150px] pointer-events-none" />
+
+      {/* Background Decor - Abstract Side Waves matching the image */}
+      <div className="absolute left-0 top-1/4 bottom-1/4 w-[300px] pointer-events-none opacity-40 overflow-hidden">
         <svg
-          className="w-full h-full"
-          viewBox="0 0 1000 1000"
-          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 200 800"
+          className="w-full h-full text-cyan-400"
+          preserveAspectRatio="none"
         >
           <path
-            d="M0,500 C200,400 300,600 500,500 C700,400 800,600 1000,500"
-            stroke="#0ea5e9"
-            fill="transparent"
-            strokeWidth="0.5"
+            d="M-50,200 C50,300 100,500 -50,600"
+            stroke="currentColor"
+            strokeWidth="3"
+            fill="none"
+            opacity="0.6"
+            style={{ filter: "blur(2px)" }}
           />
           <path
-            d="M0,520 C200,420 300,620 500,520 C700,420 800,620 1000,520"
-            stroke="#0ea5e9"
-            fill="transparent"
-            strokeWidth="0.5"
+            d="M-50,250 C80,350 120,450 -50,550"
+            stroke="currentColor"
+            strokeWidth="2"
+            fill="none"
+            opacity="0.4"
+            style={{ filter: "blur(1px)" }}
+          />
+          <path
+            d="M-50,150 C120,300 150,500 -50,650"
+            stroke="currentColor"
+            strokeWidth="1"
+            fill="none"
+            opacity="0.2"
+          />
+        </svg>
+      </div>
+      <div className="absolute right-0 top-1/4 bottom-1/4 w-[300px] pointer-events-none opacity-40 overflow-hidden transform scale-x-[-1]">
+        <svg
+          viewBox="0 0 200 800"
+          className="w-full h-full text-blue-500"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M-50,200 C50,300 100,500 -50,600"
+            stroke="currentColor"
+            strokeWidth="3"
+            fill="none"
+            opacity="0.6"
+            style={{ filter: "blur(2px)" }}
+          />
+          <path
+            d="M-50,250 C80,350 120,450 -50,550"
+            stroke="currentColor"
+            strokeWidth="2"
+            fill="none"
+            opacity="0.4"
+            style={{ filter: "blur(1px)" }}
+          />
+          <path
+            d="M-50,150 C120,300 150,500 -50,650"
+            stroke="currentColor"
+            strokeWidth="1"
+            fill="none"
+            opacity="0.2"
           />
         </svg>
       </div>
 
       {/* Top Navbar */}
-      <nav className="relative z-10 w-full flex items-center justify-between px-6 py-6 lg:px-16 max-w-[1400px]">
-        <Link to="/" className="flex items-center gap-2">
+      <nav className="relative z-10 w-full flex items-center justify-between px-6 py-6 lg:px-12 max-w-[1400px]">
+        <Link to="/" className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-8 w-8 text-cyan-400" />
-          <span className="text-3xl font-bold tracking-tight text-white italic">
+          <span className="text-2xl font-bold tracking-tight text-white">
             HealthBot
           </span>
         </Link>
       </nav>
 
-      {/* Main Form */}
-      <main className="relative z-10 flex-1 flex flex-col justify-center items-center w-full px-4 py-8">
-        <div className="w-full max-w-[900px] bg-[#020817]/90 backdrop-blur-sm border border-cyan-500/40 rounded-[40px] p-8 sm:p-12 shadow-[0_0_50px_rgba(6,182,212,0.15)] relative">
+      {/* Main Form Container */}
+      <main className="relative z-10 flex-1 flex flex-col justify-center items-center w-full px-4 py-6">
+        <div className="w-full max-w-[850px] bg-[#020817]/80 backdrop-blur-md border border-cyan-500/30 rounded-[35px] p-8 sm:p-12 shadow-[0_0_50px_rgba(6,182,212,0.15)] relative">
+          {/* Header */}
           <div className="flex flex-col items-center mb-10 text-center">
-            <div className="w-20 h-20 rounded-full border border-cyan-500/40 bg-cyan-500/5 flex items-center justify-center mb-6">
+            <div className="w-20 h-20 rounded-full border border-cyan-500/40 bg-cyan-500/5 flex items-center justify-center mb-5 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
               <UserPlus className="h-10 w-10 text-cyan-400" strokeWidth={1.5} />
             </div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4 tracking-tight">
+            <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3 tracking-tight">
               Create Account
             </h1>
-            <p className="text-slate-400 text-lg">
+            <p className="text-slate-400 text-sm">
               Join <span className="text-cyan-400 font-medium">HealthBot</span>{" "}
               and start your smarter health journey today.
             </p>
           </div>
 
-          <form onSubmit={handleRegister} className="flex flex-col gap-7">
+          <form onSubmit={handleRegister} className="flex flex-col gap-6">
             {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-4 rounded-xl text-center font-bold">
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-4 rounded-xl text-center font-bold animate-pulse">
                 {errorMessage}
               </div>
             )}
@@ -218,14 +266,14 @@ export default function Register() {
                   Full Name <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400" />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
                   <input
                     type="text"
                     name="name"
                     required
                     placeholder="Enter your full name"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-cyan-500/50"
+                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
                   />
                 </div>
               </div>
@@ -236,21 +284,21 @@ export default function Register() {
                 </label>
                 <div className="relative flex gap-2">
                   <div className="relative flex-1 group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400" />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
                     <input
                       type="email"
                       name="email"
                       required
                       placeholder="Enter your email address"
                       onChange={handleChange}
-                      className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-4 pl-12 pr-[110px] text-white focus:outline-none focus:border-cyan-500/50"
+                      className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-[105px] text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
                     />
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                    <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
                       <button
                         type="button"
                         disabled={timer > 0 || loading}
                         onClick={handleSendOTP}
-                        className="flex items-center gap-1.5 h-10 px-3 bg-transparent border border-cyan-500/50 text-cyan-400 rounded-lg text-xs font-bold hover:bg-cyan-500/10 transition-all disabled:opacity-50 whitespace-nowrap"
+                        className="flex items-center gap-1.5 h-9 px-3 bg-transparent border border-cyan-500/50 text-cyan-400 rounded-lg text-xs font-bold hover:bg-cyan-500/10 transition-all disabled:opacity-50 whitespace-nowrap"
                       >
                         <Send size={14} />
                         {timer > 0 ? `${timer}s` : "Send OTP"}
@@ -280,7 +328,7 @@ export default function Register() {
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                      className="w-10 h-12 sm:w-12 sm:h-14 bg-[#0B1120] border border-slate-700 rounded-lg sm:rounded-xl text-center text-xl sm:text-2xl text-white font-semibold focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 transition-all"
+                      className="w-10 h-12 sm:w-12 sm:h-12 bg-[#0B1120] border border-slate-700 rounded-lg text-center text-xl text-white font-bold focus:outline-none focus:border-cyan-400 transition-all"
                     />
                   ))}
                 </div>
@@ -294,14 +342,14 @@ export default function Register() {
                   Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
                     required
                     placeholder="Create a password"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-4 pl-12 pr-12 text-white focus:outline-none focus:border-cyan-500/50"
+                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
                   />
                   <button
                     type="button"
@@ -312,8 +360,8 @@ export default function Register() {
                   </button>
                 </div>
                 <div className="flex items-start gap-2 mt-1 px-1">
-                  <ShieldCheck className="h-4 w-4 text-cyan-400 shrink-0" />
-                  <p className="text-[11px] text-slate-400 leading-tight">
+                  <ShieldCheck className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-slate-400 leading-tight">
                     Use at least 8 characters with a mix of letters, numbers &
                     symbols
                   </p>
@@ -324,14 +372,14 @@ export default function Register() {
                   Confirm Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
                     required
                     placeholder="Confirm your password"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-4 pl-12 pr-12 text-white focus:outline-none focus:border-cyan-500/50"
+                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
                   />
                   <button
                     type="button"
@@ -355,13 +403,13 @@ export default function Register() {
                   Age
                 </label>
                 <div className="relative group">
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400" />
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
                   <input
                     type="number"
                     name="age"
                     placeholder="Enter your age"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-white focus:outline-none"
+                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
                   />
                 </div>
               </div>
@@ -370,13 +418,13 @@ export default function Register() {
                   Phone Number
                 </label>
                 <div className="relative group">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400" />
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
                   <input
                     type="tel"
                     name="phoneNumber"
-                    placeholder="Enter your phone number"
+                    placeholder="Enter phone number"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-white focus:outline-none"
+                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
                   />
                 </div>
               </div>
@@ -385,13 +433,13 @@ export default function Register() {
                   Address
                 </label>
                 <div className="relative group">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400" />
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
                   <input
                     type="text"
                     name="address"
                     placeholder="Enter your address"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-white focus:outline-none"
+                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
                   />
                 </div>
               </div>
@@ -404,13 +452,13 @@ export default function Register() {
                   Gender <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
-                  <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400" />
+                  <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
                   <select
                     name="gender"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-10 text-slate-400 focus:outline-none appearance-none"
+                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-10 text-sm text-slate-400 focus:outline-none focus:border-cyan-500/50 appearance-none transition-all cursor-pointer"
                   >
-                    <option value="">Select your gender</option>
+                    <option value="">Select gender</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
                   </select>
@@ -422,13 +470,13 @@ export default function Register() {
                   Blood Group
                 </label>
                 <div className="relative group">
-                  <Droplet className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400" />
+                  <Droplet className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
                   <select
                     name="bloodGroup"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-10 text-slate-400 focus:outline-none appearance-none"
+                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-10 text-sm text-slate-400 focus:outline-none focus:border-cyan-500/50 appearance-none transition-all cursor-pointer"
                   >
-                    <option value="">Select your blood group</option>
+                    <option value="">Select blood group</option>
                     {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
                       (bg) => (
                         <option key={bg} value={bg}>
@@ -443,15 +491,15 @@ export default function Register() {
               <div className="hidden sm:block"></div>
             </div>
 
-            {/* Terms and Checkbox */}
+            {/* Terms Checkbox */}
             <div className="flex items-center gap-3 mt-2">
               <div
-                className={`w-5 h-5 rounded border transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? "bg-cyan-500 border-cyan-500" : "bg-[#0B1120] border-slate-700"}`}
+                className={`w-5 h-5 rounded border transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? "bg-cyan-500 border-cyan-500" : "bg-transparent border-slate-700"}`}
                 onClick={() => setAgreedToTerms(!agreedToTerms)}
               >
                 {agreedToTerms && (
                   <CheckCircle2
-                    size={14}
+                    size={16}
                     className="text-[#020817]"
                     strokeWidth={3}
                   />
@@ -479,16 +527,36 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 mt-2 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-white font-bold text-lg rounded-xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] flex items-center justify-center gap-2"
+              className="w-full mt-2 bg-gradient-to-r from-cyan-400 to-blue-600 text-white font-bold text-lg py-4 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? "Processing..." : "Create Account"}{" "}
-              <span className="text-2xl leading-none">→</span>
+              <span className="text-xl">→</span>
             </button>
 
+            {/* Form Links (Moved Above Google) */}
+            <div className="mt-5 text-center flex flex-col sm:flex-row items-center justify-center gap-2 text-sm text-slate-400 font-medium">
+              <span>
+                Already have an account?{" "}
+                <Link
+                  to="/login"
+                  className="text-cyan-400 font-bold hover:underline ml-1"
+                >
+                  Log In
+                </Link>
+              </span>
+              <span className="hidden sm:inline text-slate-700">|</span>
+              <Link
+                to="/forgot-password"
+                className="text-cyan-400 font-bold hover:underline"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+
             {/* Social Divider */}
-            <div className="relative flex items-center gap-4 my-2">
+            <div className="relative flex items-center gap-4 mt-4 mb-2">
               <div className="h-[1px] flex-1 bg-slate-800"></div>
-              <span className="text-xs text-slate-500 font-medium uppercase tracking-widest">
+              <span className="text-xs text-slate-500 font-medium">
                 or continue with
               </span>
               <div className="h-[1px] flex-1 bg-slate-800"></div>
@@ -498,7 +566,7 @@ export default function Register() {
             <button
               type="button"
               onClick={handleGoogleSignUp}
-              className="w-full py-4 border border-slate-800 hover:bg-slate-800/50 rounded-xl transition-all flex items-center justify-center gap-3 text-white font-semibold"
+              className="w-full flex items-center justify-center gap-3 bg-[#0B1120] border border-slate-800 hover:bg-slate-800/50 rounded-xl py-3.5 transition-all text-sm font-semibold text-white"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -520,30 +588,26 @@ export default function Register() {
               </svg>
               Continue with Google
             </button>
-
-            {/* Bottom Form Links */}
-            <div className="mt-4 text-center flex items-center justify-center text-sm">
-              <span className="text-slate-400">Already have an account?</span>
-              <Link
-                to="/login"
-                className="text-cyan-400 font-bold hover:underline ml-2"
-              >
-                Log In
-              </Link>
-              <span className="text-slate-700 mx-4">|</span>
-              <Link
-                to="/forgot-password"
-                className="text-cyan-400 font-bold hover:underline"
-              >
-                Forgot Password?
-              </Link>
-            </div>
           </form>
         </div>
       </main>
 
-      {/* Outer Footer */}
-      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-400 text-sm"></footer>
+      {/* Page Footer (Matches Login Exactly) */}
+      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-sm">
+        <p>© 2026 HealthBot AI. All rights reserved.</p>
+        <div className="flex items-center gap-4">
+          <Link
+            to="/privacy"
+            className="hover:text-slate-400 transition-colors"
+          >
+            Privacy Policy
+          </Link>
+          <span className="text-slate-700">|</span>
+          <Link to="/terms" className="hover:text-slate-400 transition-colors">
+            Terms of Service
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 }
