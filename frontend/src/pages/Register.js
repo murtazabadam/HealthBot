@@ -240,7 +240,7 @@ export default function Register() {
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Email Address <span className="text-red-500">*</span>
                 </label>
-                <div className="relative flex gap-2">
+                <div className="flex gap-2">
                   <div className="relative flex-1 group">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                     <input
@@ -249,20 +249,19 @@ export default function Register() {
                       required
                       placeholder="Enter your email address"
                       onChange={handleChange}
-                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-[90px] sm:pr-[105px] text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                      style={{ colorScheme: "dark" }}
                     />
-                    <div className="absolute right-1.5 top-1/2 -translate-y-1/2">
-                      <button
-                        type="button"
-                        disabled={timer > 0 || loading}
-                        onClick={handleSendOTP}
-                        className="flex items-center justify-center gap-1 sm:gap-1.5 h-9 px-2 sm:px-3 bg-[#0B1120] border border-teal-500/50 text-teal-400 rounded-lg text-[10px] sm:text-[11px] font-bold hover:bg-teal-500/10 transition-all disabled:opacity-50 whitespace-nowrap shadow-sm"
-                      >
-                        <Send size={12} className="shrink-0" />
-                        <span>{timer > 0 ? `${timer}s` : "Send OTP"}</span>
-                      </button>
-                    </div>
                   </div>
+                  <button
+                    type="button"
+                    disabled={timer > 0 || loading}
+                    onClick={handleSendOTP}
+                    className="shrink-0 flex items-center justify-center gap-1.5 px-3 sm:px-4 bg-[#0B1120] border border-teal-500/50 text-teal-400 rounded-xl text-[11px] sm:text-xs font-bold hover:bg-teal-500/10 transition-all disabled:opacity-50 whitespace-nowrap shadow-sm"
+                  >
+                    <Send size={14} className="shrink-0" />
+                    <span>{timer > 0 ? `${timer}s` : "Send OTP"}</span>
+                  </button>
                 </div>
                 <p className="text-[10px] text-slate-400 text-center md:text-left mt-1">
                   We will send a 6-digit OTP to your email
