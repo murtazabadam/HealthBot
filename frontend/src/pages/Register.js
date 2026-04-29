@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 export default function Register() {
-  const [regStep, setRegStep] = useState(1); // 1: Identity, 2: OTP, 3: Full Profile
+  const [regStep, setRegStep] = useState(1); // 1: Info, 2: OTP, 3: Security & Health
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -67,7 +67,7 @@ export default function Register() {
       setRegStep(2);
     } catch (err) {
       setErrorMessage(
-        err.message || "Connection error. Ensure server is online.",
+        err.message || "Connection error. Ensure backend is live.",
       );
     } finally {
       setLoading(false);
@@ -109,17 +109,14 @@ export default function Register() {
   // STEP 3: FINAL REGISTRATION
   const handleRegister = async (e) => {
     e.preventDefault();
-
     if (formData.password !== formData.confirmPassword) {
       setErrorMessage("Passwords do not match.");
       return;
     }
-
     if (!formData.gender) {
       setErrorMessage("Please select your gender.");
       return;
     }
-
     if (!agreedToTerms) {
       setErrorMessage("You must agree to the Terms and Privacy Policy.");
       return;
@@ -168,8 +165,26 @@ export default function Register() {
 
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
         <div
-          className={`bg-[#111827]/90 border border-slate-800 rounded-[2.5rem] p-8 sm:p-12 w-full shadow-2xl relative transition-all duration-500 ${regStep === 3 ? "max-w-[750px]" : "max-w-[540px]"}`}
+          className={`bg-[#111827]/90 border border-slate-800 rounded-[2.5rem] p-8 sm:p-12 w-full shadow-2xl relative transition-all duration-500 ${regStep === 3 ? "max-w-[680px]" : "max-w-[540px]"}`}
         >
+          {/* Progress Indicator */}
+          <div className="flex items-center justify-between mb-8 px-2">
+            {[1, 2, 3].map((s) => (
+              <div key={s} className="flex items-center flex-1 last:flex-none">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${regStep >= s ? "bg-teal-400 text-[#0B1120]" : "bg-slate-800 text-slate-500 border border-slate-700"}`}
+                >
+                  {regStep > s ? <CheckCircle2 size={16} /> : s}
+                </div>
+                {s < 3 && (
+                  <div
+                    className={`h-[2px] flex-1 mx-2 transition-all ${regStep > s ? "bg-teal-400" : "bg-slate-800"}`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
           {regStep > 1 && (
             <button
               onClick={() => setRegStep(regStep - 1)}
@@ -181,14 +196,16 @@ export default function Register() {
 
           <div className="text-center mb-10">
             <h2 className="text-4xl font-bold mb-3 tracking-tight">
-              {regStep === 1 && "Create Account"}
-              {regStep === 2 && "Verify Email"}
+              {regStep === 1 && "Basic Information"}
+              {regStep === 2 && "Verification"}
               {regStep === 3 && "Complete Profile"}
             </h2>
             <p className="text-slate-400 text-sm">
-              {regStep === 1 && "Step 1: Your identity details."}
-              {regStep === 2 && `Step 2: Enter code sent to your email.`}
-              {regStep === 3 && "Step 3: Secure your account and medical info."}
+              {regStep === 1 &&
+                "Let's start with your identity and contact details."}
+              {regStep === 2 &&
+                `Enter the 6-digit code sent to ${formData.email}`}
+              {regStep === 3 && "Secure your account and provide medical info."}
             </p>
           </div>
 
@@ -198,9 +215,9 @@ export default function Register() {
             </div>
           )}
 
-          {/* STEP 1: IDENTITY */}
+          {/* STEP 1: IDENTITY & CONTACT */}
           {regStep === 1 && (
-            <form className="flex flex-col gap-6" onSubmit={handleSendOTP}>
+            <form className="flex flex-col gap-5" onSubmit={handleSendOTP}>
               <div className="flex flex-col gap-2">
                 <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
                   Full Name <span className="text-rose-500">*</span>
@@ -237,17 +254,51 @@ export default function Register() {
                   />
                 </div>
               </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+                  Phone Number
+                </label>
+                <div className="relative group">
+                  <Phone className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
+                  <input
+                    type="tel"
+                    placeholder="Enter phone number"
+                    value={formData.phoneNumber}
+                    onChange={(e) =>
+                      setFormData({ ...formData, phoneNumber: e.target.value })
+                    }
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 text-base focus:border-teal-400 outline-none transition-all"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+                  Address
+                </label>
+                <div className="relative group">
+                  <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
+                  <input
+                    type="text"
+                    placeholder="Enter full address"
+                    value={formData.address}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 text-base focus:border-teal-400 outline-none transition-all"
+                  />
+                </div>
+              </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.1em] text-lg hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10"
+                className="w-full py-5 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.1em] text-lg hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10 mt-2"
               >
                 {loading ? "Sending..." : "SEND OTP"}
               </button>
             </form>
           )}
 
-          {/* STEP 2: VERIFICATION */}
+          {/* STEP 2: OTP VERIFICATION */}
           {regStep === 2 && (
             <form className="flex flex-col gap-6" onSubmit={handleVerifyOTP}>
               <div className="flex flex-col gap-3 text-center">
@@ -279,17 +330,9 @@ export default function Register() {
             </form>
           )}
 
-          {/* STEP 3: FULL PROFILE */}
+          {/* STEP 3: SECURITY & MEDICAL */}
           {regStep === 3 && (
-            <form className="flex flex-col gap-6" onSubmit={handleRegister}>
-              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl mb-1">
-                <CheckCircle2 className="text-emerald-400 h-5 w-5" />
-                <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
-                  Email Verified Successfully
-                </span>
-              </div>
-
-              {/* Row 1: Passwords (MANDATORY) */}
+            <form className="flex flex-col gap-5" onSubmit={handleRegister}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-bold text-slate-300 uppercase ml-1">
@@ -350,46 +393,6 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Row 2: Phone & Address */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-slate-300 uppercase ml-1">
-                    Phone Number
-                  </label>
-                  <div className="relative group">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-teal-400" />
-                    <input
-                      type="tel"
-                      placeholder="Enter phone"
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          phoneNumber: e.target.value,
-                        })
-                      }
-                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-11 pr-4 text-sm focus:border-teal-400 outline-none"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-slate-300 uppercase ml-1">
-                    Address
-                  </label>
-                  <div className="relative group">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-teal-400" />
-                    <input
-                      type="text"
-                      placeholder="Enter full address"
-                      onChange={(e) =>
-                        setFormData({ ...formData, address: e.target.value })
-                      }
-                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-11 pr-4 text-sm focus:border-teal-400 outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 3: Age, Gender, Blood Group */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-bold text-slate-300 uppercase ml-1">
@@ -451,9 +454,8 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Terms Checkbox */}
               <div
-                className="flex items-start gap-3 mt-2 group cursor-pointer"
+                className="flex items-start gap-3 mt-4 group cursor-pointer"
                 onClick={() => setAgreedToTerms(!agreedToTerms)}
               >
                 <div
