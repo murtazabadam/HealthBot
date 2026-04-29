@@ -8,14 +8,17 @@ import {
   Eye,
   EyeOff,
   Calendar,
+  ArrowLeft,
+  ShieldCheck,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function Register() {
+  const [regStep, setRegStep] = useState(1); // 1: Identity, 2: OTP, 3: Security/Final
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -28,9 +31,11 @@ export default function Register() {
 
   const navigate = useNavigate();
 
-  const handleSendOTP = async () => {
-    if (!formData.email) {
-      setErrorMessage("Please enter your email first.");
+  // STEP 1: SEND OTP
+  const handleSendOTP = async (e) => {
+    e.preventDefault();
+    if (!formData.email || !formData.name) {
+      setErrorMessage("Please fill in your name and email.");
       return;
     }
 
@@ -49,10 +54,45 @@ export default function Register() {
 
       const data = await res.json();
       if (!res.ok)
-        throw new Error(data.message || "Failed to send OTP. Try again.");
+        throw new Error(
+          data.message || "Failed to send OTP. Please check your connection.",
+        );
 
-      setOtpSent(true);
-      setErrorMessage(""); // Clear error on success
+      setRegStep(2); // Move to OTP tab
+    } catch (err) {
+      setErrorMessage(
+        err.message || "Failed to fetch. Ensure the backend server is online.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // STEP 2: VERIFY OTP
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    if (!formData.otp) {
+      setErrorMessage("Please enter the 6-digit code.");
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
+      const res = await fetch(
+        "https://healthbot-production-3c7d.up.railway.app/api/auth/verify-otp",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: formData.email, otp: formData.otp }),
+        },
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Invalid or expired OTP.");
+
+      setRegStep(3); // Move to Password/Age tab
     } catch (err) {
       setErrorMessage(err.message);
     } finally {
@@ -60,6 +100,7 @@ export default function Register() {
     }
   };
 
+  // STEP 3: FINAL REGISTRATION
   const handleRegister = async (e) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
@@ -112,180 +153,231 @@ export default function Register() {
 
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
         <div className="bg-[#111827]/90 border border-slate-800 rounded-[2.5rem] p-8 sm:p-12 w-full max-w-[500px] shadow-2xl relative">
+          {/* Back Button for multi-step */}
+          {regStep > 1 && (
+            <button
+              onClick={() => setRegStep(regStep - 1)}
+              className="absolute top-8 left-8 text-slate-500 hover:text-teal-400 transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-widest"
+            >
+              <ArrowLeft size={14} /> Back
+            </button>
+          )}
+
           <div className="text-center mb-10">
             <h2 className="text-4xl font-bold mb-3 tracking-tight">
-              Create Account
+              {regStep === 1 && "Create Account"}
+              {regStep === 2 && "Verify Email"}
+              {regStep === 3 && "Final Details"}
             </h2>
             <p className="text-slate-400 text-sm">
-              Verified access to your personal AI Health Assistant.
+              {regStep === 1 && "Start your journey to better health with AI."}
+              {regStep === 2 &&
+                `We've sent a 6-digit code to ${formData.email}`}
+              {regStep === 3 && "Secure your account and provide your age."}
             </p>
           </div>
 
-          <form className="flex flex-col gap-6" onSubmit={handleRegister}>
-            {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-4 rounded-xl text-center font-medium animate-pulse">
-                {errorMessage}
-              </div>
-            )}
-
-            {/* Name Field */}
-            <div className="flex flex-col gap-2">
-              <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
-                Full Name <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative group">
-                <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
-                <input
-                  type="text"
-                  placeholder="Enter full name"
-                  required
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 text-base focus:border-teal-400 outline-none transition-all"
-                />
-              </div>
+          {errorMessage && (
+            <div className="mb-6 bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-4 rounded-xl text-center font-medium animate-pulse">
+              {errorMessage}
             </div>
+          )}
 
-            {/* Email Field */}
-            <div className="flex flex-col gap-2">
-              <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
-                Email Address <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative group">
-                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
-                <input
-                  type="email"
-                  placeholder="Enter email address"
-                  required
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 text-base focus:border-teal-400 outline-none transition-all"
-                />
+          {/* STEP 1: IDENTITY */}
+          {regStep === 1 && (
+            <form className="flex flex-col gap-6" onSubmit={handleSendOTP}>
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative group">
+                  <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
+                  <input
+                    type="text"
+                    placeholder="Enter full name"
+                    required
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 text-base focus:border-teal-400 outline-none transition-all"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Verify OTP Button */}
-            <button
-              type="button"
-              onClick={handleSendOTP}
-              disabled={loading || otpSent}
-              className="w-full py-4 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.1em] text-lg hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10 disabled:opacity-50"
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+                  Email Address <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative group">
+                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
+                  <input
+                    type="email"
+                    placeholder="name@example.com"
+                    required
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 text-base focus:border-teal-400 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.1em] text-lg hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10 disabled:opacity-50"
+              >
+                {loading ? "Sending..." : "SEND OTP"}
+              </button>
+            </form>
+          )}
+
+          {/* STEP 2: VERIFICATION */}
+          {regStep === 2 && (
+            <form
+              className="flex flex-col gap-6 animate-in fade-in zoom-in duration-300"
+              onSubmit={handleVerifyOTP}
             >
-              {loading
-                ? "Sending..."
-                : otpSent
-                  ? "OTP Sent Successfully"
-                  : "Verify OTP"}
-            </button>
-
-            {otpSent && (
-              <div className="flex flex-col gap-2 animate-in slide-in-from-top-2">
-                <label className="text-[11px] font-bold text-teal-400 uppercase tracking-widest ml-1 text-center">
-                  Enter Verification Code
+              <div className="flex flex-col gap-3">
+                <div className="w-16 h-16 bg-teal-500/10 rounded-full flex items-center justify-center mx-auto mb-2 border border-teal-500/20">
+                  <ShieldCheck className="text-teal-400 h-8 w-8" />
+                </div>
+                <label className="text-[11px] font-bold text-teal-400 uppercase tracking-widest text-center">
+                  Verification Code
                 </label>
                 <input
                   type="text"
                   maxLength="6"
                   placeholder="0 0 0 0 0 0"
                   required
+                  autoFocus
                   onChange={(e) =>
                     setFormData({ ...formData, otp: e.target.value })
                   }
-                  className="w-full bg-teal-500/5 border-2 border-teal-500/30 rounded-2xl py-4 px-6 text-center text-3xl font-mono tracking-[0.5em] focus:border-teal-400 outline-none transition-all"
+                  className="w-full bg-teal-500/5 border-2 border-teal-500/30 rounded-2xl py-5 px-6 text-center text-3xl font-mono tracking-[0.5em] focus:border-teal-400 outline-none transition-all"
                 />
               </div>
-            )}
 
-            {/* Password Field */}
-            <div className="flex flex-col gap-2">
-              <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
-                Password <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative group">
-                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="•••••"
-                  required
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-12 text-base focus:border-teal-400 outline-none transition-all"
-                />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.1em] text-lg hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10 disabled:opacity-50"
+              >
+                {loading ? "Verifying..." : "VERIFY OTP"}
+              </button>
+
+              <p className="text-center text-xs text-slate-500 font-medium">
+                Didn't receive the code?
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500"
+                  onClick={handleSendOTP}
+                  className="text-teal-400 hover:underline ml-1 uppercase font-bold"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  Resend
                 </button>
-              </div>
-            </div>
+              </p>
+            </form>
+          )}
 
-            {/* Confirm Password */}
-            <div className="flex flex-col gap-2">
-              <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
-                Confirm Password <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative group">
-                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Confirm your password"
-                  required
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      confirmPassword: e.target.value,
-                    })
-                  }
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-12 text-base focus:border-teal-400 outline-none transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff size={20} />
-                  ) : (
-                    <Eye size={20} />
-                  )}
-                </button>
+          {/* STEP 3: SECURITY & FINAL */}
+          {regStep === 3 && (
+            <form
+              className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300"
+              onSubmit={handleRegister}
+            >
+              <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl mb-2">
+                <CheckCircle2 className="text-emerald-400 h-5 w-5" />
+                <span className="text-emerald-400 text-xs font-bold uppercase">
+                  Email Verified Successfully
+                </span>
               </div>
-            </div>
 
-            {/* Age Field */}
-            <div className="flex flex-col gap-2">
-              <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
-                Age <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative group">
-                <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
-                <input
-                  type="number"
-                  placeholder="Enter your age"
-                  required
-                  onChange={(e) =>
-                    setFormData({ ...formData, age: e.target.value })
-                  }
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 text-base focus:border-teal-400 outline-none transition-all"
-                />
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+                  Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative group">
+                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="•••••"
+                    required
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-12 text-base focus:border-teal-400 outline-none transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {otpSent && (
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+                  Confirm Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative group">
+                  <Lock className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm your password"
+                    required
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-12 text-base focus:border-teal-400 outline-none transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff size={20} />
+                    ) : (
+                      <Eye size={20} />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-slate-300 uppercase tracking-widest ml-1">
+                  Age <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative group">
+                  <Calendar className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
+                  <input
+                    type="number"
+                    placeholder="Enter your age"
+                    required
+                    onChange={(e) =>
+                      setFormData({ ...formData, age: e.target.value })
+                    }
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 text-base focus:border-teal-400 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full py-5 bg-teal-400 text-[#0B1120] font-extrabold rounded-2xl uppercase tracking-[0.2em] text-xl hover:bg-teal-300 transition-all mt-4"
               >
-                {loading ? "Creating..." : "Create Account"}
+                {loading ? "Creating..." : "CREATE ACCOUNT"}
               </button>
-            )}
-          </form>
+            </form>
+          )}
 
           <p className="mt-10 text-center text-sm text-slate-400">
             Already have an account?{" "}
