@@ -1,308 +1,505 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Activity, Mail, Lock, Eye, EyeOff, User, UserPlus,
-  Calendar, Phone, Droplet, MapPin, CheckCircle2,
+  Activity,
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowLeft,
+  ShieldCheck,
+  CheckCircle2,
+  MapPin,
+  Phone,
+  Users,
+  UserPlus,
+  Droplet,
+  Calendar,
 } from "lucide-react";
 
 export default function Register() {
+  const [regStep, setRegStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    age: "",
+    gender: "",
+    bloodGroup: "",
+    address: "",
+    phoneNumber: "",
+    otp: "",
+  });
+
   const navigate = useNavigate();
 
-  const nameRef = useRef();
-  const emailRef = useRef();
-  const passwordRef = useRef();
-  const confirmPasswordRef = useRef();
-
+  // Redirect to Railway Google Auth Route
   const handleGoogleSignUp = () => {
-    window.location.href = 'https://healthbot-production-3c7d.up.railway.app/api/auth/google';
+    window.location.href =
+      "https://healthbot-production-3c7d.up.railway.app/api/auth/google";
+  };
+
+  const handleSendOTP = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMessage("");
+    try {
+      const res = await fetch(
+        "https://healthbot-production-3c7d.up.railway.app/api/auth/send-otp",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: formData.email.trim() }),
+        },
+      );
+      if (!res.ok) throw new Error("Failed to send OTP.");
+      setRegStep(2);
+    } catch (err) {
+      setErrorMessage(
+        "Service Connection Error: Please ensure the server is active.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(
+        "https://healthbot-production-3c7d.up.railway.app/api/auth/verify-otp",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: formData.email.trim(),
+            otp: formData.otp,
+          }),
+        },
+      );
+      if (!res.ok) throw new Error("Invalid or expired verification code.");
+      setRegStep(3);
+    } catch (err) {
+      setErrorMessage(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setErrorMessage('');
-    const name = nameRef.current?.value;
-    const email = emailRef.current?.value;
-    const password = passwordRef.current?.value;
-    const confirmPassword = confirmPasswordRef.current?.value;
+    if (formData.password !== formData.confirmPassword)
+      return setErrorMessage("Passwords do not match.");
+    if (!formData.gender) return setErrorMessage("Please select a gender.");
+    if (!agreedToTerms) return setErrorMessage("You must agree to the terms.");
 
-    if (!agreedToTerms) {
-      setErrorMessage('Please agree to the Terms of Service');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match');
-      return;
-    }
+    setLoading(true);
     try {
-      const res = await fetch('https://healthbot-production-3c7d.up.railway.app/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
-      });
+      const res = await fetch(
+        "https://healthbot-production-3c7d.up.railway.app/api/auth/register",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        },
+      );
+      if (!res.ok) throw new Error("Registration failed.");
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Registration failed');
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      navigate('/chat');
+
+      // Save credentials and move to chat
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      navigate("/chat");
     } catch (err) {
       setErrorMessage(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white relative flex flex-col items-center overflow-x-hidden">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-teal-500/10 rounded-full blur-[150px] pointer-events-none" />
-      <div
-        className="absolute inset-0 pointer-events-none opacity-20"
-        style={{
-          backgroundImage: "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)",
-          backgroundSize: "40px 40px",
-        }}
-      />
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
+      {/* Background Ambient Orbs */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-teal-500/10 rounded-full blur-[130px] pointer-events-none" />
 
+      {/* Top Navbar */}
       <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
-        <Link to="/" className="flex items-center gap-2 cursor-pointer">
+        <Link to="/" className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" />
-          <span className="text-2xl font-bold tracking-tight text-white">HealthBot</span>
+          <span className="text-2xl font-bold tracking-tight text-white">
+            HealthBot
+          </span>
         </Link>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-slate-400 hidden sm:inline-block">Already have an account?</span>
-          <Link to="/login" className="px-6 py-2.5 text-sm font-semibold text-white bg-transparent border border-teal-500 hover:bg-teal-500/10 rounded-md transition-all">
-            Log In
-          </Link>
-        </div>
       </nav>
 
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
-        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 sm:p-12 w-full max-w-[800px] shadow-[0_0_50px_rgba(13,148,136,0.1)] relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
+        <div
+          className={`bg-[#111827]/90 border border-slate-700/50 rounded-[2.5rem] p-8 sm:p-12 w-full shadow-2xl relative transition-all duration-500 ${regStep === 3 ? "max-w-[760px]" : "max-w-[540px]"}`}
+        >
+          {/* Step Back Control */}
+          {regStep > 1 && (
+            <button
+              onClick={() => setRegStep(regStep - 1)}
+              className="absolute top-8 left-8 text-slate-500 hover:text-teal-400 flex items-center gap-1 text-xs font-bold uppercase tracking-widest transition-colors"
+            >
+              <ArrowLeft size={14} /> Back
+            </button>
+          )}
 
-          <div className="flex flex-col items-center mb-10">
-            <div className="w-16 h-16 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mb-6">
-              <UserPlus className="h-8 w-8 text-teal-400" strokeWidth={1.5} />
+          <div className="text-center mb-10">
+            <div className="w-16 h-16 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mx-auto mb-4">
+              <UserPlus className="h-8 w-8 text-teal-400" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-tight">Create Account</h1>
-            <p className="text-slate-400 text-center text-sm sm:text-base leading-relaxed">
-              Join <span className="text-teal-400 font-medium">HealthBot</span> and start your smarter health journey today.
+            <h2 className="text-4xl font-bold mb-2 tracking-tight">
+              {regStep === 1
+                ? "Get Started"
+                : regStep === 2
+                  ? "Verify"
+                  : "Health Profile"}
+            </h2>
+            <p className="text-slate-400 text-sm tracking-wide">
+              {regStep === 1
+                ? "Step 1: Identification"
+                : regStep === 2
+                  ? "Step 2: Verification"
+                  : "Step 3: Medical Record"}
             </p>
           </div>
 
-          <form className="flex flex-col gap-6" onSubmit={handleRegister}>
-            {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center">
-                {errorMessage}
-              </div>
-            )}
+          {errorMessage && (
+            <div className="mb-6 bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-4 rounded-xl text-center font-bold animate-pulse">
+              {errorMessage}
+            </div>
+          )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">Full Name</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-slate-500" />
-                  </div>
+          {/* STEP 1: IDENTITY */}
+          {regStep === 1 && (
+            <form className="flex flex-col gap-5" onSubmit={handleSendOTP}>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-slate-400 uppercase ml-1">
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative group">
+                  <User className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <input
-                    ref={nameRef}
                     type="text"
-                    placeholder="Enter your full name"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+                    placeholder="Full Name"
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 outline-none focus:border-teal-400 transition-all"
                   />
                 </div>
               </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">Email Address</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-slate-500" />
-                  </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-slate-400 uppercase ml-1">
+                  Email Address <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative group">
+                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <input
-                    ref={emailRef}
                     type="email"
-                    placeholder="Enter your email address"
                     required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+                    placeholder="Email"
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 outline-none focus:border-teal-400 transition-all"
                   />
                 </div>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">Password</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-slate-500" />
-                  </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-slate-400 uppercase ml-1">
+                  Phone Number
+                </label>
+                <div className="relative group">
+                  <Phone className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
                   <input
-                    ref={passwordRef}
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Create a password"
-                    required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-12 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+                    type="tel"
+                    placeholder="Phone"
+                    onChange={(e) =>
+                      setFormData({ ...formData, phoneNumber: e.target.value })
+                    }
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 outline-none focus:border-teal-400"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors">
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-                <div className="flex items-start gap-2 mt-1">
-                  <CheckCircle2 className="h-4 w-4 text-teal-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-slate-400 leading-tight">Use at least 8 characters with a mix of letters, numbers & symbols</p>
                 </div>
               </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">Confirm Password</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-slate-500" />
-                  </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-slate-300 uppercase ml-1">
+                  Address
+                </label>
+                <div className="relative group">
+                  <MapPin className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400" />
                   <input
-                    ref={confirmPasswordRef}
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm your password"
-                    required
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-12 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+                    type="text"
+                    placeholder="Full Address"
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-2xl py-4 pl-14 pr-4 outline-none focus:border-teal-400"
                   />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors">
-                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
                 </div>
               </div>
-            </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-teal-400 text-slate-900 font-black rounded-2xl uppercase tracking-[0.2em] mt-2 hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10"
+              >
+                {loading ? "Sending..." : "Verify Email"}
+              </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">Age</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Calendar className="h-5 w-5 text-slate-500" />
+              <div className="relative flex items-center gap-4 my-4">
+                <div className="h-[1px] flex-1 bg-slate-800"></div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                  or
+                </span>
+                <div className="h-[1px] flex-1 bg-slate-800"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleSignUp}
+                className="w-full flex items-center justify-center gap-3 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-2xl py-4 transition-all text-sm font-bold text-slate-300"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                </svg>
+                Continue with Google
+              </button>
+            </form>
+          )}
+
+          {/* STEP 2: OTP VERIFICATION */}
+          {regStep === 2 && (
+            <form className="flex flex-col gap-6" onSubmit={handleVerifyOTP}>
+              <div className="text-center">
+                <ShieldCheck className="mx-auto h-12 w-12 text-teal-400 mb-4" />
+                <label className="text-[11px] font-bold text-teal-400 uppercase tracking-[0.3em]">
+                  6-Digit Code
+                </label>
+                <input
+                  type="text"
+                  maxLength="6"
+                  placeholder="000000"
+                  required
+                  autoFocus
+                  onChange={(e) =>
+                    setFormData({ ...formData, otp: e.target.value })
+                  }
+                  className="w-full bg-transparent border-b-2 border-slate-700 text-center text-5xl py-4 outline-none focus:border-teal-400 font-mono tracking-widest transition-all"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-teal-400 text-slate-900 font-black rounded-2xl uppercase tracking-[0.2em]"
+              >
+                {loading ? "Checking..." : "Verify Code"}
+              </button>
+            </form>
+          )}
+
+          {/* STEP 3: MEDICAL PROFILE */}
+          {regStep === 3 && (
+            <form className="flex flex-col gap-5" onSubmit={handleRegister}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
+                    Password <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      placeholder="•••••"
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-10 pr-10 focus:border-teal-400 outline-none transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
                   </div>
-                  <input type="number" placeholder="Enter your age" className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
+                    Confirm <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      placeholder="•••••"
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          confirmPassword: e.target.value,
+                        })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-10 pr-10 focus:border-teal-400 outline-none transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff size={16} />
+                      ) : (
+                        <Eye size={16} />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">Phone Number (optional)</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-slate-500" />
-                  </div>
-                  <input type="tel" placeholder="Enter your phone number" className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors" />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">Gender (optional)</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-slate-500" />
-                  </div>
-                  <select className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors appearance-none">
-                    <option value="" disabled>Select gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                    <option value="prefer-not">Prefer not to say</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
-                    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
+                    Age
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 h-4 w-4 text-slate-500 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="number"
+                      placeholder="Age"
+                      onChange={(e) =>
+                        setFormData({ ...formData, age: e.target.value })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-9 pr-2 text-xs focus:border-teal-400 outline-none transition-all"
+                    />
                   </div>
                 </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">Blood Group (optional)</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Droplet className="h-5 w-5 text-slate-500" />
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
+                    Gender <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Users className="absolute left-3 h-4 w-4 text-slate-500 top-1/2 -translate-y-1/2" />
+                    <select
+                      required
+                      onChange={(e) =>
+                        setFormData({ ...formData, gender: e.target.value })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-9 pr-2 text-xs focus:border-teal-400 outline-none appearance-none transition-all"
+                    >
+                      <option value="">Select</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
                   </div>
-                  <select className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-slate-400 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors appearance-none">
-                    <option value="" disabled>Select blood group</option>
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
-                    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">
+                    Blood Group
+                  </label>
+                  <div className="relative">
+                    <Droplet className="absolute left-3 h-4 w-4 text-slate-500 top-1/2 -translate-y-1/2" />
+                    <select
+                      onChange={(e) =>
+                        setFormData({ ...formData, bloodGroup: e.target.value })
+                      }
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-9 pr-2 text-xs focus:border-teal-400 outline-none appearance-none transition-all"
+                    >
+                      <option value="">Select</option>
+                      {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
+                        (bg) => (
+                          <option key={bg} value={bg}>
+                            {bg}
+                          </option>
+                        ),
+                      )}
+                    </select>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-slate-300">City</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <MapPin className="h-5 w-5 text-slate-500" />
-                  </div>
-                  <input type="text" placeholder="Enter your city" className="w-full bg-[#0B1120] border border-slate-700 rounded-lg py-3 pl-12 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors" />
+              <div
+                className="flex items-start gap-3 mt-4 cursor-pointer"
+                onClick={() => setAgreedToTerms(!agreedToTerms)}
+              >
+                <div
+                  className={`mt-1 w-5 h-5 rounded border transition-all flex items-center justify-center ${agreedToTerms ? "bg-teal-500 border-teal-500 shadow-[0_0_10px_rgba(45,212,191,0.5)]" : "bg-[#0B1120] border-slate-700"}`}
+                >
+                  {agreedToTerms && (
+                    <CheckCircle2
+                      size={14}
+                      className="text-slate-900"
+                      strokeWidth={3}
+                    />
+                  )}
                 </div>
+                <p className="text-xs text-slate-400 font-medium leading-relaxed">
+                  I agree to the{" "}
+                  <Link to="/terms" className="text-teal-400 hover:underline">
+                    Terms of Service
+                  </Link>{" "}
+                  and{" "}
+                  <Link to="/privacy" className="text-teal-400 hover:underline">
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3 mt-2">
-              <input type="checkbox" id="terms" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="w-4 h-4 rounded border-slate-600 text-teal-500 focus:ring-teal-500 bg-[#0B1120]" />
-              <label htmlFor="terms" className="text-sm text-slate-300 cursor-pointer">
-                I agree to the{" "}
-                <Link to="/terms" className="text-teal-400 hover:text-teal-300 transition-colors">Terms of Service</Link>{" "}
-                and{" "}
-                <Link to="/privacy" className="text-teal-400 hover:text-teal-300 transition-colors">Privacy Policy</Link>
-              </label>
-            </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-5 bg-teal-400 text-slate-900 font-black rounded-2xl uppercase tracking-[0.25em] text-xl mt-4 hover:bg-teal-300 transition-all shadow-lg shadow-teal-500/10"
+              >
+                {loading ? "CREATING..." : "CREATE ACCOUNT"}
+              </button>
+            </form>
+          )}
 
-            <button type="submit" className="w-full mt-4 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-white font-semibold py-3.5 rounded-lg transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)] flex items-center justify-center gap-2">
-              Create Account <span className="text-xl leading-none">→</span>
-            </button>
-          </form>
-
-          <div className="flex items-center gap-4 my-8">
-            <div className="h-[1px] flex-1 bg-slate-700/50"></div>
-            <span className="text-xs text-slate-500 font-medium">or continue with</span>
-            <div className="h-[1px] flex-1 bg-slate-700/50"></div>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <button type="button" onClick={handleGoogleSignUp} className="w-full flex items-center justify-center gap-3 bg-transparent border border-slate-700 hover:bg-slate-800 rounded-lg py-3.5 transition-colors text-sm font-semibold text-white">
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-              </svg>
-              Continue with Google
-            </button>
-          </div>
-
-          <div className="text-center mt-6">
-            <span className="text-sm text-slate-400">Already have an account? </span>
-            <Link to="/login" className="text-sm text-teal-400 hover:text-teal-300 font-medium transition-colors">Log In</Link>
-          </div>
+          <p className="mt-8 text-center text-sm text-slate-400 font-medium">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="text-teal-400 font-extrabold hover:underline ml-1"
+            >
+              Log In
+            </Link>
+          </p>
         </div>
       </main>
 
-      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10">
-        <p className="text-slate-400 text-xs font-medium">© 2026 HealthBot. All rights reserved.</p>
-        <div className="flex items-center gap-4 text-xs font-medium">
-          <Link to="/privacy" className="text-teal-400 hover:text-teal-300 transition-colors">Privacy Policy</Link>
-          <span className="text-slate-700">|</span>
-          <Link to="/terms" className="text-teal-400 hover:text-teal-300 transition-colors">Terms of Service</Link>
-        </div>
+      <footer className="w-full pb-8 pt-4 text-center text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] relative z-10">
+        © 2026 HealthBot. All rights reserved.
       </footer>
     </div>
   );
