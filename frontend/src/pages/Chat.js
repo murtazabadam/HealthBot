@@ -6,7 +6,6 @@ import {
   MessageSquare,
   History,
   Bookmark,
-  FolderHeart,
   Bell,
   User,
   Settings,
@@ -29,8 +28,10 @@ export default function Chat() {
   const bottomRef = useRef(null);
   const navigate = useNavigate();
 
+  // Safely get user data
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
+  const firstName = user.name ? user.name.trim().split(" ")[0] : "User";
 
   useEffect(() => {
     const now = new Date().toLocaleTimeString([], {
@@ -38,21 +39,19 @@ export default function Chat() {
       minute: "2-digit",
     });
 
-    // Greeting logic: Extract first name only
-    const firstName = user.name ? user.name.trim().split(" ")[0] : "User";
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: "welcome",
+          sender: "bot",
+          text: `Hello ${firstName}! I am your HealthBot. How are you feeling today? Please describe your symptoms.`,
+          time: now,
+        },
+      ]);
+    }
 
-    setMessages([
-      {
-        id: "welcome",
-        sender: "bot",
-        text: `Hello ${firstName}! I am your HealthBot. How are you feeling today? Please describe your symptoms.`,
-        time: now,
-      },
-    ]);
-
-    // Auto-hide sidebar on small screens
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
-  }, [user.name]);
+  }, [firstName, messages.length]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -127,7 +126,6 @@ export default function Chat() {
         <SidebarBtn icon={MessageSquare} label="New Chat" active />
         <SidebarBtn icon={History} label="Chat History" />
         <SidebarBtn icon={Bookmark} label="Saved Conversations" />
-        <SidebarBtn icon={FolderHeart} label="Health Records" />
         <SidebarBtn icon={Bell} label="Reminders" />
         <SidebarBtn icon={User} label="Profile" />
         <SidebarBtn icon={Settings} label="Settings" />
@@ -136,9 +134,9 @@ export default function Chat() {
             localStorage.clear();
             navigate("/login");
           }}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 mt-8 hover:bg-rose-500/10 transition-all font-bold"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 mt-8 hover:bg-rose-500/10 transition-all font-bold uppercase tracking-wider text-xs"
         >
-          <LogOut size={18} /> <span className="text-sm">Log Out</span>
+          <LogOut size={18} /> <span>Log Out</span>
         </button>
       </nav>
     </div>
@@ -146,10 +144,8 @@ export default function Chat() {
 
   return (
     <div className="h-screen w-full bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative">
-      {/* Background ambient glow */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Sidebar - Desktop and Mobile Overlay */}
       <div
         className={`fixed inset-y-0 left-0 z-[60] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
       >
@@ -163,7 +159,6 @@ export default function Chat() {
       </div>
 
       <main className="flex-1 flex flex-col h-full relative z-10 overflow-hidden">
-        {/* HEADER - STICKY TOP */}
         <header className="sticky top-0 left-0 right-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617]/80 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button
@@ -181,8 +176,9 @@ export default function Chat() {
                   HealthBot
                 </h3>
                 <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 flex items-center gap-1">
+                  {firstName} •{" "}
                   <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />{" "}
-                  Online
+                  ONLINE
                 </p>
               </div>
             </div>
@@ -203,7 +199,6 @@ export default function Chat() {
           </div>
         </header>
 
-        {/* CHAT MESSAGES - SCROLLABLE AREA */}
         <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex justify-center">
@@ -246,10 +241,10 @@ export default function Chat() {
                 <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
                   <Activity size={18} className="text-teal-400 opacity-50" />
                 </div>
-                <div className="bg-slate-800/40 p-4 rounded-2xl rounded-tl-none border border-slate-700/30 flex gap-1">
-                  <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce" />
-                  <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+                <div className="bg-slate-800/40 p-4 rounded-2xl rounded-tl-none border border-slate-700/30 flex gap-1 items-center">
+                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce" />
+                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
                 </div>
               </div>
             )}
@@ -257,10 +252,8 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* CHAT INPUT AREA */}
         <div className="p-4 lg:p-6 bg-[#020617] shrink-0 border-t border-slate-800/30">
           <div className="max-w-4xl mx-auto">
-            {/* Quick Symptom Chips */}
             <div className="flex flex-wrap justify-center gap-2 mb-4">
               {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
                 <button
@@ -273,7 +266,6 @@ export default function Chat() {
               ))}
             </div>
 
-            {/* Main Input Box */}
             <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl focus-within:border-teal-500/40 transition-all">
               <button className="p-2.5 text-slate-500 hover:text-teal-400 transition-colors">
                 <Paperclip size={20} />
@@ -301,8 +293,8 @@ export default function Chat() {
               </button>
             </div>
 
-            <p className="mt-4 text-[9px] lg:text-[10px] text-slate-600 text-center uppercase tracking-widest font-bold opacity-80">
-              Not a medical substitute • Consult a doctor for emergencies
+            <p className="mt-4 text-[9px] lg:text-[10px] text-teal-400 font-bold text-center italic max-w-md mx-auto leading-relaxed drop-shadow-[0_0_8px_rgba(45,212,191,0.2)]">
+              🩺 For guidance only • Consult a doctor for emergencies
             </p>
           </div>
         </div>
