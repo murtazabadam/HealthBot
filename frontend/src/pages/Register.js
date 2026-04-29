@@ -7,13 +7,7 @@ import {
   Lock,
   Eye,
   EyeOff,
-  MapPin,
-  Phone,
-  Users,
   UserPlus,
-  Droplet,
-  Calendar,
-  ChevronDown,
   Send,
   ShieldCheck,
   CheckCircle2,
@@ -158,7 +152,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
-      {/* Autofill CSS Fix */}
+      {/* Global CSS fix for Chrome/Mobile Autofill white background bug */}
       <style>{`
         input:-webkit-autofill,
         input:-webkit-autofill:hover, 
