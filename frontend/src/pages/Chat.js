@@ -146,6 +146,7 @@ export default function Chat() {
     <div className="h-screen w-full bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
+      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-[60] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
       >
@@ -159,7 +160,8 @@ export default function Chat() {
       </div>
 
       <main className="flex-1 flex flex-col h-full relative z-10 overflow-hidden">
-        <header className="sticky top-0 left-0 right-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617]/80 backdrop-blur-md">
+        {/* FIXED HEADER - NAME AT TOP RIGHT */}
+        <header className="sticky top-0 left-0 right-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617] backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button
               className={`p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-all ${isSidebarOpen ? "lg:hidden" : "block"}`}
@@ -171,27 +173,21 @@ export default function Chat() {
               <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-slate-800/50 flex items-center justify-center border border-slate-700">
                 <Activity size={22} className="text-teal-400" />
               </div>
-              <div>
-                <h3 className="text-white text-sm lg:text-base font-bold leading-none tracking-tight">
-                  HealthBot
-                </h3>
-                <p className="text-[10px] text-teal-400 font-bold uppercase mt-1 flex items-center gap-1">
-                  {firstName} •{" "}
-                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />{" "}
-                  ONLINE
-                </p>
-              </div>
+              <h3 className="text-white text-sm lg:text-lg font-bold leading-none tracking-tight">
+                HealthBot
+              </h3>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex flex-col items-end">
+            <div className="flex flex-col items-end">
               <span className="text-[11px] lg:text-xs font-bold text-slate-300 uppercase tracking-wide">
-                {user.name || "User"}
+                {firstName}
               </span>
-              <span className="text-[9px] text-slate-500 font-medium">
-                Premium Member
-              </span>
+              <p className="text-[9px] text-teal-400 font-bold uppercase flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />{" "}
+                ONLINE
+              </p>
             </div>
             <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/50">
               <UserCircle className="text-slate-500" size={24} />
@@ -199,6 +195,7 @@ export default function Chat() {
           </div>
         </header>
 
+        {/* CHAT AREA */}
         <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex justify-center">
@@ -242,9 +239,9 @@ export default function Chat() {
                   <Activity size={18} className="text-teal-400 opacity-50" />
                 </div>
                 <div className="bg-slate-800/40 p-4 rounded-2xl rounded-tl-none border border-slate-700/30 flex gap-1 items-center">
-                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce" />
-                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+                  <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce" />
+                  <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
                 </div>
               </div>
             )}
@@ -252,6 +249,7 @@ export default function Chat() {
           </div>
         </div>
 
+        {/* INPUT AREA */}
         <div className="p-4 lg:p-6 bg-[#020617] shrink-0 border-t border-slate-800/30">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-wrap justify-center gap-2 mb-4">
