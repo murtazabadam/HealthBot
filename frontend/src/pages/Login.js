@@ -19,6 +19,7 @@ const [resendStatus, setResendStatus] = useState('');
  const handleLogin = async (e) => {
   e.preventDefault();
   setErrorMessage('');
+  setLoading(true);
   const email = e.target[0].value;
   const password = e.target[1].value;
   try {
@@ -42,6 +43,8 @@ const [resendStatus, setResendStatus] = useState('');
     navigate('/chat');
   } catch (err) {
     setErrorMessage(err.message);
+  } finally {
+    setLoading(false);
   }
 };
 
@@ -59,6 +62,8 @@ const handleResend = async () => {
     setResendStatus('Failed to resend. Try again.');
   }
 };
+
+
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
