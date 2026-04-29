@@ -11,6 +11,7 @@ import {
   Send,
   ShieldCheck,
   CheckCircle2,
+  ChevronDown,
 } from "lucide-react";
 
 export default function Register() {
@@ -152,7 +153,6 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
-      {/* Global CSS fix for Chrome/Mobile Autofill white background bug */}
       <style>{`
         input:-webkit-autofill,
         input:-webkit-autofill:hover, 
@@ -164,10 +164,8 @@ export default function Register() {
         }
       `}</style>
 
-      {/* Background Decor - Ambient Glow (Matches Login) */}
+      {/* Background Decor */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
-
-      {/* Dotted Pattern Overlay (Matches Login) */}
       <div
         className="absolute inset-0 pointer-events-none opacity-20"
         style={{
@@ -177,9 +175,9 @@ export default function Register() {
         }}
       />
 
-      {/* Navigation Bar - Sticky at top (Matches Login) */}
+      {/* Navigation */}
       <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-6 lg:px-12 w-full bg-[#0B1120]/80 backdrop-blur-md border-b border-slate-800/50">
-        <Link to="/" className="flex items-center gap-2 cursor-pointer">
+        <Link to="/" className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" />
           <span className="text-2xl font-bold tracking-tight text-white">
             HealthBot
@@ -193,13 +191,10 @@ export default function Register() {
         </Link>
       </nav>
 
-      {/* Main Form Container */}
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
-        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 sm:p-12 w-full max-w-[850px] shadow-2xl relative">
-          {/* Top border highlight (Matches Login) */}
+        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-12 w-full max-w-[850px] shadow-2xl relative">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
-          {/* Header */}
           <div className="flex flex-col items-center mb-10 text-center">
             <div className="w-16 h-16 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mb-6">
               <UserPlus className="h-8 w-8 text-teal-400" />
@@ -220,8 +215,8 @@ export default function Register() {
               </div>
             )}
 
-            {/* Fields Row 1: Name & Email */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Row 1: Name & Email */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Full Name <span className="text-red-500">*</span>
@@ -243,14 +238,14 @@ export default function Register() {
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Email Address <span className="text-red-500">*</span>
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1 group">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                     <input
                       type="email"
                       name="email"
                       required
-                      placeholder="Enter your email address"
+                      placeholder="Enter email"
                       onChange={handleChange}
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                       style={{ colorScheme: "dark" }}
@@ -260,7 +255,7 @@ export default function Register() {
                     type="button"
                     disabled={timer > 0 || loading}
                     onClick={handleSendOTP}
-                    className="shrink-0 flex items-center justify-center gap-1.5 px-3 sm:px-4 bg-[#0B1120] border border-teal-500/50 text-teal-400 rounded-xl text-[11px] sm:text-xs font-bold hover:bg-teal-500/10 transition-all disabled:opacity-50 whitespace-nowrap shadow-sm"
+                    className="shrink-0 flex items-center justify-center gap-1.5 h-12 sm:h-auto px-4 bg-[#0B1120] border border-teal-500/50 text-teal-400 rounded-xl text-xs font-bold hover:bg-teal-500/10 transition-all disabled:opacity-50 whitespace-nowrap shadow-sm"
                   >
                     <Send size={14} className="shrink-0" />
                     <span>{timer > 0 ? `${timer}s` : "Send OTP"}</span>
@@ -273,9 +268,9 @@ export default function Register() {
             {otpSent && (
               <div className="flex flex-col gap-3 animate-in fade-in zoom-in duration-300 md:ml-[50%]">
                 <label className="text-xs font-bold text-teal-400 flex items-center gap-2 uppercase tracking-wider">
-                  <ShieldCheck size={14} /> Enter Verification Code
+                  <ShieldCheck size={14} /> Enter Code
                 </label>
-                <div className="flex gap-2 sm:gap-3">
+                <div className="flex gap-2 sm:gap-3 justify-start">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -285,15 +280,15 @@ export default function Register() {
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                      className="w-10 h-12 sm:w-12 sm:h-12 bg-[#0B1120] border border-slate-700 rounded-lg text-center text-xl text-white font-bold focus:outline-none focus:border-teal-400 transition-all"
+                      className="w-10 h-12 bg-[#0B1120] border border-slate-700 rounded-lg text-center text-xl text-white font-bold focus:outline-none focus:border-teal-400 transition-all"
                     />
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Fields Row 2: Passwords */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Row 2: Passwords */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Password <span className="text-red-500">*</span>
@@ -304,7 +299,7 @@ export default function Register() {
                     type={showPassword ? "text" : "password"}
                     name="password"
                     required
-                    placeholder="Create a password"
+                    placeholder="Create password"
                     onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
@@ -327,7 +322,7 @@ export default function Register() {
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
                     required
-                    placeholder="Confirm your password"
+                    placeholder="Confirm password"
                     onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
@@ -346,7 +341,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 3: Personal Info */}
+            {/* Row 3: Age, Phone, Address */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
@@ -357,7 +352,7 @@ export default function Register() {
                   name="age"
                   placeholder="Age"
                   onChange={handleChange}
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -369,7 +364,7 @@ export default function Register() {
                   name="phoneNumber"
                   placeholder="Phone"
                   onChange={handleChange}
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -379,10 +374,54 @@ export default function Register() {
                 <input
                   type="text"
                   name="address"
-                  placeholder="City/Address"
+                  placeholder="Address"
                   onChange={handleChange}
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
+              </div>
+            </div>
+
+            {/* Row 4: Gender and Blood Group */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Gender <span className="text-red-500">*</span>
+                </label>
+                <div className="relative group">
+                  <select
+                    name="gender"
+                    required
+                    onChange={handleChange}
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-slate-300 focus:outline-none focus:border-teal-400 appearance-none transition-all cursor-pointer"
+                  >
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Blood Group
+                </label>
+                <div className="relative group">
+                  <select
+                    name="bloodGroup"
+                    onChange={handleChange}
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-slate-300 focus:outline-none focus:border-teal-400 appearance-none transition-all cursor-pointer"
+                  >
+                    <option value="">Blood Group (Optional)</option>
+                    {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
+                      (bg) => (
+                        <option key={bg} value={bg}>
+                          {bg}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+                </div>
               </div>
             </div>
 
@@ -427,7 +466,7 @@ export default function Register() {
               {loading ? "Processing..." : "Create Account"}
             </button>
 
-            {/* Spacing adjusted for Social Section (Matches Login) */}
+            {/* Divider */}
             <div className="relative flex items-center gap-4 my-2">
               <div className="h-[1px] flex-1 bg-slate-800"></div>
               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
@@ -477,7 +516,6 @@ export default function Register() {
         </div>
       </main>
 
-      {/* Page Footer (Matches Login Exactly) */}
       <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-xs font-medium">
         <p>© 2026 HealthBot. All rights reserved.</p>
         <div className="flex items-center gap-4">
