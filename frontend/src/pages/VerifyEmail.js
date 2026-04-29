@@ -24,11 +24,17 @@ export default function VerifyEmail() {
         const res = await fetch(
           `https://healthbot-production-3c7d.up.railway.app/api/auth/verify-email?token=${token}`
         );
-        const data = await res.json();
+        const contentType = res.headers.get("content-type") || "";
+        const data = contentType.includes("application/json")
+          ? await res.json()
+          : null;
 
         if (!res.ok) {
           setStatus("error");
-          setMessage(data.message || "Verification failed.");
+          setMessage(
+            data?.message ||
+              "Verification failed. Please try the link again or request a new one."
+          );
           return;
         }
 
@@ -38,7 +44,7 @@ export default function VerifyEmail() {
         }
 
         setStatus("success");
-        setMessage(data.message || "Email verified successfully!");
+        setMessage(data?.message || "Email verified successfully!");
         redirectTimer = setTimeout(() => navigate("/chat"), 3000);
       } catch (err) {
         setStatus("error");

@@ -50,16 +50,22 @@ export default function ResetPassword() {
           body: JSON.stringify({ token, password }),
         }
       );
-      const data = await res.json();
+      const contentType = res.headers.get("content-type") || "";
+      const data = contentType.includes("application/json")
+        ? await res.json()
+        : null;
 
       if (!res.ok) {
         setStatus("error");
-        setMessage(data.message || "Reset failed. Please try again.");
+        setMessage(
+          data?.message ||
+            "Reset failed. Please try again."
+        );
         return;
       }
 
       setStatus("success");
-      setMessage(data.message || "Password reset successfully!");
+      setMessage(data?.message || "Password reset successfully!");
 
       // Auto redirect to login after 3 seconds
       setTimeout(() => navigate("/login"), 3000);

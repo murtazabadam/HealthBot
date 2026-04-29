@@ -20,13 +20,26 @@ export default function ForgotPassword() {
           body: JSON.stringify({ email }),
         }
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Request failed");
+      const contentType = res.headers.get("content-type") || "";
+      const data = contentType.includes("application/json")
+        ? await res.json()
+        : null;
+
+      if (!res.ok) {
+        throw new Error(
+          data?.message ||
+            "We could not send the reset link right now. Please try again in a moment."
+        );
+      }
+
       setStatus("success");
-      setMessage(data.message || "Reset link sent! Check your inbox.");
+      setMessage(data?.message || "Reset link sent! Check your inbox.");
     } catch (err) {
       setStatus("error");
-      setMessage(err.message);
+      setMessage(
+        err.message ||
+          "We could not send the reset link right now. Please try again in a moment."
+      );
     }
   };
 
