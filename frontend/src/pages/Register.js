@@ -183,29 +183,38 @@ export default function Register() {
         }}
       />
 
-      {/* Top Navbar */}
-      <nav className="relative z-10 w-full flex items-center justify-between px-6 py-6 lg:px-12 max-w-[1400px]">
+      {/* Navigation Bar - Sticky at top (Matches Login) */}
+      <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-6 lg:px-12 w-full bg-[#0B1120]/80 backdrop-blur-md border-b border-slate-800/50">
         <Link to="/" className="flex items-center gap-2 cursor-pointer">
-          <Activity className="h-8 w-8 text-cyan-400" />
+          <Activity className="h-7 w-7 text-teal-400" />
           <span className="text-2xl font-bold tracking-tight text-white">
             HealthBot
           </span>
         </Link>
+        <Link
+          to="/login"
+          className="px-6 py-2.5 text-sm font-bold text-white border border-teal-500 hover:bg-teal-500/10 rounded-xl transition-all"
+        >
+          Log In
+        </Link>
       </nav>
 
       {/* Main Form Container */}
-      <main className="relative z-10 flex-1 flex flex-col justify-center items-center w-full px-4 py-6">
-        <div className="w-full max-w-[850px] bg-[#020817]/80 backdrop-blur-md border border-cyan-500/30 rounded-[35px] p-8 sm:p-12 shadow-[0_0_50px_rgba(6,182,212,0.15)] relative">
+      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
+        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 sm:p-12 w-full max-w-[850px] shadow-2xl relative">
+          {/* Top border highlight (Matches Login) */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
+
           {/* Header */}
           <div className="flex flex-col items-center mb-10 text-center">
-            <div className="w-20 h-20 rounded-full border border-cyan-500/40 bg-cyan-500/5 flex items-center justify-center mb-5 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
-              <UserPlus className="h-10 w-10 text-cyan-400" strokeWidth={1.5} />
+            <div className="w-16 h-16 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mb-6">
+              <UserPlus className="h-8 w-8 text-teal-400" />
             </div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-white mb-3 tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 tracking-tight">
               Create Account
             </h1>
             <p className="text-slate-400 text-sm">
-              Join <span className="text-cyan-400 font-medium">HealthBot</span>{" "}
+              Join <span className="text-teal-400 font-bold">HealthBot</span>{" "}
               and start your smarter health journey today.
             </p>
           </div>
@@ -272,8 +281,8 @@ export default function Register() {
             {/* OTP Input (Appears when OTP is sent) */}
             {otpSent && (
               <div className="flex flex-col gap-3 animate-in fade-in zoom-in duration-300 md:col-start-2 md:-mt-4 mb-2 md:ml-[50%]">
-                <label className="text-sm font-semibold text-cyan-400 flex items-center gap-2">
-                  <ShieldCheck size={16} /> Enter Verification Code
+                <label className="text-xs font-bold text-teal-400 flex items-center gap-2 uppercase tracking-wider">
+                  <ShieldCheck size={14} /> Enter Verification Code
                 </label>
                 <div className="flex gap-2 sm:gap-3">
                   {otp.map((digit, index) => (
@@ -285,7 +294,7 @@ export default function Register() {
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                      className="w-10 h-12 sm:w-12 sm:h-12 bg-[#0B1120] border border-slate-700 rounded-lg text-center text-xl text-white font-bold focus:outline-none focus:border-cyan-400 transition-all"
+                      className="w-10 h-12 sm:w-12 sm:h-12 bg-[#0B1120] border border-slate-700 rounded-lg text-center text-xl text-white font-bold focus:outline-none focus:border-teal-400 transition-all"
                     />
                   ))}
                 </div>
@@ -295,48 +304,48 @@ export default function Register() {
             {/* Row 2: Passwords */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-200">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
                     required
                     placeholder="Create a password"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
                 <div className="flex items-start gap-2 mt-1 px-1">
-                  <ShieldCheck className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-slate-400 leading-tight">
+                  <ShieldCheck className="h-3 w-3 text-teal-400 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-slate-400 leading-tight">
                     Use at least 8 characters with a mix of letters, numbers &
                     symbols
                   </p>
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-200">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Confirm Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
                     required
                     placeholder="Confirm your password"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                   <button
                     type="button"
@@ -344,9 +353,9 @@ export default function Register() {
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
                   >
                     {showConfirmPassword ? (
-                      <EyeOff size={18} />
+                      <EyeOff size={16} />
                     ) : (
-                      <Eye size={18} />
+                      <Eye size={16} />
                     )}
                   </button>
                 </div>
@@ -356,47 +365,47 @@ export default function Register() {
             {/* Row 3: Age, Phone, Address */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-200">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Age
                 </label>
                 <div className="relative group">
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <input
                     type="number"
                     name="age"
                     placeholder="Enter your age"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-200">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Phone Number
                 </label>
                 <div className="relative group">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <input
                     type="tel"
                     name="phoneNumber"
-                    placeholder="Enter phone number"
+                    placeholder="Enter phone"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-200">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Address
                 </label>
                 <div className="relative group">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <input
                     type="text"
                     name="address"
-                    placeholder="Enter your address"
+                    placeholder="Enter address"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-cyan-500/50 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                 </div>
               </div>
@@ -405,15 +414,15 @@ export default function Register() {
             {/* Row 4: Gender, Blood Group */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-200">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Gender <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
-                  <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                  <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <select
                     name="gender"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-10 text-sm text-slate-400 focus:outline-none focus:border-cyan-500/50 appearance-none transition-all cursor-pointer"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-10 text-sm text-slate-400 focus:outline-none focus:border-teal-400 appearance-none transition-all cursor-pointer"
                   >
                     <option value="">Select gender</option>
                     <option value="male">Male</option>
@@ -423,15 +432,15 @@ export default function Register() {
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-slate-200">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Blood Group
                 </label>
                 <div className="relative group">
-                  <Droplet className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                  <Droplet className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                   <select
                     name="bloodGroup"
                     onChange={handleChange}
-                    className="w-full bg-[#0B1120] border border-slate-800 rounded-xl py-3.5 pl-12 pr-10 text-sm text-slate-400 focus:outline-none focus:border-cyan-500/50 appearance-none transition-all cursor-pointer"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-10 text-sm text-slate-400 focus:outline-none focus:border-teal-400 appearance-none transition-all cursor-pointer"
                   >
                     <option value="">Select blood group</option>
                     {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
@@ -451,29 +460,29 @@ export default function Register() {
             {/* Terms Checkbox */}
             <div className="flex items-center gap-3 mt-2">
               <div
-                className={`w-5 h-5 rounded border transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? "bg-cyan-500 border-cyan-500" : "bg-transparent border-slate-700"}`}
+                className={`w-5 h-5 rounded border transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? "bg-teal-500 border-teal-500" : "bg-[#0B1120] border-slate-700"}`}
                 onClick={() => setAgreedToTerms(!agreedToTerms)}
               >
                 {agreedToTerms && (
                   <CheckCircle2
                     size={16}
-                    className="text-[#020817]"
+                    className="text-[#0B1120]"
                     strokeWidth={3}
                   />
                 )}
               </div>
-              <label className="text-sm text-slate-300">
+              <label className="text-xs text-slate-300">
                 I agree to the{" "}
                 <Link
                   to="/terms"
-                  className="text-cyan-400 font-medium hover:underline"
+                  className="text-teal-400 font-bold hover:underline"
                 >
                   Terms of Service
                 </Link>{" "}
                 and{" "}
                 <Link
                   to="/privacy"
-                  className="text-cyan-400 font-medium hover:underline"
+                  className="text-teal-400 font-bold hover:underline"
                 >
                   Privacy Policy
                 </Link>
@@ -484,7 +493,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 bg-gradient-to-r from-cyan-400 to-blue-600 text-white font-bold text-lg py-4 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center"
+              className="w-full mt-4 bg-gradient-to-r from-teal-400 to-blue-500 text-slate-900 font-extrabold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center"
             >
               {loading ? "Processing..." : "Create Account"}
             </button>
@@ -531,7 +540,7 @@ export default function Register() {
                 Already have an account?{" "}
                 <Link
                   to="/login"
-                  className="text-cyan-400 font-bold hover:underline ml-1"
+                  className="text-teal-400 font-extrabold hover:underline ml-1"
                 >
                   Log In
                 </Link>
