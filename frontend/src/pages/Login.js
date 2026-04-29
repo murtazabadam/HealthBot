@@ -7,32 +7,58 @@ export default function Login() {
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+const [showVerificationBanner, setShowVerificationBanner] = useState(false);
+const [resendStatus, setResendStatus] = useState('');
 
   const handleGoogleLogin = () => {
     window.location.href =
       "https://healthbot-production-3c7d.up.railway.app/api/auth/google";
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setErrorMessage("");
-    setLoading(true);
+ const handleLogin = async (e) => {
+  e.preventDefault();
+  setErrorMessage('');
+  const email = e.target[0].value;
+  const password = e.target[1].value;
+  try {
+    const res = await fetch('https://healthbot-production-3c7d.up.railway.app/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (data.requiresVerification) {
+        setErrorMessage('');
+        setUnverifiedEmail(data.email);
+        setShowVerificationBanner(true);
+        return;
+      }
+      throw new Error(data.message || 'Login failed');
+    }
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    navigate('/chat');
+  } catch (err) {
+    setErrorMessage(err.message);
+  }
+};
 
-    // Accessing inputs directly from the form event
-    const email = e.target[0].value;
-    const password = e.target[1].value;
-
-    try {
-      const res = await fetch(
-        "https://healthbot-production-3c7d.up.railway.app/api/auth/login",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        },
-      );
-
-      const data = await res.json();
+const handleResend = async () => {
+  setResendStatus('Sending...');
+  try {
+    const res = await fetch('https://healthbot-production-3c7d.up.railway.app/api/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: unverifiedEmail })
+    });
+    const data = await res.json();
+    setResendStatus(data.message || 'Sent!');
+  } catch {
+    setResendStatus('Failed to resend. Try again.');
+  }
+};
 
       // --- EMAIL VERIFICATION CHECK (STEP 8) ---
       if (data.requiresVerification) {
@@ -108,6 +134,28 @@ export default function Login() {
                 {errorMessage}
               </div>
             )}
+
+{/* Verification Banner */}
+{showVerificationBanner && (
+  <div className="bg-yellow-500/10 border border-yellow-500/50 rounded-lg p-4">
+    <p className="text-yellow-400 text-sm font-medium mb-2">
+      ⚠️ Email not verified
+    </p>
+    <p className="text-slate-400 text-xs mb-3">
+      Please check your inbox and verify your email before logging in.
+    </p>
+    <button
+      type="button"
+      onClick={handleResend}
+      className="text-xs text-teal-400 hover:text-teal-300 font-medium underline"
+    >
+      Resend verification email
+    </button>
+    {resendStatus && (
+      <p className="text-xs text-green-400 mt-2">{resendStatus}</p>
+    )}
+  </div>
+)}
 
             {/* Email Field */}
             <div className="flex flex-col gap-2">
