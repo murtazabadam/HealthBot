@@ -8,6 +8,37 @@ export default function VerifyEmail() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const verifyEmail = async (token) => {
+      try {
+        const res = await fetch(
+          `https://healthbot-production-3c7d.up.railway.app/api/auth/verify-email?token=${token}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          setStatus("error");
+          setMessage(data.message || "Verification failed.");
+          return;
+        }
+
+        // Save token and auto login
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("user", JSON.stringify(data.user));
+        }
+
+        setStatus("success");
+        setMessage(data.message || "Email verified successfully!");
+
+        // Auto redirect to chat after 3 seconds
+        setTimeout(() => navigate("/chat"), 3000);
+
+      } catch (err) {
+        setStatus("error");
+        setMessage("Something went wrong. Please try again.");
+      }
+    };
+
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
 
@@ -19,37 +50,6 @@ export default function VerifyEmail() {
 
     verifyEmail(token);
   }, []);
-
-  const verifyEmail = async (token) => {
-    try {
-      const res = await fetch(
-        `https://healthbot-production-3c7d.up.railway.app/api/auth/verify-email?token=${token}`
-      );
-      const data = await res.json();
-
-      if (!res.ok) {
-        setStatus("error");
-        setMessage(data.message || "Verification failed.");
-        return;
-      }
-
-      // Save token and auto login
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-      }
-
-      setStatus("success");
-      setMessage(data.message || "Email verified successfully!");
-
-      // Auto redirect to chat after 3 seconds
-      setTimeout(() => navigate("/chat"), 3000);
-
-    } catch (err) {
-      setStatus("error");
-      setMessage("Something went wrong. Please try again.");
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">

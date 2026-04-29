@@ -60,26 +60,6 @@ const handleResend = async () => {
   }
 };
 
-      // --- EMAIL VERIFICATION CHECK (STEP 8) ---
-      if (data.requiresVerification) {
-        setErrorMessage("Please verify your email. Check your inbox.");
-        setLoading(false);
-        return;
-      }
-
-      if (!res.ok) throw new Error(data.message || "Login failed");
-
-      // Success: Save credentials and navigate to chat
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      navigate("/chat");
-    } catch (err) {
-      setErrorMessage(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
       {/* Background Decor - Ambient Glow */}
