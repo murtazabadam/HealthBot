@@ -161,7 +161,7 @@ export default function Chat() {
 
       <main className="flex-1 flex flex-col h-full relative z-10 overflow-hidden">
         {/* --- FIXED HEADER (Locked at top) --- */}
-        <header className="sticky top-0 left-0 right-0 z-50 h-[72px] shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617] shadow-lg">
+        <header className="h-[72px] w-full shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617] z-50">
           <div className="flex items-center gap-3">
             <button
               className={`p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-all ${isSidebarOpen ? "lg:hidden" : "block"}`}
@@ -173,9 +173,15 @@ export default function Chat() {
               <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-slate-800/50 flex items-center justify-center border border-teal-500/20">
                 <Activity size={22} className="text-teal-400" />
               </div>
-              <h3 className="text-white text-base lg:text-lg font-bold tracking-tight">
-                HealthBot
-              </h3>
+              <div className="flex flex-col">
+                <h3 className="text-white text-base lg:text-lg font-bold tracking-tight leading-tight">
+                  HealthBot
+                </h3>
+                <p className="text-[9px] text-teal-400 font-bold uppercase flex items-center gap-1 mt-0.5">
+                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />
+                  Online
+                </p>
+              </div>
             </div>
           </div>
 
@@ -184,10 +190,9 @@ export default function Chat() {
               <span className="text-[11px] lg:text-xs font-black text-white uppercase tracking-wider">
                 {fullName}
               </span>
-              <p className="text-[9px] text-teal-400 font-bold uppercase flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />
-                Online
-              </p>
+              <span className="text-[8px] text-slate-500 font-bold uppercase opacity-60">
+                Verified User
+              </span>
             </div>
             <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/80 shadow-md">
               <UserCircle className="text-slate-400" size={26} />
@@ -195,7 +200,7 @@ export default function Chat() {
           </div>
         </header>
 
-        {/* --- SCROLLABLE CHAT MESSAGES --- */}
+        {/* --- SCROLLABLE CHAT MESSAGES area --- */}
         <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex justify-center">
@@ -249,8 +254,8 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* --- FIXED INPUT AREA --- */}
-        <div className="p-4 lg:p-6 bg-[#020617] shrink-0 border-t border-slate-800/30 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+        {/* --- FIXED INPUT AREA (Bottom) --- */}
+        <div className="p-4 lg:p-6 bg-[#020617] shrink-0 border-t border-slate-800/30">
           <div className="max-w-4xl mx-auto">
             <div className="flex flex-wrap justify-center gap-2 mb-4">
               {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
