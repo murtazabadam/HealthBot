@@ -107,7 +107,7 @@ export default function Chat() {
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60 shadow-2xl">
+    <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60">
       <div className="p-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" strokeWidth={3} />
@@ -148,7 +148,7 @@ export default function Chat() {
 
       {/* Sidebar Navigation */}
       <div
-        className={`fixed inset-y-0 left-0 z-[60] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
+        className={`fixed inset-y-0 left-0 z-[100] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
       >
         {isSidebarOpen && (
           <div
@@ -159,9 +159,9 @@ export default function Chat() {
         <SidebarContent />
       </div>
 
-      <main className="flex-1 flex flex-col h-full relative z-10 overflow-hidden">
-        {/* --- FIXED HEADER (Locked at top) --- */}
-        <header className="h-[72px] w-full shrink-0 border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617] z-50">
+      <main className="flex-1 flex flex-col h-full relative overflow-hidden">
+        {/* --- HEADER LOCKED AT TOP --- */}
+        <header className="fixed top-0 left-0 right-0 lg:left-auto lg:w-[calc(100%-18rem)] z-[90] h-[72px] border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617] shadow-xl">
           <div className="flex items-center gap-3">
             <button
               className={`p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-all ${isSidebarOpen ? "lg:hidden" : "block"}`}
@@ -170,14 +170,14 @@ export default function Chat() {
               <Menu size={24} />
             </button>
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-slate-800/50 flex items-center justify-center border border-teal-500/20">
+              <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-teal-500/20">
                 <Activity size={22} className="text-teal-400" />
               </div>
               <div className="flex flex-col">
-                <h3 className="text-white text-base lg:text-lg font-bold tracking-tight leading-tight">
+                <h3 className="text-white text-sm font-bold tracking-tight leading-tight">
                   HealthBot
                 </h3>
-                <p className="text-[9px] text-teal-400 font-bold uppercase flex items-center gap-1 mt-0.5">
+                <p className="text-[9px] text-teal-400 font-bold uppercase flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />
                   Online
                 </p>
@@ -200,11 +200,11 @@ export default function Chat() {
           </div>
         </header>
 
-        {/* --- SCROLLABLE CHAT MESSAGES area --- */}
-        <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50">
+        {/* --- SCROLLABLE MESSAGES (Offset by header height) --- */}
+        <div className="flex-1 overflow-y-auto px-4 lg:px-6 pt-[80px] pb-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50">
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex justify-center">
-              <span className="text-[9px] lg:text-[10px] bg-slate-800/50 px-3 py-1 rounded-full text-slate-500 font-bold uppercase tracking-widest border border-slate-700/50 backdrop-blur-sm">
+              <span className="text-[9px] bg-slate-800/50 px-3 py-1 rounded-full text-slate-500 font-bold uppercase tracking-widest border border-slate-700/50">
                 Session Started Today
               </span>
             </div>
@@ -212,10 +212,10 @@ export default function Chat() {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+                className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2`}
               >
                 <div
-                  className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border shadow-sm ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : "bg-slate-800 border-slate-700"}`}
+                  className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : "bg-slate-800 border-slate-700"}`}
                 >
                   {msg.sender === "user" ? (
                     <User size={18} className="text-teal-400" />
@@ -243,7 +243,7 @@ export default function Chat() {
                 <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
                   <Activity size={18} className="text-teal-400 opacity-50" />
                 </div>
-                <div className="bg-slate-800/40 p-4 rounded-2xl rounded-tl-none border border-slate-700/30 flex gap-1 items-center">
+                <div className="bg-slate-800/40 p-4 rounded-2xl rounded-tl-none border border-slate-700/30 flex gap-1">
                   <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce" />
                   <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
                   <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
@@ -254,15 +254,15 @@ export default function Chat() {
           </div>
         </div>
 
-        {/* --- FIXED INPUT AREA (Bottom) --- */}
+        {/* --- INPUT AREA --- */}
         <div className="p-4 lg:p-6 bg-[#020617] shrink-0 border-t border-slate-800/30">
           <div className="max-w-4xl mx-auto">
-            <div className="flex flex-wrap justify-center gap-2 mb-4">
+            <div className="flex overflow-x-auto gap-2 mb-4 no-scrollbar pb-1">
               {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
                 <button
                   key={symptom}
                   onClick={() => sendMessage(`I have a ${symptom}`)}
-                  className="bg-slate-800/40 border border-slate-700/50 px-3 py-1.5 rounded-full text-[10px] text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all flex items-center gap-1 font-bold"
+                  className="whitespace-nowrap bg-slate-800/40 border border-slate-700/50 px-3 py-1.5 rounded-full text-[10px] text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all flex items-center gap-1 font-bold"
                 >
                   {symptom} <ChevronRight size={10} />
                 </button>
@@ -270,8 +270,8 @@ export default function Chat() {
             </div>
 
             <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl focus-within:border-teal-500/40 transition-all">
-              <button className="p-2.5 text-slate-500 hover:text-teal-400 transition-colors">
-                <Paperclip size={20} />
+              <button className="p-2 text-slate-500 hover:text-teal-400 transition-colors">
+                <Paperclip size={18} />
               </button>
               <textarea
                 rows={1}
@@ -282,21 +282,21 @@ export default function Chat() {
                   !e.shiftKey &&
                   (e.preventDefault(), sendMessage())
                 }
-                placeholder="Describe your health concern..."
-                className="flex-1 bg-transparent border-none focus:ring-0 text-xs lg:text-sm text-white py-3 resize-none no-scrollbar placeholder-slate-600"
+                placeholder="Describe symptoms..."
+                className="flex-1 bg-transparent border-none focus:ring-0 text-xs text-white py-3 resize-none no-scrollbar placeholder-slate-600"
               />
-              <button className="p-2.5 text-slate-500 hover:text-teal-400 transition-colors">
-                <Mic size={20} />
+              <button className="p-2 text-slate-500 hover:text-teal-400 transition-colors">
+                <Mic size={18} />
               </button>
               <button
                 onClick={() => sendMessage()}
                 className="bg-teal-500 text-slate-900 p-2.5 rounded-xl transition-all shadow-lg hover:brightness-110 active:scale-95"
               >
-                <Send size={20} strokeWidth={3} />
+                <Send size={18} strokeWidth={3} />
               </button>
             </div>
 
-            <p className="mt-4 text-[9px] lg:text-[10px] text-teal-400 font-bold text-center italic max-w-md mx-auto leading-relaxed drop-shadow-[0_0_8px_rgba(45,212,191,0.2)]">
+            <p className="mt-4 text-[9px] text-teal-400 font-bold text-center italic opacity-80 leading-relaxed">
               🩺 For guidance only • Consult a doctor for emergencies
             </p>
           </div>
