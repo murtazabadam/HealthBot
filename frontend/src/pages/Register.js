@@ -484,10 +484,9 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 bg-gradient-to-r from-cyan-400 to-blue-600 text-white font-bold text-lg py-4 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full mt-2 bg-gradient-to-r from-cyan-400 to-blue-600 text-white font-bold text-lg py-4 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center"
             >
-              {loading ? "Processing..." : "Create Account"}{" "}
-              <span className="text-xl">→</span>
+              {loading ? "Processing..." : "Create Account"}
             </button>
 
             {/* Social Divider */}
@@ -537,13 +536,6 @@ export default function Register() {
                   Log In
                 </Link>
               </span>
-              <span className="hidden sm:inline text-slate-700">|</span>
-              <Link
-                to="/forgot-password"
-                className="text-cyan-400 font-bold hover:underline"
-              >
-                Forgot Password?
-              </Link>
             </div>
           </form>
         </div>
