@@ -10,37 +10,48 @@ export default function VerifyEmail() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
+
     if (!token) {
       setStatus("error");
       setMessage("No verification token found. Please check your email link.");
       return;
     }
-    verifyEmail(token);
-  }, []);
 
-  const verifyEmail = async (token) => {
-    try {
-      const res = await fetch(
-        `https://healthbot-production-3c7d.up.railway.app/api/auth/verify-email?token=${token}`
-      );
-      const data = await res.json();
-      if (!res.ok) {
+    let redirectTimer;
+
+    const verifyEmail = async () => {
+      try {
+        const res = await fetch(
+          `https://healthbot-production-3c7d.up.railway.app/api/auth/verify-email?token=${token}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          setStatus("error");
+          setMessage(data.message || "Verification failed.");
+          return;
+        }
+
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("user", JSON.stringify(data.user));
+        }
+
+        setStatus("success");
+        setMessage(data.message || "Email verified successfully!");
+        redirectTimer = setTimeout(() => navigate("/chat"), 3000);
+      } catch (err) {
         setStatus("error");
-        setMessage(data.message || "Verification failed.");
-        return;
+        setMessage("Something went wrong. Please try again.");
       }
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-      }
-      setStatus("success");
-      setMessage(data.message || "Email verified successfully!");
-      setTimeout(() => navigate("/chat"), 3000);
-    } catch (err) {
-      setStatus("error");
-      setMessage("Something went wrong. Please try again.");
-    }
-  };
+    };
+
+    verifyEmail();
+
+    return () => {
+      if (redirectTimer) clearTimeout(redirectTimer);
+    };
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
@@ -67,7 +78,6 @@ export default function VerifyEmail() {
         <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-10 w-full max-w-[480px] shadow-[0_0_40px_rgba(13,148,136,0.1)] relative text-center">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
-          {/* Loading */}
           {status === "loading" && (
             <>
               <div className="w-20 h-20 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mx-auto mb-6">
@@ -82,7 +92,6 @@ export default function VerifyEmail() {
             </>
           )}
 
-          {/* Success */}
           {status === "success" && (
             <>
               <div className="w-20 h-20 rounded-full border border-green-500/30 bg-green-500/10 flex items-center justify-center mx-auto mb-6">
@@ -106,7 +115,6 @@ export default function VerifyEmail() {
             </>
           )}
 
-          {/* Error */}
           {status === "error" && (
             <>
               <div className="w-20 h-20 rounded-full border border-red-500/30 bg-red-500/10 flex items-center justify-center mx-auto mb-6">
