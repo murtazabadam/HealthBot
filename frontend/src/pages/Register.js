@@ -411,7 +411,7 @@ export default function Register() {
                     onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-slate-300 focus:outline-none focus:border-teal-400 appearance-none transition-all cursor-pointer"
                   >
-                    <option value="">Blood Group (Optional)</option>
+                    <option value="">Blood Group </option>
                     {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
                       (bg) => (
                         <option key={bg} value={bg}>
