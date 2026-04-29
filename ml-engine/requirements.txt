@@ -1,10 +1,10 @@
 flask
 flask-cors
-scikit-learn
 pandas
 numpy
+scikit-learn
+xgboost
+lightgbm
+imbalanced-learn
+joblib
 gunicorn
-nltk
-textblob
-fuzzywuzzy
-python-Levenshtein
