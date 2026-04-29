@@ -15,6 +15,9 @@ const app = express(); // MUST COME BEFORE app.use()
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
+const cors = require('cors');
+app.use(cors({ origin: 'https://healthbotsc.vercel.app' }));
+
 /* Session + Passport */
 app.use(session({
   secret: process.env.SESSION_SECRET || 'healthbot_secret',
