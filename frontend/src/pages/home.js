@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   HeartPulse,
@@ -12,9 +12,13 @@ import {
   Clock,
   Brain,
   AlertTriangle,
+  Menu,
+  X,
 } from "lucide-react";
 
 export default function Home() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white overflow-x-hidden relative w-full">
       {/* Background Glow Orbs */}
@@ -30,7 +34,7 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Desktop Navigation Links */}
+        {/* Desktop Links (Hidden on Mobile) */}
         <div className="hidden md:flex items-center gap-10 text-sm font-medium text-slate-300">
           <a href="#home" className="hover:text-teal-400 transition-colors">
             Home
@@ -49,130 +53,179 @@ export default function Home() {
           </a>
         </div>
 
+        {/* Right Side Buttons & Mobile Menu Toggle */}
         <div className="flex items-center gap-4 lg:gap-6">
           <Link
             to="/login"
-            className="text-xs lg:text-sm font-medium text-slate-300 hover:text-white transition-colors"
+            className="hidden sm:block text-xs lg:text-sm font-medium text-slate-300 hover:text-white transition-colors"
           >
             Log In
           </Link>
           <Link
             to="/register"
-            className="px-4 py-2 lg:px-6 lg:py-2.5 text-xs lg:text-sm font-semibold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-md transition-all shadow-[0_0_15px_rgba(45,212,191,0.2)]"
+            className="px-4 py-2 lg:px-6 lg:py-2.5 text-xs lg:text-sm font-semibold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-md transition-all"
           >
             Sign Up
           </Link>
+
+          {/* Hamburger Icon for Mobile */}
+          <button
+            className="md:hidden text-slate-300 p-1 hover:text-teal-400 transition-colors"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
-      </nav>
 
-      {/* 1. HOME SECTION */}
-      <section id="home">
-        <main className="relative pt-32 pb-20 px-6 lg:pt-44 lg:pb-32 lg:px-12 max-w-[1200px] mx-auto flex flex-col items-center text-center z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 lg:px-4 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-400 text-[10px] lg:text-xs font-bold tracking-wider mb-6 mt-4 lg:mt-0">
-            <Activity size={14} />
-            AI POWERED HEALTH ASSISTANT
-          </div>
-
-          <h1 className="text-4xl sm:text-5xl lg:text-[4rem] font-extrabold tracking-tight text-white mb-6 leading-[1.2] lg:leading-[1.1] lg:whitespace-nowrap">
-            Your AI-Powered <br className="block lg:hidden" />{" "}
-            <span className="text-teal-400">Health</span> Assistant
-          </h1>
-
-          <p className="text-base lg:text-lg text-slate-300 mb-10 leading-relaxed max-w-2xl mx-auto">
-            Get instant answers to your health questions, check symptoms, and
-            receive smart, evidence-based recommendations – anytime, anywhere.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 lg:mb-16 w-full sm:w-auto">
-            <Link
-              to="/chat"
-              className="w-full sm:w-auto px-8 py-3.5 text-base font-bold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all flex items-center justify-center gap-2"
+        {/* Mobile Navigation Dropdown */}
+        {isMobileMenuOpen && (
+          <div className="absolute top-[100%] left-0 w-full bg-[#0B1120]/95 backdrop-blur-xl border-b border-slate-800/60 md:hidden flex flex-col px-6 py-6 gap-6 shadow-2xl animate-in slide-in-from-top-2">
+            <a
+              href="#home"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-base font-bold text-slate-300 hover:text-teal-400"
             >
-              <MessageSquare className="h-5 w-5" />
-              Start Chatting
-            </Link>
+              Home
+            </a>
             <a
               href="#features"
-              className="w-full sm:w-auto px-8 py-3.5 text-base font-bold text-white border border-slate-600 hover:bg-slate-800 rounded-full transition-all flex items-center justify-center gap-2"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-base font-bold text-slate-300 hover:text-teal-400"
             >
-              Learn More
-              <ChevronRight className="h-5 w-5" />
+              Features
             </a>
+            <a
+              href="#how-it-works"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-base font-bold text-slate-300 hover:text-teal-400"
+            >
+              How It Works
+            </a>
+            <a
+              href="#about"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-base font-bold text-slate-300 hover:text-teal-400"
+            >
+              About Us
+            </a>
+            <div className="sm:hidden pt-4 border-t border-slate-800/60">
+              <Link
+                to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="text-base font-bold text-slate-300 hover:text-teal-400 block"
+              >
+                Log In
+              </Link>
+            </div>
           </div>
+        )}
+      </nav>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-8 w-full max-w-3xl mx-auto">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 lg:h-5 lg:w-5 text-teal-400" />
-              <span className="text-xs lg:text-sm font-medium text-slate-200">
-                Secure & Private
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-blue-400" />
-              <span className="text-xs lg:text-sm font-medium text-slate-200">
-                Instant Support
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Brain className="h-4 w-4 lg:h-5 lg:w-5 text-purple-400" />
-              <span className="text-xs lg:text-sm font-medium text-slate-200">
-                AI-Powered
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 lg:h-5 lg:w-5 text-rose-400" />
-              <span className="text-xs lg:text-sm font-medium text-slate-200">
-                24/7 Available
-              </span>
-            </div>
+      {/* --- SECTION 1: HOME --- */}
+      {/* Reduced pb-20 to pb-10 to close the gap */}
+      <section
+        id="home"
+        className="relative pt-32 pb-10 px-6 lg:pt-44 lg:pb-16 max-w-[1200px] mx-auto flex flex-col items-center text-center z-10"
+      >
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 lg:px-4 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-400 text-[10px] lg:text-xs font-bold tracking-wider mb-6 mt-4 lg:mt-0">
+          <Activity size={14} /> AI POWERED HEALTH ASSISTANT
+        </div>
+        <h1 className="text-4xl sm:text-5xl lg:text-[4rem] font-extrabold tracking-tight text-white mb-6 leading-[1.2] lg:leading-[1.1]">
+          Your AI-Powered <span className="text-teal-400">Health</span>{" "}
+          Assistant
+        </h1>
+        <p className="text-base lg:text-lg text-slate-300 mb-10 leading-relaxed max-w-2xl mx-auto">
+          Get instant answers to your health questions, check symptoms, and
+          receive smart recommendations – anytime, anywhere.
+        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+          <Link
+            to="/chat"
+            className="px-8 py-3.5 text-base font-bold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all flex items-center gap-2"
+          >
+            <MessageSquare size={20} /> Start Chatting
+          </Link>
+          <a
+            href="#features"
+            className="px-8 py-3.5 text-base font-bold text-white border border-slate-600 hover:bg-slate-800 rounded-full transition-all flex items-center gap-2"
+          >
+            Learn More <ChevronRight size={20} />
+          </a>
+        </div>
+
+        {/* Trust Badges */}
+        <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-8 w-full max-w-3xl mx-auto">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 lg:h-5 lg:w-5 text-teal-400" />
+            <span className="text-xs lg:text-sm font-medium text-slate-200">
+              Secure & Private
+            </span>
           </div>
-        </main>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 lg:h-5 lg:w-5 text-blue-400" />
+            <span className="text-xs lg:text-sm font-medium text-slate-200">
+              Instant Support
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Brain className="h-4 w-4 lg:h-5 lg:w-5 text-purple-400" />
+            <span className="text-xs lg:text-sm font-medium text-slate-200">
+              AI-Powered
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 lg:h-5 lg:w-5 text-rose-400" />
+            <span className="text-xs lg:text-sm font-medium text-slate-200">
+              24/7 Available
+            </span>
+          </div>
+        </div>
       </section>
 
-      {/* 2. FEATURES SECTION */}
+      {/* --- SECTION 2: FEATURES --- */}
+      {/* Reduced pt-24 to pt-12 to close the gap */}
       <section
         id="features"
-        className="pt-24 pb-16 px-6 lg:pt-32 lg:pb-20 lg:px-12 relative z-20 max-w-[1400px] mx-auto"
+        className="pt-12 pb-16 px-6 lg:pt-16 lg:pb-20 lg:px-12 relative z-20 max-w-[1400px] mx-auto"
       >
-        <div className="text-center mb-16 lg:mb-20">
+        <div className="text-center mb-16">
           <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-white">
             Why Choose HealthBot?
           </h2>
-          <p className="text-slate-400 max-w-2xl mx-auto text-sm lg:text-base">
+          <p className="text-slate-400 max-w-2xl mx-auto">
             Comprehensive healthcare assistance bridging the gap between
             patients and medical knowledge.
           </p>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <FeatureCard
             icon={MessageSquare}
-            color="teal"
+            theme="teal"
             title="AI Symptom Checker"
-            desc="Describe your symptoms naturally. Our advanced NLP engine analyzes patterns to suggest possible causes."
+            desc="Describe symptoms naturally. Our engine suggests possible causes."
           />
           <FeatureCard
             icon={UserPlus}
-            color="blue"
+            theme="blue"
             title="Smart Recommendations"
-            desc="Receive severity-based advice indicating if you need emergency care or simple home self-care."
+            desc="Severity-based advice for emergency care or self-care."
           />
           <FeatureCard
             icon={FileText}
-            color="purple"
+            theme="purple"
             title="Health History"
-            desc="Securely store and track your symptom history and past conversations to share with providers."
+            desc="Securely store and track your history and past conversations."
           />
           <FeatureCard
             icon={MapPin}
-            color="rose"
+            theme="rose"
             title="Nearby Facilities"
-            desc="Integrated location services to instantly find the nearest hospitals and clinics when needed."
+            desc="Instantly find the nearest hospitals and clinics when needed."
           />
         </div>
       </section>
 
-      {/* 3. HOW IT WORKS SECTION */}
+      {/* --- SECTION 3: HOW IT WORKS --- */}
       <section
         id="how-it-works"
         className="py-24 px-6 lg:px-12 bg-[#111827]/30 border-y border-slate-800/50"
@@ -201,84 +254,82 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. ABOUT US SECTION */}
+      {/* --- SECTION 4: ABOUT US --- */}
+      {/* Reduced bottom padding to pb-8 to close the gap to disclaimer */}
       <section
         id="about"
-        className="py-24 px-6 lg:px-12 max-w-[1200px] mx-auto"
+        className="pt-24 pb-8 px-6 lg:pt-24 lg:pb-12 max-w-[1200px] mx-auto"
       >
-        <div className="bg-gradient-to-r from-teal-500/10 to-transparent border border-slate-800 p-8 lg:p-12 rounded-3xl flex flex-col md:flex-row items-center gap-10">
+        <div className="bg-[#111827] border border-slate-800 p-8 lg:p-12 rounded-3xl flex flex-col md:flex-row items-center gap-10">
           <div className="flex-1">
             <h2 className="text-3xl font-bold text-white mb-6">
               About HealthBot
             </h2>
-            <p className="text-slate-400 text-sm lg:text-base leading-relaxed">
-              HealthBot is a collaborative project designed to leverage
-              artificial intelligence to make healthcare information more
-              accessible. Our mission is to provide immediate, evidence-based
-              health insights to users worldwide, reducing the anxiety of
-              unknown symptoms.
+            <p className="text-slate-400 leading-relaxed">
+              HealthBot leverages artificial intelligence to make healthcare
+              information accessible, providing evidence-based insights to users
+              worldwide.
             </p>
           </div>
-          <div className="w-full md:w-1/3 flex justify-center">
-            <div className="w-32 h-32 lg:w-40 lg:h-40 rounded-full border-4 border-teal-500/20 bg-teal-500/5 flex items-center justify-center animate-pulse">
-              <Activity size={60} className="text-teal-400" />
-            </div>
-          </div>
+          <Activity size={80} className="text-teal-400 opacity-20" />
         </div>
       </section>
 
-      {/* Medical Disclaimer Box */}
-      <div className="max-w-5xl mx-auto px-6 lg:px-12 pb-16 lg:pb-20 w-full mt-10">
-        <div className="bg-[#111827] border border-slate-800 rounded-xl p-6 lg:p-8 text-center w-full">
+      {/* Disclaimer */}
+      {/* Changed mt-10 to mt-4 to pull it closer to the About Us block */}
+      <div className="max-w-5xl mx-auto px-6 pb-20 mt-4">
+        <div className="bg-[#111827] border border-slate-800 rounded-xl p-8 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <AlertTriangle className="h-4 w-4 lg:h-5 lg:w-5 text-teal-400" />
-            <h4 className="text-teal-400 font-bold uppercase text-xs lg:text-sm tracking-widest">
-              Appendix E: Medical Disclaimer
+            <AlertTriangle className="text-teal-400" size={20} />
+            <h4 className="text-teal-400 font-bold uppercase text-xs tracking-widest">
+              Medical Disclaimer
             </h4>
           </div>
-          <p className="text-slate-300 text-xs lg:text-sm leading-relaxed max-w-3xl mx-auto">
-            This system provides preliminary health information only and is not
-            a substitute for professional medical advice, diagnosis, or
-            treatment. Always seek advice from qualified providers.
+          <p className="text-slate-400 text-xs leading-relaxed max-w-3xl mx-auto">
+            This system provides preliminary information only and is not a
+            substitute for professional medical advice.
           </p>
         </div>
       </div>
 
-      <footer className="pb-8 px-6 lg:px-12 flex flex-col md:flex-row items-center justify-between w-full max-w-[1400px] mx-auto relative mt-10">
-        <div className="flex items-center gap-2 opacity-60 mb-4 md:mb-0 md:absolute md:left-6 lg:left-12">
-          <HeartPulse className="h-5 w-5 lg:h-6 lg:w-6 text-slate-400" />
-          <span className="text-lg lg:text-xl font-bold text-slate-400">
-            HealthBot
-          </span>
+      <footer className="pb-8 px-6 lg:px-12 flex flex-col md:flex-row items-center justify-between w-full max-w-[1400px] mx-auto opacity-60">
+        <div className="flex items-center gap-2">
+          <HeartPulse className="text-slate-400" size={20} />
+          <span className="text-xl font-bold text-slate-400">HealthBot</span>
         </div>
-        <div className="w-full text-center">
-          <p className="text-slate-500 text-[10px] sm:text-xs lg:text-sm font-medium leading-relaxed">
-            © Developed by Aarif Shameem, Junaid Nazeer, and Murtaza Badam.
-          </p>
-        </div>
+        <p className="text-slate-500 text-xs mt-4 md:mt-0">
+          © 2026 Developed by Aarif, Junaid, and Murtaza.
+        </p>
       </footer>
     </div>
   );
 }
 
-// Small helper components to keep code clean
-const FeatureCard = ({ icon: Icon, color, title, desc }) => (
-  <div
-    className={`bg-[#111827] rounded-2xl p-6 lg:p-8 border border-slate-800 hover:border-${color}-500/50 transition-all group text-left`}
-  >
+const FeatureCard = ({ icon: Icon, theme, title, desc }) => {
+  const themes = {
+    teal: "hover:border-teal-500/50 bg-teal-500/20 text-teal-400",
+    blue: "hover:border-blue-500/50 bg-blue-500/20 text-blue-400",
+    purple: "hover:border-purple-500/50 bg-purple-500/20 text-purple-400",
+    rose: "hover:border-rose-500/50 bg-rose-500/20 text-rose-400",
+  };
+  return (
     <div
-      className={`w-12 h-12 bg-${color}-500/20 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}
+      className={`bg-[#111827] rounded-2xl p-6 border border-slate-800 transition-all group ${themes[theme].split(" ")[0]}`}
     >
-      <Icon className={`h-6 w-6 text-${color}-400`} />
+      <div
+        className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform ${themes[theme].split(" ")[1]}`}
+      >
+        <Icon className={`h-6 w-6 ${themes[theme].split(" ")[2]}`} />
+      </div>
+      <h3 className="text-lg font-bold mb-3 text-white">{title}</h3>
+      <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
     </div>
-    <h3 className="text-lg lg:text-xl font-bold mb-3 text-white">{title}</h3>
-    <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
-  </div>
-);
+  );
+};
 
 const Step = ({ number, title, desc }) => (
   <div className="flex flex-col items-center">
-    <div className="text-5xl font-black text-teal-500/20 mb-4">{number}</div>
+    <div className="text-5xl font-black text-teal-500/10 mb-4">{number}</div>
     <h4 className="text-xl font-bold text-white mb-2">{title}</h4>
     <p className="text-slate-400 text-sm">{desc}</p>
   </div>
