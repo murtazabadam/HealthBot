@@ -21,8 +21,8 @@ export default function Home() {
       <div className="absolute top-0 left-0 md:left-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-teal-500/10 rounded-full blur-[80px] md:blur-[120px] pointer-events-none" />
       <div className="absolute top-40 right-0 md:right-1/4 w-[250px] md:w-[400px] h-[250px] md:h-[400px] bg-cyan-500/10 rounded-full blur-[60px] md:blur-[100px] pointer-events-none" />
 
-      {/* Navigation Bar - Hamburger Removed, Links Always Visible */}
-      <nav className="flex flex-col md:flex-row items-center justify-between px-4 py-3 lg:px-12 lg:py-5 border-b border-slate-800/60 bg-[#0B1120]/80 backdrop-blur-md fixed w-full top-0 z-50">
+      {/* Navigation Bar */}
+      <nav className="flex flex-col md:flex-row items-center justify-between px-4 py-3 lg:px-12 lg:py-5 border-b border-slate-800/60 bg-[#0B1120]/90 backdrop-blur-md fixed w-full top-0 z-[100]">
         {/* Top Row on Mobile (Logo & Auth) */}
         <div className="flex items-center justify-between w-full md:w-auto">
           <div className="flex items-center gap-2 cursor-pointer">
@@ -48,29 +48,29 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 4 Navigation Links - Always visible on Mobile & Desktop */}
-        <div className="flex items-center justify-center gap-4 sm:gap-8 lg:gap-10 text-[11px] lg:text-sm font-medium text-slate-300 w-full md:w-auto mt-3 md:mt-0 overflow-x-auto no-scrollbar">
+        {/* 4 Navigation Links - Fixed for Clickability */}
+        <div className="flex items-center justify-center gap-2 sm:gap-6 lg:gap-10 text-[12px] lg:text-sm font-medium text-slate-300 w-full md:w-auto mt-3 md:mt-0 overflow-x-auto no-scrollbar pb-1">
           <a
             href="#home"
-            className="hover:text-teal-400 transition-colors whitespace-nowrap"
+            className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
           >
             Home
           </a>
           <a
             href="#features"
-            className="hover:text-teal-400 transition-colors whitespace-nowrap"
+            className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
           >
             Features
           </a>
           <a
             href="#how-it-works"
-            className="hover:text-teal-400 transition-colors whitespace-nowrap"
+            className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
           >
             How It Works
           </a>
           <a
             href="#about"
-            className="hover:text-teal-400 transition-colors whitespace-nowrap"
+            className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
           >
             About Us
           </a>
@@ -263,12 +263,15 @@ export default function Home() {
         </div>
       </div>
 
-      <footer className="pb-8 px-6 lg:px-12 flex flex-col md:flex-row items-center justify-between w-full max-w-[1400px] mx-auto opacity-60">
-        <div className="flex items-center gap-2">
-          <HeartPulse className="text-slate-400" size={20} />
-          <span className="text-xl font-bold text-slate-400">HealthBot</span>
+      {/* --- FOOTER (Centered as requested) --- */}
+      <footer className="pb-10 px-6 flex flex-col items-center justify-center w-full max-w-[1400px] mx-auto opacity-70 mt-4">
+        <div className="flex items-center gap-2 mb-3">
+          <HeartPulse className="text-slate-400" size={24} />
+          <span className="text-xl lg:text-2xl font-bold text-slate-400">
+            HealthBot
+          </span>
         </div>
-        <p className="text-slate-500 text-xs mt-4 md:mt-0">
+        <p className="text-slate-500 text-[10px] sm:text-xs font-medium text-center">
           © 2026 Developed by Aarif, Junaid, and Murtaza.
         </p>
       </footer>
@@ -298,9 +301,10 @@ const FeatureCard = ({ icon: Icon, theme, title, desc }) => {
   );
 };
 
+// Fixed visibility of numbers
 const Step = ({ number, title, desc }) => (
   <div className="flex flex-col items-center">
-    <div className="text-5xl font-black text-teal-500/10 mb-4">{number}</div>
+    <div className="text-5xl font-black text-teal-500/50 mb-4">{number}</div>
     <h4 className="text-xl font-bold text-white mb-2">{title}</h4>
     <p className="text-slate-400 text-sm text-center">{desc}</p>
   </div>
