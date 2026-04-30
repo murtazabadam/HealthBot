@@ -5,17 +5,27 @@ const Conversation = require('../models/Conversation');
 
 async function getMLPrediction(text, symptoms) {
   try {
-    const response = await fetch('https://tranquil-nourishment-production-11f9.up.railway.app/predict', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, symptoms })
-    });
-    return await response.json();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(
+      'https://tranquil-nourishment-production-11f9.up.railway.app/predict',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, symptoms }),
+        signal: controller.signal
+      }
+    );
+    clearTimeout(timeout);
+    const data = await response.json();
+    console.log('ML Response:', JSON.stringify(data).substring(0, 200));
+    return data;
   } catch (err) {
+    console.error('ML Engine error:', err.message);
     return null;
   }
 }
-
 function extractSymptoms(text) {
   const allSymptoms = [
     'fever','cough','fatigue','headache','nausea','vomiting','diarrhea',
@@ -34,50 +44,54 @@ function buildBotReply(text, mlResult) {
   const symptoms = extractSymptoms(text);
 
   if (symptoms.length === 0) {
-    return `I'm HealthBot 🤖. Please describe your symptoms and I'll help analyze them.\n\nExample: "I have fever, cough and fatigue"`;
+    return `I'm HealthBot 🤖 Please describe your symptoms in detail.\n\nExample: "I have fever, cough and fatigue for 2 days"`;
   }
 
-  if (!mlResult || !mlResult.predictions || mlResult.predictions.length === 0) {
-    return `I detected these symptoms: ${symptoms.join(', ')}. Could you describe them in more detail?`;
+  if (!mlResult || mlResult.error || !mlResult.predictions || mlResult.predictions.length === 0) {
+    return `I detected these symptoms: ${symptoms.join(', ')}. Could you describe them in more detail? For example, how long have you had these symptoms?`;
   }
 
   const top = mlResult.predictions[0];
-  const others = mlResult.predictions.slice(1)
+  const others = mlResult.predictions
+    .slice(1)
+    .filter(p => p.confidence > 2)
     .map(p => `${p.disease} (${p.confidence}%)`)
     .join(', ');
 
-  const precautions = top.precautions && top.precautions.length > 0
-    ? `\n📌 Precautions: ${top.precautions.join(', ')}`
-    : '';
-
   const description = top.description
-    ? `\n📖 About: ${top.description}`
+    ? `\n📖 ${top.description}`
     : '';
 
-  return `🔍 Based on your symptoms (${(mlResult.matched_symptoms || symptoms).join(', ')}):
+  const precautions = top.precautions && top.precautions.length > 0
+    ? `\n\n💡 Precautions:\n${top.precautions.map(p => `• ${p}`).join('\n')}`
+    : '';
 
-📋 Most likely: **${top.disease}** (${top.confidence}% confidence)
+  const matched = mlResult.matched_symptoms || symptoms;
+
+  return `🔍 Based on your symptoms (${matched.join(', ')}):
+
+📋 Most likely: ${top.disease} (${top.confidence}% confidence)
 ${others ? `📌 Also possible: ${others}` : ''}
-⚠️ Severity: **${mlResult.severity}**
+⚠️ Severity: ${mlResult.severity}
 ${description}
-${precautions}
 💊 Recommendation: ${mlResult.recommendation}
+${precautions}
 
-⚕️ *This is not a substitute for professional medical advice.*`;
+⚕️ This is not a substitute for professional medical advice.`;
 }
 
 // Send a message
 router.post('/message', auth, async (req, res) => {
   try {
     const { text } = req.body;
-    const mlResult = await getMLPrediction(text, []);
+    const symptoms = extractSymptoms(text);
+    const mlResult = await getMLPrediction(text, symptoms);
     const botReply = buildBotReply(text, mlResult);
 
     let conversation = await Conversation.findOne({ userId: req.user.id });
     if (!conversation) {
       conversation = new Conversation({ userId: req.user.id, messages: [] });
     }
-
     conversation.messages.push({ sender: 'user', text });
     conversation.messages.push({ sender: 'bot', text: botReply });
     await conversation.save();
