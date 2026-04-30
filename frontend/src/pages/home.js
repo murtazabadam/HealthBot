@@ -15,6 +15,15 @@ import {
 } from "lucide-react";
 
 export default function Home() {
+  // Fetch user data from local storage to personalize the Google Maps link
+  const userData = JSON.parse(localStorage.getItem("user") || "{}");
+  const userAddress = userData.address;
+
+  // Create a dynamic map URL based on whether the user has an address saved
+  const mapsUrl = userAddress
+    ? `https://www.google.com/maps/search/hospitals+and+clinics+near+${encodeURIComponent(userAddress)}`
+    : "https://www.google.com/maps/search/hospitals+near+me";
+
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white overflow-x-hidden relative w-full">
       {/* Background Glow Orbs */}
@@ -173,24 +182,29 @@ export default function Home() {
             theme="teal"
             title="AI Symptom Checker"
             desc="Describe symptoms naturally. Our engine suggests possible causes."
+            link="/chat"
           />
           <FeatureCard
             icon={UserPlus}
             theme="blue"
             title="Smart Recommendations"
             desc="Severity-based advice for emergency care or self-care."
+            link="/chat"
           />
           <FeatureCard
             icon={FileText}
             theme="purple"
             title="Health History"
             desc="Securely store and track your history and past conversations."
+            link="/login"
           />
           <FeatureCard
             icon={MapPin}
             theme="rose"
             title="Nearby Facilities"
             desc="Instantly find the nearest hospitals and clinics when needed."
+            link={mapsUrl}
+            isExternal={true}
           />
         </div>
       </section>
@@ -279,25 +293,54 @@ export default function Home() {
   );
 }
 
-const FeatureCard = ({ icon: Icon, theme, title, desc }) => {
+const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal }) => {
   const themes = {
     teal: "hover:border-teal-500/50 bg-teal-500/20 text-teal-400",
     blue: "hover:border-blue-500/50 bg-blue-500/20 text-blue-400",
     purple: "hover:border-purple-500/50 bg-purple-500/20 text-purple-400",
     rose: "hover:border-rose-500/50 bg-rose-500/20 text-rose-400",
   };
-  return (
+
+  const CardContent = (
     <div
-      className={`bg-[#111827] rounded-2xl p-6 border border-slate-800 transition-all group ${themes[theme].split(" ")[0]}`}
+      className={`bg-[#111827] rounded-2xl p-6 border border-slate-800 transition-all duration-300 group cursor-pointer h-full flex flex-col hover:-translate-y-1 hover:shadow-xl hover:shadow-${theme}-500/10 ${themes[theme].split(" ")[0]}`}
     >
       <div
         className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform ${themes[theme].split(" ")[1]}`}
       >
         <Icon className={`h-6 w-6 ${themes[theme].split(" ")[2]}`} />
       </div>
-      <h3 className="text-lg font-bold mb-3 text-white">{title}</h3>
-      <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+      <h3 className="text-lg font-bold mb-3 text-white flex-1">{title}</h3>
+      <p className="text-slate-400 text-sm leading-relaxed mb-4">{desc}</p>
+
+      {/* Hidden 'Try it now' link that appears on hover */}
+      <div
+        className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity mt-auto ${themes[theme].split(" ")[2]}`}
+      >
+        {isExternal ? "Open Map" : "Try it now"} <ChevronRight size={12} />
+      </div>
     </div>
+  );
+
+  // If it's an external link (like Google Maps), use standard <a> tag
+  if (isExternal) {
+    return (
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block h-full"
+      >
+        {CardContent}
+      </a>
+    );
+  }
+
+  // If it's an internal link, use React Router's <Link>
+  return (
+    <Link to={link} className="block h-full">
+      {CardContent}
+    </Link>
   );
 };
 
