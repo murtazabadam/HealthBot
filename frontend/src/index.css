@@ -35,3 +35,7 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+/* Add this to your index.css */
+section {
+  scroll-margin-top: 72px; /* Adjust this value if your navbar is taller/shorter */
+}
