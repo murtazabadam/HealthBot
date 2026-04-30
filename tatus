@@ -1,0 +1,10 @@
+[33m5809c080[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m updated the requirements.txt file to include the new dependencies for the ML engine.
+[33m3df2679f[m Add email verification and forgot password
+[33ma12e37e5[m Fix: forced header to remain fixed at top during mobile keyboard entry
+[33mbe8f0bc3[m UI: removed arrow icon from log in button
+[33m6b1f40af[m Fix: locked header to top, moved online status below logo, and kept name on right
+[33m92047e27[m Fix: locked header to top and moved name/online status to right side
+[33m700915de[m UI: moved username to top right and fixed header visibility
+[33m62d55c2a[m Fix: resolved ESLint errors and updated header/disclaimer UI
+[33m533eb69f[m Final UI sync: matched background, fixed mobile layout, and restored chat sticky header
+[33mb368d8bf[m UI: removed optional label from blood group dropdown

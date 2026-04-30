@@ -4,7 +4,10 @@ import Home from "./pages/home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Chat from "./pages/Chat";
-import AuthCallback from './pages/AuthCallback';
+import AuthCallback from "./pages/AuthCallback";
+import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 function App() {
   const token = localStorage.getItem("token");
@@ -16,6 +19,9 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/chat"
           element={token ? <Chat /> : <Navigate to="/login" />}
