@@ -35,7 +35,7 @@ import {
 
 export default function Chat() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [page, setPage] = useState("chat"); // Controls which view is active
+  const [page, setPage] = useState("chat");
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
@@ -43,7 +43,6 @@ export default function Chat() {
   const [isRecording, setIsRecording] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
 
-  // Mock Reminders State
   const [reminders, setReminders] = useState([
     { id: 1, name: "Drink Water", time: "Every 2 Hours", active: true },
     { id: 2, name: "Vitamin C Supplement", time: "09:00 AM", active: true },
@@ -68,7 +67,6 @@ export default function Chat() {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
-  // Fetch full user data from localStorage
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
   const fullName = user.name || "User";
@@ -98,7 +96,6 @@ export default function Chat() {
     }
   }, [messages, loading, page]);
 
-  // --- Speech Recognition ---
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
   const recognition = SpeechRecognition ? new SpeechRecognition() : null;
@@ -134,7 +131,6 @@ export default function Chat() {
     }
   };
 
-  // --- Navigation Controls ---
   const handleNavClick = (targetPage) => {
     setPage(targetPage);
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
@@ -156,7 +152,6 @@ export default function Chat() {
     handleNavClick("chat");
   };
 
-  // --- API Chat Request ---
   const sendMessage = async (textOverride = null) => {
     const textToSend = textOverride || inputText;
     if ((!textToSend.trim() && !uploadedImage) || loading) return;
@@ -255,8 +250,6 @@ export default function Chat() {
           active={page === "reminders"}
           onClick={() => handleNavClick("reminders")}
         />
-
-        {/* NEW FIRST AID LINK */}
         <SidebarBtn
           icon={LifeBuoy}
           label="First Aid"
@@ -302,7 +295,8 @@ export default function Chat() {
   );
 
   return (
-    <div className="h-[100dvh] w-full bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative selection:bg-teal-500/30">
+    // FIXED INSET-0 absolutely locks the web app to the screen bounds
+    <div className="fixed inset-0 bg-[#020617] text-slate-200 flex font-sans overflow-hidden selection:bg-teal-500/30">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Sidebar */}
@@ -318,52 +312,54 @@ export default function Chat() {
         <SidebarContent />
       </div>
 
-      <main className="flex-1 flex flex-col h-full relative overflow-hidden">
-        {/* HEADER */}
-        <header className="shrink-0 z-[90] h-[72px] border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617] shadow-xl">
-          <div className="flex items-center gap-3">
+      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
+        {/* HEADER - flex-none guarantees it never shrinks or hides */}
+        <header className="flex-none z-[90] h-[72px] border-b border-slate-800/60 flex items-center justify-between px-3 sm:px-4 lg:px-8 bg-[#020617] shadow-xl w-full">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
-              className={`p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-all ${isSidebarOpen ? "lg:hidden" : "block"}`}
+              className={`p-1.5 sm:p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-all ${isSidebarOpen ? "lg:hidden" : "block"}`}
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu size={24} />
             </button>
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center border border-teal-500/20">
-                <Activity size={22} className="text-teal-400" />
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-800 flex items-center justify-center border border-teal-500/20">
+                <Activity size={20} className="text-teal-400" />
               </div>
               <div className="flex flex-col">
-                <h3 className="text-white text-sm font-bold tracking-tight leading-tight capitalize">
+                <h3 className="text-white text-xs sm:text-sm font-bold tracking-tight leading-tight capitalize">
                   {page.replace("-", " ")}
                 </h3>
                 <p className="text-[9px] text-teal-400 font-bold uppercase flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />
-                  HealthBot Active
+                  Online
                 </p>
               </div>
             </div>
           </div>
 
           <div
-            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => handleNavClick("profile")}
           >
-            <div className="flex flex-col items-end text-right hidden sm:flex">
-              <span className="text-[11px] lg:text-xs font-black text-white uppercase tracking-wider">
-                {fullName}
+            {/* FIXED: Removed hidden property. Shows firstName on mobile, fullName on desktop */}
+            <div className="flex flex-col items-end text-right">
+              <span className="text-[11px] lg:text-xs font-black text-white uppercase tracking-wider max-w-[80px] sm:max-w-[150px] truncate">
+                <span className="sm:hidden">{firstName}</span>
+                <span className="hidden sm:inline">{fullName}</span>
               </span>
-              <span className="text-[8px] text-slate-500 font-bold uppercase opacity-60">
+              <span className="text-[8px] text-slate-500 font-bold uppercase opacity-60 hidden sm:block">
                 Verified User
               </span>
             </div>
-            <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/80 shadow-md">
-              <UserCircle className="text-slate-400" size={26} />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/80 shadow-md">
+              <UserCircle className="text-slate-400" size={24} />
             </div>
           </div>
         </header>
 
         {/* --- DYNAMIC VIEW SWITCHER --- */}
-        <div className="flex-1 overflow-y-auto px-4 lg:px-6 pt-6 pb-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50">
+        <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50 w-full">
           {/* VIEW: CHAT */}
           {page === "chat" && (
             <div className="max-w-4xl mx-auto space-y-6">
@@ -430,7 +426,7 @@ export default function Chat() {
 
           {/* VIEW: PROFILE */}
           {page === "profile" && (
-            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2 className="text-3xl font-bold text-white mb-8">
                 Patient Profile
               </h2>
@@ -481,7 +477,7 @@ export default function Chat() {
 
           {/* VIEW: CHAT HISTORY */}
           {page === "history" && (
-            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2 className="text-3xl font-bold text-white mb-8">
                 Consultation History
               </h2>
@@ -510,7 +506,7 @@ export default function Chat() {
 
           {/* VIEW: SAVED ADVICE */}
           {page === "saved" && (
-            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2 className="text-3xl font-bold text-white mb-8">
                 Saved Prescriptions & Advice
               </h2>
@@ -536,7 +532,7 @@ export default function Chat() {
 
           {/* VIEW: REMINDERS */}
           {page === "reminders" && (
-            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-bold text-white">Reminders</h2>
                 <button
@@ -577,7 +573,7 @@ export default function Chat() {
 
           {/* VIEW: FACILITIES */}
           {page === "facilities" && (
-            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2 className="text-3xl font-bold text-white mb-8">
                 Nearby Facilities
               </h2>
@@ -609,7 +605,7 @@ export default function Chat() {
 
           {/* VIEW: SETTINGS */}
           {page === "settings" && (
-            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2 className="text-3xl font-bold text-white mb-8">
                 App Settings
               </h2>
@@ -642,9 +638,9 @@ export default function Chat() {
           )}
         </div>
 
-        {/* --- INPUT BAR (Hidden on Dashboard Pages) --- */}
+        {/* --- INPUT BAR - flex-none ensures it sits right above keyboard --- */}
         {page === "chat" && (
-          <div className="p-4 lg:p-6 bg-[#020617] shrink-0 border-t border-slate-800/30">
+          <div className="flex-none p-4 lg:p-6 bg-[#020617] border-t border-slate-800/30 w-full">
             <div className="max-w-4xl mx-auto">
               <div className="flex overflow-x-auto gap-2 mb-4 no-scrollbar pb-1">
                 {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
@@ -717,7 +713,7 @@ export default function Chat() {
                   <Send size={18} strokeWidth={3} />
                 </button>
               </div>
-              <p className="mt-4 text-[9px] text-teal-400 font-bold text-center italic opacity-80 leading-relaxed">
+              <p className="mt-4 text-[9px] text-teal-400 font-bold text-center italic opacity-80 leading-relaxed hidden sm:block">
                 🩺 For guidance only • Consult a doctor for emergencies
               </p>
             </div>
@@ -820,7 +816,7 @@ const FirstAidView = () => {
 
   if (selected) {
     return (
-      <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-right-4 duration-500 py-6">
+      <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-right-4 duration-500 pb-6">
         <button
           onClick={() => setSelected(null)}
           className="flex items-center gap-2 text-slate-400 hover:text-teal-400 mb-6 transition-colors font-medium"
@@ -868,7 +864,7 @@ const FirstAidView = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+    <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
         <div>
           <h2 className="text-3xl font-bold text-white mb-2">
