@@ -17,17 +17,58 @@ import {
   Menu,
   X,
   ChevronRight,
+  Clock,
+  Plus,
+  Trash2,
+  MapPin,
+  Building,
+  HeartPulse,
+  LifeBuoy,
+  PhoneCall,
+  ArrowLeft,
+  AlertCircle,
+  Flame,
+  Wind,
+  Droplet,
+  Mail,
 } from "lucide-react";
 
 export default function Chat() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [page, setPage] = useState("chat"); // Controls which view is active
+
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState(null);
+
+  // Mock Reminders State
+  const [reminders, setReminders] = useState([
+    { id: 1, name: "Drink Water", time: "Every 2 Hours", active: true },
+    { id: 2, name: "Vitamin C Supplement", time: "09:00 AM", active: true },
+  ]);
+
+  const handleAddReminder = () => {
+    const name = prompt("What is the reminder for? (e.g. Paracetamol)");
+    const time = prompt("What time? (e.g. 08:00 AM)");
+    if (name && time) {
+      setReminders([
+        ...reminders,
+        { id: Date.now(), name, time, active: true },
+      ]);
+    }
+  };
+
+  const handleDeleteReminder = (id) => {
+    setReminders(reminders.filter((r) => r.id !== id));
+  };
 
   const bottomRef = useRef(null);
+  const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
+  // Fetch full user data from localStorage
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
   const fullName = user.name || "User";
@@ -38,7 +79,6 @@ export default function Chat() {
       hour: "2-digit",
       minute: "2-digit",
     });
-
     if (messages.length === 0) {
       setMessages([
         {
@@ -49,17 +89,77 @@ export default function Chat() {
         },
       ]);
     }
-
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
   }, [firstName, messages.length]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+    if (page === "chat") {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, loading, page]);
 
+  // --- Speech Recognition ---
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+
+  if (recognition) {
+    recognition.continuous = false;
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInputText((prev) => (prev ? prev + " " + transcript : transcript));
+      setIsRecording(false);
+    };
+    recognition.onerror = () => setIsRecording(false);
+    recognition.onend = () => setIsRecording(false);
+  }
+
+  const toggleRecording = () => {
+    if (!recognition)
+      return alert("Speech recognition is not supported in this browser.");
+    if (isRecording) {
+      recognition.stop();
+    } else {
+      recognition.start();
+      setIsRecording(true);
+    }
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setUploadedImage(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // --- Navigation Controls ---
+  const handleNavClick = (targetPage) => {
+    setPage(targetPage);
+    if (window.innerWidth < 1024) setIsSidebarOpen(false);
+  };
+
+  const handleNewChat = () => {
+    const now = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    setMessages([
+      {
+        id: "welcome",
+        sender: "bot",
+        text: `Hello ${firstName}! I am your HealthBot. How are you feeling today? Please describe your symptoms.`,
+        time: now,
+      },
+    ]);
+    handleNavClick("chat");
+  };
+
+  // --- API Chat Request ---
   const sendMessage = async (textOverride = null) => {
     const textToSend = textOverride || inputText;
-    if (!textToSend.trim() || loading) return;
+    if ((!textToSend.trim() && !uploadedImage) || loading) return;
 
     const now = new Date().toLocaleTimeString([], {
       hour: "2-digit",
@@ -67,15 +167,23 @@ export default function Chat() {
     });
     setMessages((prev) => [
       ...prev,
-      { id: Date.now(), sender: "user", text: textToSend, time: now },
+      {
+        id: Date.now(),
+        sender: "user",
+        text: textToSend,
+        image: uploadedImage,
+        time: now,
+      },
     ]);
     setInputText("");
+    const currentImg = uploadedImage;
+    setUploadedImage(null);
     setLoading(true);
 
     try {
       const res = await axios.post(
         "https://healthbot-production-3c7d.up.railway.app/api/chat/message",
-        { text: textToSend },
+        { text: textToSend, image: currentImg },
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
@@ -107,8 +215,8 @@ export default function Chat() {
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60">
-      <div className="p-6 flex items-center justify-between">
+    <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60 shadow-2xl">
+      <div className="p-6 flex items-center justify-between border-b border-slate-800/40 mb-2">
         <div className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" strokeWidth={3} />
           <span className="text-2xl font-bold text-white tracking-tight">
@@ -123,12 +231,63 @@ export default function Chat() {
         </button>
       </div>
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar">
-        <SidebarBtn icon={MessageSquare} label="New Chat" active />
-        <SidebarBtn icon={History} label="Chat History" />
-        <SidebarBtn icon={Bookmark} label="Saved Conversations" />
-        <SidebarBtn icon={Bell} label="Reminders" />
-        <SidebarBtn icon={User} label="Profile" />
-        <SidebarBtn icon={Settings} label="Settings" />
+        <SidebarBtn
+          icon={MessageSquare}
+          label="New Chat"
+          active={page === "chat"}
+          onClick={handleNewChat}
+        />
+        <SidebarBtn
+          icon={History}
+          label="Chat History"
+          active={page === "history"}
+          onClick={() => handleNavClick("history")}
+        />
+        <SidebarBtn
+          icon={Bookmark}
+          label="Saved Advice"
+          active={page === "saved"}
+          onClick={() => handleNavClick("saved")}
+        />
+        <SidebarBtn
+          icon={Bell}
+          label="Reminders"
+          active={page === "reminders"}
+          onClick={() => handleNavClick("reminders")}
+        />
+
+        {/* NEW FIRST AID LINK */}
+        <SidebarBtn
+          icon={LifeBuoy}
+          label="First Aid"
+          active={page === "first-aid"}
+          onClick={() => handleNavClick("first-aid")}
+        />
+        <SidebarBtn
+          icon={MapPin}
+          label="Facilities"
+          active={page === "facilities"}
+          onClick={() => handleNavClick("facilities")}
+        />
+
+        <div className="pt-6 pb-2">
+          <p className="px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+            Account
+          </p>
+        </div>
+        <SidebarBtn
+          icon={User}
+          label="Profile"
+          active={page === "profile"}
+          onClick={() => handleNavClick("profile")}
+        />
+        <SidebarBtn
+          icon={Settings}
+          label="Settings"
+          active={page === "settings"}
+          onClick={() => handleNavClick("settings")}
+        />
+
         <button
           onClick={() => {
             localStorage.clear();
@@ -143,10 +302,10 @@ export default function Chat() {
   );
 
   return (
-    <div className="h-screen w-full bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative">
+    <div className="h-[100dvh] w-full bg-[#020617] text-slate-200 flex font-sans overflow-hidden relative selection:bg-teal-500/30">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Sidebar Navigation */}
+      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-[100] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
       >
@@ -160,8 +319,8 @@ export default function Chat() {
       </div>
 
       <main className="flex-1 flex flex-col h-full relative overflow-hidden">
-        {/* --- HEADER LOCKED AT TOP --- */}
-        <header className="fixed top-0 left-0 right-0 lg:left-auto lg:w-[calc(100%-18rem)] z-[90] h-[72px] border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617] shadow-xl">
+        {/* HEADER */}
+        <header className="shrink-0 z-[90] h-[72px] border-b border-slate-800/60 flex items-center justify-between px-4 lg:px-8 bg-[#020617] shadow-xl">
           <div className="flex items-center gap-3">
             <button
               className={`p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-all ${isSidebarOpen ? "lg:hidden" : "block"}`}
@@ -174,19 +333,22 @@ export default function Chat() {
                 <Activity size={22} className="text-teal-400" />
               </div>
               <div className="flex flex-col">
-                <h3 className="text-white text-sm font-bold tracking-tight leading-tight">
-                  HealthBot
+                <h3 className="text-white text-sm font-bold tracking-tight leading-tight capitalize">
+                  {page.replace("-", " ")}
                 </h3>
                 <p className="text-[9px] text-teal-400 font-bold uppercase flex items-center gap-1">
                   <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />
-                  Online
+                  HealthBot Active
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex flex-col items-end text-right">
+          <div
+            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => handleNavClick("profile")}
+          >
+            <div className="flex flex-col items-end text-right hidden sm:flex">
               <span className="text-[11px] lg:text-xs font-black text-white uppercase tracking-wider">
                 {fullName}
               </span>
@@ -200,107 +362,367 @@ export default function Chat() {
           </div>
         </header>
 
-        {/* --- SCROLLABLE MESSAGES (Offset by header height) --- */}
-        <div className="flex-1 overflow-y-auto px-4 lg:px-6 pt-[80px] pb-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex justify-center">
-              <span className="text-[9px] bg-slate-800/50 px-3 py-1 rounded-full text-slate-500 font-bold uppercase tracking-widest border border-slate-700/50">
-                Session Started Today
-              </span>
-            </div>
-
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2`}
-              >
+        {/* --- DYNAMIC VIEW SWITCHER --- */}
+        <div className="flex-1 overflow-y-auto px-4 lg:px-6 pt-6 pb-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50">
+          {/* VIEW: CHAT */}
+          {page === "chat" && (
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="flex justify-center">
+                <span className="text-[9px] bg-slate-800/50 px-3 py-1 rounded-full text-slate-500 font-bold uppercase tracking-widest border border-slate-700/50">
+                  Session Started Today
+                </span>
+              </div>
+              {messages.map((msg) => (
                 <div
-                  className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : "bg-slate-800 border-slate-700"}`}
-                >
-                  {msg.sender === "user" ? (
-                    <User size={18} className="text-teal-400" />
-                  ) : (
-                    <Activity size={18} className="text-teal-400" />
-                  )}
-                </div>
-                <div
-                  className={`flex flex-col gap-1.5 ${msg.sender === "user" ? "items-end" : ""}`}
+                  key={msg.id}
+                  className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2`}
                 >
                   <div
-                    className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md"}`}
+                    className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : "bg-slate-800 border-slate-700"}`}
                   >
-                    {msg.text}
+                    {msg.sender === "user" ? (
+                      <User size={18} className="text-teal-400" />
+                    ) : (
+                      <Activity size={18} className="text-teal-400" />
+                    )}
                   </div>
-                  <span className="text-[8px] text-slate-600 font-bold uppercase tracking-tighter">
-                    {msg.time}
-                  </span>
+                  <div
+                    className={`flex flex-col gap-1.5 ${msg.sender === "user" ? "items-end" : ""}`}
+                  >
+                    <div
+                      className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md"}`}
+                    >
+                      {msg.image && (
+                        <img
+                          src={msg.image}
+                          alt="Upload"
+                          className="max-w-full rounded-lg mb-3 border border-white/10 shadow-lg"
+                        />
+                      )}
+                      {msg.text && (
+                        <div className="whitespace-pre-wrap">{msg.text}</div>
+                      )}
+                    </div>
+                    <span className="text-[8px] text-slate-600 font-bold uppercase tracking-tighter">
+                      {msg.time}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
-
-            {loading && (
-              <div className="flex gap-3 animate-pulse">
-                <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
-                  <Activity size={18} className="text-teal-400 opacity-50" />
-                </div>
-                <div className="bg-slate-800/40 p-4 rounded-2xl rounded-tl-none border border-slate-700/30 flex gap-1">
-                  <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce" />
-                  <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-        </div>
-
-        {/* --- INPUT AREA --- */}
-        <div className="p-4 lg:p-6 bg-[#020617] shrink-0 border-t border-slate-800/30">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex overflow-x-auto gap-2 mb-4 no-scrollbar pb-1">
-              {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
-                <button
-                  key={symptom}
-                  onClick={() => sendMessage(`I have a ${symptom}`)}
-                  className="whitespace-nowrap bg-slate-800/40 border border-slate-700/50 px-3 py-1.5 rounded-full text-[10px] text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all flex items-center gap-1 font-bold"
-                >
-                  {symptom} <ChevronRight size={10} />
-                </button>
               ))}
+              {loading && (
+                <div className="flex gap-3 animate-pulse">
+                  <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
+                    <Activity size={18} className="text-teal-400 opacity-50" />
+                  </div>
+                  <div className="bg-slate-800/40 p-4 rounded-2xl rounded-tl-none border border-slate-700/30 flex gap-1">
+                    <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce" />
+                    <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+                  </div>
+                </div>
+              )}
+              <div ref={bottomRef} />
             </div>
+          )}
 
-            <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl focus-within:border-teal-500/40 transition-all">
-              <button className="p-2 text-slate-500 hover:text-teal-400 transition-colors">
-                <Paperclip size={18} />
-              </button>
-              <textarea
-                rows={1}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyPress={(e) =>
-                  e.key === "Enter" &&
-                  !e.shiftKey &&
-                  (e.preventDefault(), sendMessage())
-                }
-                placeholder="Describe symptoms..."
-                className="flex-1 bg-transparent border-none focus:ring-0 text-xs text-white py-3 resize-none no-scrollbar placeholder-slate-600"
-              />
-              <button className="p-2 text-slate-500 hover:text-teal-400 transition-colors">
-                <Mic size={18} />
-              </button>
-              <button
-                onClick={() => sendMessage()}
-                className="bg-teal-500 text-slate-900 p-2.5 rounded-xl transition-all shadow-lg hover:brightness-110 active:scale-95"
-              >
-                <Send size={18} strokeWidth={3} />
-              </button>
+          {/* VIEW: FIRST AID */}
+          {page === "first-aid" && <FirstAidView />}
+
+          {/* VIEW: PROFILE */}
+          {page === "profile" && (
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+              <h2 className="text-3xl font-bold text-white mb-8">
+                Patient Profile
+              </h2>
+              <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl">
+                <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-slate-700/50 text-center sm:text-left">
+                  <div className="w-24 h-24 rounded-full bg-teal-500/10 border-2 border-teal-500/50 flex items-center justify-center text-teal-400 shrink-0">
+                    <User size={40} />
+                  </div>
+                  <div>
+                    <h3 className="text-3xl font-black text-white tracking-tight">
+                      {fullName}
+                    </h3>
+                    <p className="text-slate-400 font-medium mt-1 flex items-center justify-center sm:justify-start gap-2">
+                      <Mail size={14} /> {user.email || "No email linked"}
+                    </p>
+                    <span className="inline-block mt-3 px-3 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-[10px] font-bold uppercase tracking-widest rounded-full">
+                      Active Member
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <ProfileDetail
+                    label="Age"
+                    value={user.age ? `${user.age} years old` : "Not specified"}
+                  />
+                  <ProfileDetail
+                    label="Gender"
+                    value={user.gender || "Not specified"}
+                    className="capitalize"
+                  />
+                  <ProfileDetail
+                    label="Blood Group"
+                    value={user.bloodGroup || "Not specified"}
+                  />
+                  <ProfileDetail
+                    label="Phone Number"
+                    value={user.phoneNumber || "Not specified"}
+                  />
+                  <ProfileDetail
+                    label="Home Address"
+                    value={user.address || "Not specified"}
+                    className="sm:col-span-2"
+                  />
+                </div>
+              </div>
             </div>
+          )}
 
-            <p className="mt-4 text-[9px] text-teal-400 font-bold text-center italic opacity-80 leading-relaxed">
-              🩺 For guidance only • Consult a doctor for emergencies
-            </p>
-          </div>
+          {/* VIEW: CHAT HISTORY */}
+          {page === "history" && (
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+              <h2 className="text-3xl font-bold text-white mb-8">
+                Consultation History
+              </h2>
+              <div className="space-y-4">
+                <HistoryCard
+                  date="Today"
+                  title="General Symptom Check"
+                  desc="Discussed mild headache and fatigue."
+                />
+                <HistoryCard
+                  date="Yesterday"
+                  title="Dietary Advice"
+                  desc="Requested information regarding hydration and vitamins."
+                />
+                <HistoryCard
+                  date="Oct 12, 2026"
+                  title="Fever Assessment"
+                  desc="Received preliminary advice for high temperature."
+                />
+                <div className="text-center pt-8">
+                  <p className="text-slate-500 text-sm">End of history.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: SAVED ADVICE */}
+          {page === "saved" && (
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+              <h2 className="text-3xl font-bold text-white mb-8">
+                Saved Prescriptions & Advice
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <SavedCard
+                  title="Cold Remedies"
+                  date="Oct 24, 2026"
+                  icon={Activity}
+                />
+                <SavedCard
+                  title="Hydration Schedule"
+                  date="Oct 20, 2026"
+                  icon={Clock}
+                />
+                <SavedCard
+                  title="Emergency Contacts"
+                  date="Pinned"
+                  icon={Bell}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: REMINDERS */}
+          {page === "reminders" && (
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-bold text-white">Reminders</h2>
+                <button
+                  onClick={handleAddReminder}
+                  className="bg-teal-500 text-slate-900 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:brightness-110 transition-all text-sm"
+                >
+                  <Plus size={16} /> Add New
+                </button>
+              </div>
+              <div className="grid gap-4">
+                {reminders.map((r) => (
+                  <div
+                    key={r.id}
+                    className="bg-[#111827]/80 border border-slate-700/50 p-6 rounded-2xl flex items-center justify-between backdrop-blur-md hover:border-teal-500/30 transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-teal-500/10 rounded-xl">
+                        <Clock className="h-6 w-6 text-teal-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold text-lg">
+                          {r.name}
+                        </h4>
+                        <p className="text-slate-400 text-sm">{r.time}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteReminder(r.id)}
+                      className="p-2 text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: FACILITIES */}
+          {page === "facilities" && (
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+              <h2 className="text-3xl font-bold text-white mb-8">
+                Nearby Facilities
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <FacilityCard
+                  title="Hospitals"
+                  desc="Find general and specialized hospitals near your location."
+                  icon={Building}
+                  query="hospitals"
+                  userAddress={user.address}
+                />
+                <FacilityCard
+                  title="Health Centers"
+                  desc="Locate community health centers and primary care facilities."
+                  icon={Activity}
+                  query="health centers"
+                  userAddress={user.address}
+                />
+                <FacilityCard
+                  title="Clinics"
+                  desc="Discover nearby walk-in clinics and outpatient care."
+                  icon={HeartPulse}
+                  query="clinics"
+                  userAddress={user.address}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* VIEW: SETTINGS */}
+          {page === "settings" && (
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+              <h2 className="text-3xl font-bold text-white mb-8">
+                App Settings
+              </h2>
+              <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl space-y-8">
+                <SettingToggle
+                  label="Dark Mode"
+                  desc="Enable sleek dark theme across the app."
+                  defaultChecked={true}
+                />
+                <div className="h-[1px] w-full bg-slate-800" />
+                <SettingToggle
+                  label="Email Notifications"
+                  desc="Receive weekly health summaries."
+                  defaultChecked={true}
+                />
+                <div className="h-[1px] w-full bg-slate-800" />
+                <SettingToggle
+                  label="SMS Alerts"
+                  desc="Get urgent reminders via text."
+                  defaultChecked={false}
+                />
+                <div className="h-[1px] w-full bg-slate-800" />
+                <SettingToggle
+                  label="Save Chat History"
+                  desc="Securely backup conversations to cloud."
+                  defaultChecked={true}
+                />
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* --- INPUT BAR (Hidden on Dashboard Pages) --- */}
+        {page === "chat" && (
+          <div className="p-4 lg:p-6 bg-[#020617] shrink-0 border-t border-slate-800/30">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex overflow-x-auto gap-2 mb-4 no-scrollbar pb-1">
+                {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
+                  <button
+                    key={symptom}
+                    onClick={() => sendMessage(`I have a ${symptom}`)}
+                    className="whitespace-nowrap bg-slate-800/40 border border-slate-700/50 px-3 py-1.5 rounded-full text-[10px] text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all flex items-center gap-1 font-bold"
+                  >
+                    {symptom} <ChevronRight size={10} />
+                  </button>
+                ))}
+              </div>
+
+              {uploadedImage && (
+                <div className="mb-3 flex items-center gap-3 bg-slate-800 p-2 rounded-xl border border-slate-700 animate-in slide-in-from-bottom-2">
+                  <img
+                    src={uploadedImage}
+                    alt="Preview"
+                    className="h-12 w-12 rounded-lg object-cover"
+                  />
+                  <span className="text-xs text-slate-300 flex-1 truncate font-medium">
+                    Image attached
+                  </span>
+                  <button
+                    onClick={() => setUploadedImage(null)}
+                    className="p-1 hover:bg-slate-700 rounded-lg text-rose-400"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              )}
+
+              <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl focus-within:border-teal-500/40 transition-all">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  accept="image/*"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 text-slate-500 hover:text-teal-400 transition-colors"
+                >
+                  <Paperclip size={18} />
+                </button>
+                <textarea
+                  rows={1}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" &&
+                    !e.shiftKey &&
+                    (e.preventDefault(), sendMessage())
+                  }
+                  placeholder="Describe symptoms..."
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm text-white py-3 resize-none no-scrollbar placeholder-slate-600"
+                />
+                <button
+                  onClick={toggleRecording}
+                  className={`p-2 transition-colors ${isRecording ? "text-rose-500 animate-pulse" : "text-slate-500 hover:text-teal-400"}`}
+                >
+                  <Mic size={18} />
+                </button>
+                <button
+                  onClick={() => sendMessage()}
+                  disabled={(!inputText.trim() && !uploadedImage) || loading}
+                  className="bg-teal-500 text-slate-900 p-2.5 rounded-xl transition-all shadow-lg hover:brightness-110 active:scale-95 disabled:opacity-50"
+                >
+                  <Send size={18} strokeWidth={3} />
+                </button>
+              </div>
+              <p className="mt-4 text-[9px] text-teal-400 font-bold text-center italic opacity-80 leading-relaxed">
+                🩺 For guidance only • Consult a doctor for emergencies
+              </p>
+            </div>
+          </div>
+        )}
       </main>
 
       <style>{`
@@ -311,11 +733,291 @@ export default function Chat() {
   );
 }
 
+// --- First Aid Component ---
+const FirstAidView = () => {
+  const [selected, setSelected] = useState(null);
+
+  const topics = [
+    {
+      id: "cpr",
+      title: "CPR (Adult)",
+      icon: HeartPulse,
+      themeClasses: {
+        bg: "bg-rose-500/10",
+        border: "border-rose-500/30",
+        iconBg: "bg-rose-500/20",
+        text: "text-rose-400",
+      },
+      short: "Cardiopulmonary Resuscitation",
+      steps: [
+        "Check the scene for safety, then check the person for responsiveness.",
+        "Call emergency services (e.g., 911 or 112) immediately.",
+        "Place the heel of your hand on the center of the person's chest.",
+        "Place your other hand on top and interlock your fingers.",
+        "Push hard and fast (at least 2 inches deep, 100-120 compressions per minute).",
+        "Continue until help arrives or the person starts breathing.",
+      ],
+    },
+    {
+      id: "choking",
+      title: "Choking",
+      icon: Wind,
+      themeClasses: {
+        bg: "bg-blue-500/10",
+        border: "border-blue-500/30",
+        iconBg: "bg-blue-500/20",
+        text: "text-blue-400",
+      },
+      short: "Heimlich Maneuver for blocked airway",
+      steps: [
+        "Ask the person if they are choking. If they cannot cough or speak, take action.",
+        "Stand behind the person and wrap your arms around their waist.",
+        "Make a fist with one hand and place it just above their navel.",
+        "Grab your fist with your other hand.",
+        "Give 5 quick, upward thrusts into the stomach.",
+        "Repeat thrusts until the object is expelled and they can breathe.",
+      ],
+    },
+    {
+      id: "bleeding",
+      title: "Severe Bleeding",
+      icon: Droplet,
+      themeClasses: {
+        bg: "bg-red-500/10",
+        border: "border-red-500/30",
+        iconBg: "bg-red-500/20",
+        text: "text-red-400",
+      },
+      short: "Stopping heavy blood loss",
+      steps: [
+        "Ensure safety and call emergency services immediately.",
+        "Apply firm, direct pressure to the wound using a clean cloth or bandage.",
+        "Maintain continuous pressure for at least 10 minutes without lifting to check.",
+        "If blood soaks through, add more cloth on top—DO NOT remove the original layer.",
+        "If possible, elevate the injured area above the heart.",
+      ],
+    },
+    {
+      id: "burns",
+      title: "Burns",
+      icon: Flame,
+      themeClasses: {
+        bg: "bg-orange-500/10",
+        border: "border-orange-500/30",
+        iconBg: "bg-orange-500/20",
+        text: "text-orange-400",
+      },
+      short: "Thermal burns from heat or fire",
+      steps: [
+        "Stop the burning process and ensure safety.",
+        "Cool the burn under cool (not ice-cold) running water for 10-15 minutes.",
+        "Remove rings or tight items from the burned area before it swells.",
+        "Do NOT break blisters or apply ointments, butter, or ice.",
+        "Cover the burn loosely with a sterile, non-fluffy bandage or clean cloth.",
+      ],
+    },
+  ];
+
+  if (selected) {
+    return (
+      <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-right-4 duration-500 py-6">
+        <button
+          onClick={() => setSelected(null)}
+          className="flex items-center gap-2 text-slate-400 hover:text-teal-400 mb-6 transition-colors font-medium"
+        >
+          <ArrowLeft size={18} /> Back to First Aid Guide
+        </button>
+        <div
+          className={`${selected.themeClasses.bg} border ${selected.themeClasses.border} rounded-3xl p-6 sm:p-8 backdrop-blur-md`}
+        >
+          <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-700/50">
+            <div
+              className={`p-4 ${selected.themeClasses.iconBg} rounded-2xl ${selected.themeClasses.text}`}
+            >
+              <selected.icon size={32} />
+            </div>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+                {selected.title}
+              </h2>
+              <p className="text-sm sm:text-base text-slate-400">
+                {selected.short}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-4 sm:space-y-6">
+            {selected.steps.map((step, idx) => (
+              <div
+                key={idx}
+                className="flex items-start gap-4 bg-[#111827]/80 p-4 sm:p-5 rounded-2xl border border-slate-700/50 shadow-lg"
+              >
+                <div
+                  className={`w-8 h-8 shrink-0 rounded-full ${selected.themeClasses.iconBg} ${selected.themeClasses.text} flex items-center justify-center font-black text-sm`}
+                >
+                  {idx + 1}
+                </div>
+                <p className="text-slate-200 leading-relaxed font-medium pt-1 text-sm sm:text-base">
+                  {step}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 py-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-white mb-2">
+            First Aid Guide
+          </h2>
+          <p className="text-slate-400">Emergency step-by-step instructions.</p>
+        </div>
+        <a
+          href="tel:112"
+          className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-500/20 active:scale-95"
+        >
+          <PhoneCall size={20} /> Emergency SOS
+        </a>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+        {topics.map((topic) => (
+          <div
+            key={topic.id}
+            onClick={() => setSelected(topic)}
+            className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 hover:bg-slate-800/80 transition-all cursor-pointer group backdrop-blur-md shadow-lg"
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className={`p-4 ${topic.themeClasses.iconBg} rounded-2xl ${topic.themeClasses.text} group-hover:scale-110 transition-transform`}
+              >
+                <topic.icon size={28} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white mb-1 group-hover:text-teal-400 transition-colors">
+                  {topic.title}
+                </h3>
+                <p className="text-sm text-slate-400 leading-relaxed">
+                  {topic.short}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-8 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex gap-4 backdrop-blur-md">
+        <AlertCircle className="text-amber-400 shrink-0 mt-0.5" />
+        <div>
+          <h4 className="text-amber-400 font-bold mb-1">Medical Disclaimer</h4>
+          <p className="text-amber-400/80 text-xs sm:text-sm leading-relaxed">
+            This guide provides basic first aid information for emergencies. It
+            is not a substitute for professional medical training or immediate
+            emergency services. Always call for professional help first in
+            life-threatening situations.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Helper Components ---
+
 const SidebarBtn = ({ icon: Icon, label, active, onClick }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${active ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "text-slate-400 hover:bg-slate-800/50"}`}
+    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-medium ${active ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"}`}
   >
-    <Icon size={18} /> <span className="text-sm font-bold">{label}</span>
+    <Icon size={18} /> <span className="text-sm">{label}</span>
   </button>
 );
+
+const ProfileDetail = ({ label, value, className = "" }) => (
+  <div
+    className={`bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 hover:border-teal-500/30 transition-colors ${className}`}
+  >
+    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1.5">
+      {label}
+    </p>
+    <p className="text-base text-white font-semibold">{value}</p>
+  </div>
+);
+
+const HistoryCard = ({ date, title, desc }) => (
+  <div className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800/80 hover:border-teal-500/30 transition-all cursor-pointer flex items-center justify-between group backdrop-blur-md">
+    <div>
+      <h4 className="text-white font-bold text-lg mb-1 group-hover:text-teal-400 transition-colors">
+        {title}
+      </h4>
+      <p className="text-slate-400 text-sm mb-2">{desc}</p>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+        {date}
+      </span>
+    </div>
+    <ChevronRight className="text-slate-600 group-hover:text-teal-400 transition-colors" />
+  </div>
+);
+
+const SavedCard = ({ title, date, icon: Icon }) => (
+  <div className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 transition-all cursor-pointer flex items-start gap-4 backdrop-blur-md group">
+    <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
+      <Icon size={24} />
+    </div>
+    <div>
+      <h4 className="text-white font-bold text-lg mb-1">{title}</h4>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+        {date}
+      </p>
+    </div>
+  </div>
+);
+
+const FacilityCard = ({ title, desc, icon: Icon, query, userAddress }) => {
+  const location = userAddress ? `near ${userAddress}` : "near me";
+  const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(query + " " + location)}`;
+
+  return (
+    <a
+      href={mapUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 hover:-translate-y-1 transition-all flex flex-col items-start gap-4 backdrop-blur-md group shadow-lg"
+    >
+      <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
+        <Icon size={28} />
+      </div>
+      <div className="flex-1">
+        <h4 className="text-white font-bold text-xl mb-2">{title}</h4>
+        <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+      </div>
+      <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-teal-400 mt-2 opacity-80 group-hover:opacity-100 transition-opacity">
+        Open Map <ChevronRight size={12} />
+      </div>
+    </a>
+  );
+};
+
+const SettingToggle = ({ label, desc, defaultChecked }) => {
+  const [checked, setChecked] = useState(defaultChecked);
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <span className="text-white font-bold text-lg block mb-1">{label}</span>
+        <span className="text-slate-400 text-sm">{desc}</span>
+      </div>
+      <button
+        onClick={() => setChecked(!checked)}
+        className={`w-14 h-7 rounded-full transition-colors relative shadow-inner flex-shrink-0 ${checked ? "bg-teal-500" : "bg-slate-700"}`}
+      >
+        <div
+          className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all shadow-md ${checked ? "left-8" : "left-1"}`}
+        />
+      </button>
+    </div>
+  );
+};
