@@ -69,8 +69,21 @@ export default function Chat() {
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
-  const fullName = user.name || "User";
-  const firstName = fullName.trim().split(" ")[0];
+
+  // Name Formatting Logic: Strictly first letter capital, rest lowercase
+  const formatName = (str) => {
+    if (!str) return "";
+    return str
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
+  const rawFullName = user.name || "User";
+  const rawFirstName = rawFullName.trim().split(" ")[0];
+
+  const fullName = formatName(rawFullName);
+  const firstName = formatName(rawFirstName);
 
   useEffect(() => {
     const now = new Date().toLocaleTimeString([], {
@@ -210,7 +223,7 @@ export default function Chat() {
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60 shadow-2xl">
+    <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60 shadow-2xl relative z-[100]">
       <div className="p-6 flex items-center justify-between border-b border-slate-800/40 mb-2">
         <div className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" strokeWidth={3} />
@@ -225,7 +238,7 @@ export default function Chat() {
           <X size={24} />
         </button>
       </div>
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar">
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto no-scrollbar pb-6">
         <SidebarBtn
           icon={MessageSquare}
           label="New Chat"
@@ -295,26 +308,26 @@ export default function Chat() {
   );
 
   return (
-    // FIXED INSET-0 absolutely locks the web app to the screen bounds
-    <div className="fixed inset-0 bg-[#020617] text-slate-200 flex font-sans overflow-hidden selection:bg-teal-500/30">
+    <div className="h-[100dvh] w-full bg-[#020617] text-slate-200 flex font-sans overflow-hidden selection:bg-teal-500/30">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Sidebar */}
+      {/* Sidebar - Positioned firmly to the left */}
       <div
-        className={`fixed inset-y-0 left-0 z-[100] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
+        className={`fixed inset-y-0 left-0 z-[100] transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
       >
         {isSidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm lg:hidden -z-10"
+            className="fixed inset-0 w-[100vw] bg-black/60 backdrop-blur-sm lg:hidden -z-10"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
         <SidebarContent />
       </div>
 
-      <main className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
-        {/* HEADER - flex-none guarantees it never shrinks or hides */}
-        <header className="flex-none z-[90] h-[72px] border-b border-slate-800/60 flex items-center justify-between px-3 sm:px-4 lg:px-8 bg-[#020617] shadow-xl w-full">
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative">
+        {/* HEADER - FIXED specifically on Mobile so it never disappears, Static on Desktop */}
+        <header className="fixed top-0 left-0 right-0 lg:static z-[90] h-[72px] border-b border-slate-800/60 flex items-center justify-between px-3 sm:px-4 lg:px-8 bg-[#020617]/95 backdrop-blur-md shadow-xl lg:w-auto">
           <div className="flex items-center gap-2 sm:gap-3">
             <button
               className={`p-1.5 sm:p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-all ${isSidebarOpen ? "lg:hidden" : "block"}`}
@@ -323,14 +336,15 @@ export default function Chat() {
               <Menu size={24} />
             </button>
             <div className="flex items-center gap-2 sm:gap-2.5">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-800 flex items-center justify-center border border-teal-500/20">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-800 flex items-center justify-center border border-teal-500/20 shadow-[0_0_10px_rgba(45,212,191,0.1)]">
                 <Activity size={20} className="text-teal-400" />
               </div>
-              <div className="flex flex-col">
-                <h3 className="text-white text-xs sm:text-sm font-bold tracking-tight leading-tight capitalize">
-                  {page.replace("-", " ")}
+              <div className="flex flex-col justify-center">
+                {/* RESTORED: HealthBot Title */}
+                <h3 className="text-white text-sm lg:text-base font-bold tracking-tight leading-tight">
+                  HealthBot
                 </h3>
-                <p className="text-[9px] text-teal-400 font-bold uppercase flex items-center gap-1">
+                <p className="text-[9px] sm:text-[10px] text-teal-400 font-bold uppercase flex items-center gap-1.5 mt-0.5">
                   <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />
                   Online
                 </p>
@@ -342,9 +356,9 @@ export default function Chat() {
             className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => handleNavClick("profile")}
           >
-            {/* FIXED: Removed hidden property. Shows firstName on mobile, fullName on desktop */}
             <div className="flex flex-col items-end text-right">
-              <span className="text-[11px] lg:text-xs font-black text-white uppercase tracking-wider max-w-[80px] sm:max-w-[150px] truncate">
+              {/* Fixed Name formatting (Capitalized first letter only) */}
+              <span className="text-[11px] lg:text-xs font-black text-white tracking-wider max-w-[80px] sm:max-w-[150px] truncate">
                 <span className="sm:hidden">{firstName}</span>
                 <span className="hidden sm:inline">{fullName}</span>
               </span>
@@ -359,7 +373,8 @@ export default function Chat() {
         </header>
 
         {/* --- DYNAMIC VIEW SWITCHER --- */}
-        <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50 w-full">
+        {/* Mobile needs top padding because of the fixed header, Desktop doesn't */}
+        <div className="flex-1 overflow-y-auto pt-[88px] lg:pt-6 pb-6 px-4 lg:px-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50 relative z-0">
           {/* VIEW: CHAT */}
           {page === "chat" && (
             <div className="max-w-4xl mx-auto space-y-6">
@@ -417,7 +432,8 @@ export default function Chat() {
                   </div>
                 </div>
               )}
-              <div ref={bottomRef} />
+              {/* Invisible element to auto-scroll to the bottom line */}
+              <div ref={bottomRef} className="h-2" />
             </div>
           )}
 
@@ -638,11 +654,11 @@ export default function Chat() {
           )}
         </div>
 
-        {/* --- INPUT BAR - flex-none ensures it sits right above keyboard --- */}
+        {/* --- INPUT BAR --- */}
         {page === "chat" && (
-          <div className="flex-none p-4 lg:p-6 bg-[#020617] border-t border-slate-800/30 w-full">
+          <div className="flex-none p-3 sm:p-4 lg:p-6 bg-[#020617] border-t border-slate-800/40 w-full relative z-10 pb-4 sm:pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
             <div className="max-w-4xl mx-auto">
-              <div className="flex overflow-x-auto gap-2 mb-4 no-scrollbar pb-1">
+              <div className="flex overflow-x-auto gap-2 mb-3 no-scrollbar pb-1">
                 {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
                   <button
                     key={symptom}
@@ -659,7 +675,7 @@ export default function Chat() {
                   <img
                     src={uploadedImage}
                     alt="Preview"
-                    className="h-12 w-12 rounded-lg object-cover"
+                    className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
                   />
                   <span className="text-xs text-slate-300 flex-1 truncate font-medium">
                     Image attached
@@ -708,12 +724,14 @@ export default function Chat() {
                 <button
                   onClick={() => sendMessage()}
                   disabled={(!inputText.trim() && !uploadedImage) || loading}
-                  className="bg-teal-500 text-slate-900 p-2.5 rounded-xl transition-all shadow-lg hover:brightness-110 active:scale-95 disabled:opacity-50"
+                  className="bg-teal-500 text-slate-900 p-2 sm:p-2.5 rounded-xl transition-all shadow-lg hover:brightness-110 active:scale-95 disabled:opacity-50"
                 >
                   <Send size={18} strokeWidth={3} />
                 </button>
               </div>
-              <p className="mt-4 text-[9px] text-teal-400 font-bold text-center italic opacity-80 leading-relaxed hidden sm:block">
+
+              {/* RESTORED Bottom Line / Medical Disclaimer */}
+              <p className="mt-3 text-[9px] lg:text-[10px] text-teal-400 font-bold text-center italic opacity-80 leading-relaxed border-t border-slate-800/40 pt-3">
                 🩺 For guidance only • Consult a doctor for emergencies
               </p>
             </div>
