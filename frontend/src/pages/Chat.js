@@ -31,11 +31,24 @@ import {
   Wind,
   Droplet,
   Mail,
+  Store,
 } from "lucide-react";
 
 export default function Chat() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [page, setPage] = useState("chat");
+
+  // Real-time Chat & Settings States
+  const [activeSessionId, setActiveSessionId] = useState(Date.now());
+  const [chatHistoryList, setChatHistoryList] = useState(() =>
+    JSON.parse(localStorage.getItem("chatHistory") || "[]"),
+  );
+  const [appSettings, setAppSettings] = useState(() =>
+    JSON.parse(
+      localStorage.getItem("appSettings") ||
+        '{"darkMode":true,"emailNotif":true,"smsAlerts":false,"saveHistory":true}',
+    ),
+  );
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
@@ -70,7 +83,6 @@ export default function Chat() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
 
-  // Name Formatting Logic: Strictly first letter capital, rest lowercase
   const formatName = (str) => {
     if (!str) return "";
     return str
@@ -85,6 +97,7 @@ export default function Chat() {
   const fullName = formatName(rawFullName);
   const firstName = formatName(rawFirstName);
 
+  // Initialize Welcome Message
   useEffect(() => {
     const now = new Date().toLocaleTimeString([], {
       hour: "2-digit",
@@ -102,6 +115,35 @@ export default function Chat() {
     }
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
   }, [firstName, messages.length]);
+
+  // Auto-Save Chat History System
+  useEffect(() => {
+    if (appSettings.saveHistory && messages.length > 1) {
+      const title =
+        messages.find((m) => m.sender === "user")?.text?.substring(0, 30) +
+          "..." || "Health Consultation";
+      const updatedSession = {
+        id: activeSessionId,
+        date: new Date().toLocaleDateString(),
+        title: title,
+        desc: `${messages.length} messages exchanged`,
+        messages: messages,
+      };
+
+      setChatHistoryList((prev) => {
+        const existingIndex = prev.findIndex((s) => s.id === activeSessionId);
+        let newHistory;
+        if (existingIndex >= 0) {
+          newHistory = [...prev];
+          newHistory[existingIndex] = updatedSession;
+        } else {
+          newHistory = [updatedSession, ...prev];
+        }
+        localStorage.setItem("chatHistory", JSON.stringify(newHistory));
+        return newHistory;
+      });
+    }
+  }, [messages, activeSessionId, appSettings.saveHistory]);
 
   useEffect(() => {
     if (page === "chat") {
@@ -149,11 +191,13 @@ export default function Chat() {
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
   };
 
+  // Chat History Interactions
   const handleNewChat = () => {
     const now = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
+    setActiveSessionId(Date.now()); // Generate new ID for the new session
     setMessages([
       {
         id: "welcome",
@@ -163,6 +207,31 @@ export default function Chat() {
       },
     ]);
     handleNavClick("chat");
+  };
+
+  const loadChatSession = (session) => {
+    setActiveSessionId(session.id);
+    setMessages(session.messages);
+    handleNavClick("chat");
+  };
+
+  const clearChatHistory = () => {
+    if (
+      window.confirm(
+        "Are you sure you want to permanently delete all chat history?",
+      )
+    ) {
+      setChatHistoryList([]);
+      localStorage.removeItem("chatHistory");
+      handleNewChat();
+    }
+  };
+
+  // Settings Interaction
+  const handleSettingChange = (key) => {
+    const newSettings = { ...appSettings, [key]: !appSettings[key] };
+    setAppSettings(newSettings);
+    localStorage.setItem("appSettings", JSON.stringify(newSettings));
   };
 
   const sendMessage = async (textOverride = null) => {
@@ -308,10 +377,10 @@ export default function Chat() {
   );
 
   return (
-    <div className="h-[100dvh] w-full bg-[#020617] text-slate-200 flex font-sans overflow-hidden selection:bg-teal-500/30">
+    <div className="fixed inset-0 bg-[#020617] text-slate-200 flex font-sans overflow-hidden selection:bg-teal-500/30">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Sidebar - Positioned firmly to the left */}
+      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-[100] transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
       >
@@ -326,7 +395,7 @@ export default function Chat() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative">
-        {/* HEADER - FIXED specifically on Mobile so it never disappears, Static on Desktop */}
+        {/* HEADER */}
         <header className="fixed top-0 left-0 right-0 lg:static z-[90] h-[72px] border-b border-slate-800/60 flex items-center justify-between px-3 sm:px-4 lg:px-8 bg-[#020617]/95 backdrop-blur-md shadow-xl lg:w-auto">
           <div className="flex items-center gap-2 sm:gap-3">
             <button
@@ -340,7 +409,6 @@ export default function Chat() {
                 <Activity size={20} className="text-teal-400" />
               </div>
               <div className="flex flex-col justify-center">
-                {/* RESTORED: HealthBot Title */}
                 <h3 className="text-white text-sm lg:text-base font-bold tracking-tight leading-tight">
                   HealthBot
                 </h3>
@@ -357,7 +425,6 @@ export default function Chat() {
             onClick={() => handleNavClick("profile")}
           >
             <div className="flex flex-col items-end text-right">
-              {/* Fixed Name formatting (Capitalized first letter only) */}
               <span className="text-[11px] lg:text-xs font-black text-white tracking-wider max-w-[80px] sm:max-w-[150px] truncate">
                 <span className="sm:hidden">{firstName}</span>
                 <span className="hidden sm:inline">{fullName}</span>
@@ -373,7 +440,6 @@ export default function Chat() {
         </header>
 
         {/* --- DYNAMIC VIEW SWITCHER --- */}
-        {/* Mobile needs top padding because of the fixed header, Desktop doesn't */}
         <div className="flex-1 overflow-y-auto pt-[88px] lg:pt-6 pb-6 px-4 lg:px-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50 relative z-0">
           {/* VIEW: CHAT */}
           {page === "chat" && (
@@ -432,7 +498,6 @@ export default function Chat() {
                   </div>
                 </div>
               )}
-              {/* Invisible element to auto-scroll to the bottom line */}
               <div ref={bottomRef} className="h-2" />
             </div>
           )}
@@ -491,31 +556,48 @@ export default function Chat() {
             </div>
           )}
 
-          {/* VIEW: CHAT HISTORY */}
+          {/* VIEW: CHAT HISTORY (NOW FULLY FUNCTIONAL) */}
           {page === "history" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
-              <h2 className="text-3xl font-bold text-white mb-8">
-                Consultation History
-              </h2>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-bold text-white">
+                  Consultation History
+                </h2>
+                {chatHistoryList.length > 0 && (
+                  <button
+                    onClick={clearChatHistory}
+                    className="text-rose-400 hover:text-rose-300 text-sm font-bold flex items-center gap-1 transition-colors"
+                  >
+                    <Trash2 size={16} /> Clear All
+                  </button>
+                )}
+              </div>
               <div className="space-y-4">
-                <HistoryCard
-                  date="Today"
-                  title="General Symptom Check"
-                  desc="Discussed mild headache and fatigue."
-                />
-                <HistoryCard
-                  date="Yesterday"
-                  title="Dietary Advice"
-                  desc="Requested information regarding hydration and vitamins."
-                />
-                <HistoryCard
-                  date="Oct 12, 2026"
-                  title="Fever Assessment"
-                  desc="Received preliminary advice for high temperature."
-                />
-                <div className="text-center pt-8">
-                  <p className="text-slate-500 text-sm">End of history.</p>
-                </div>
+                {chatHistoryList.length === 0 ? (
+                  <div className="text-center py-10 bg-[#111827]/80 rounded-3xl border border-slate-700/50 shadow-lg">
+                    <History className="h-12 w-12 text-slate-500 mx-auto mb-3" />
+                    <p className="text-slate-400 font-medium">
+                      No previous consultations found.
+                    </p>
+                  </div>
+                ) : (
+                  chatHistoryList.map((session) => (
+                    <HistoryCard
+                      key={session.id}
+                      date={session.date}
+                      title={session.title}
+                      desc={session.desc}
+                      onClick={() => loadChatSession(session)}
+                    />
+                  ))
+                )}
+                {chatHistoryList.length > 0 && (
+                  <div className="text-center pt-8">
+                    <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">
+                      End of history
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -587,13 +669,13 @@ export default function Chat() {
             </div>
           )}
 
-          {/* VIEW: FACILITIES */}
+          {/* VIEW: FACILITIES (NOW INCLUDES MEDICAL STORES) */}
           {page === "facilities" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2 className="text-3xl font-bold text-white mb-8">
                 Nearby Facilities
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FacilityCard
                   title="Hospitals"
                   desc="Find general and specialized hospitals near your location."
@@ -615,11 +697,18 @@ export default function Chat() {
                   query="clinics"
                   userAddress={user.address}
                 />
+                <FacilityCard
+                  title="Medical Stores"
+                  desc="Find local pharmacies and 24/7 medical stores."
+                  icon={Store}
+                  query="pharmacies medical stores"
+                  userAddress={user.address}
+                />
               </div>
             </div>
           )}
 
-          {/* VIEW: SETTINGS */}
+          {/* VIEW: SETTINGS (NOW FULLY FUNCTIONAL) */}
           {page === "settings" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2 className="text-3xl font-bold text-white mb-8">
@@ -629,25 +718,29 @@ export default function Chat() {
                 <SettingToggle
                   label="Dark Mode"
                   desc="Enable sleek dark theme across the app."
-                  defaultChecked={true}
+                  checked={appSettings.darkMode}
+                  onChange={() => handleSettingChange("darkMode")}
                 />
                 <div className="h-[1px] w-full bg-slate-800" />
                 <SettingToggle
                   label="Email Notifications"
                   desc="Receive weekly health summaries."
-                  defaultChecked={true}
+                  checked={appSettings.emailNotif}
+                  onChange={() => handleSettingChange("emailNotif")}
                 />
                 <div className="h-[1px] w-full bg-slate-800" />
                 <SettingToggle
                   label="SMS Alerts"
                   desc="Get urgent reminders via text."
-                  defaultChecked={false}
+                  checked={appSettings.smsAlerts}
+                  onChange={() => handleSettingChange("smsAlerts")}
                 />
                 <div className="h-[1px] w-full bg-slate-800" />
                 <SettingToggle
                   label="Save Chat History"
-                  desc="Securely backup conversations to cloud."
-                  defaultChecked={true}
+                  desc="Securely save conversations to your device."
+                  checked={appSettings.saveHistory}
+                  onChange={() => handleSettingChange("saveHistory")}
                 />
               </div>
             </div>
@@ -730,7 +823,6 @@ export default function Chat() {
                 </button>
               </div>
 
-              {/* RESTORED Bottom Line / Medical Disclaimer */}
               <p className="mt-3 text-[9px] lg:text-[10px] text-teal-400 font-bold text-center italic opacity-80 leading-relaxed border-t border-slate-800/40 pt-3">
                 🩺 For guidance only • Consult a doctor for emergencies
               </p>
@@ -962,8 +1054,11 @@ const ProfileDetail = ({ label, value, className = "" }) => (
   </div>
 );
 
-const HistoryCard = ({ date, title, desc }) => (
-  <div className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800/80 hover:border-teal-500/30 transition-all cursor-pointer flex items-center justify-between group backdrop-blur-md">
+const HistoryCard = ({ date, title, desc, onClick }) => (
+  <div
+    onClick={onClick}
+    className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800/80 hover:border-teal-500/30 transition-all cursor-pointer flex items-center justify-between group backdrop-blur-md shadow-sm"
+  >
     <div>
       <h4 className="text-white font-bold text-lg mb-1 group-hover:text-teal-400 transition-colors">
         {title}
@@ -1016,8 +1111,7 @@ const FacilityCard = ({ title, desc, icon: Icon, query, userAddress }) => {
   );
 };
 
-const SettingToggle = ({ label, desc, defaultChecked }) => {
-  const [checked, setChecked] = useState(defaultChecked);
+const SettingToggle = ({ label, desc, checked, onChange }) => {
   return (
     <div className="flex items-center justify-between">
       <div>
@@ -1025,7 +1119,7 @@ const SettingToggle = ({ label, desc, defaultChecked }) => {
         <span className="text-slate-400 text-sm">{desc}</span>
       </div>
       <button
-        onClick={() => setChecked(!checked)}
+        onClick={onChange}
         className={`w-14 h-7 rounded-full transition-colors relative shadow-inner flex-shrink-0 ${checked ? "bg-teal-500" : "bg-slate-700"}`}
       >
         <div
