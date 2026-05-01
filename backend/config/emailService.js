@@ -1,23 +1,8 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  family: 4  // Force IPv4 — fixes Railway's IPv6 block
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-transporter.verify((error) => {
-  if (error) console.log('Email service error:', error);
-  else console.log('Email service ready!');
-});
+console.log('Email service ready! (Resend)');
 
 const sendOTPEmail = async (email, name, otp, purpose = 'verification') => {
   const isReset = purpose === 'reset';
@@ -30,8 +15,8 @@ const sendOTPEmail = async (email, name, otp, purpose = 'verification') => {
     : 'Use this OTP to verify your email and complete registration.';
   const color = isReset ? '#ef4444' : '#0ea5e9';
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM,
+  const { error } = await resend.emails.send({
+    from: 'HealthBot <onboarding@resend.dev>',
     to: email,
     subject,
     html: `
@@ -74,6 +59,13 @@ const sendOTPEmail = async (email, name, otp, purpose = 'verification') => {
       </html>
     `
   });
+
+  if (error) {
+    console.error('Resend error:', error);
+    throw new Error(error.message);
+  }
+
+  console.log('Email sent successfully to:', email);
 };
 
 module.exports = { sendOTPEmail };
