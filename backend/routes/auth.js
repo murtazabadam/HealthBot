@@ -8,6 +8,23 @@ const { sendOTPEmail } = require('../config/emailService');
 const passport = require('passport');
 require('../config/passport');
 
+//temporary section
+router.get('/test-email', async (req, res) => {
+  try {
+    const { sendOTPEmail } = require('../config/emailService');
+    await sendOTPEmail(
+      process.env.EMAIL_USER,
+      'Test',
+      '123456',
+      'verification'
+    );
+    res.json({ message: 'Test email sent successfully!' });
+  } catch (err) {
+    res.json({ message: 'Email failed', error: err.message });
+  }
+});
+//end of temporary section
+
 // Generate 6-digit OTP
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
