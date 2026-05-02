@@ -98,23 +98,16 @@ export default function Chat() {
   const firstName = formatName(rawFirstName);
 
   // Initialize Welcome Message
-  useEffect(() => {
-    const now = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: "welcome",
-          sender: "bot",
-          text: `Hello ${firstName}! I am your HealthBot. How are you feeling today? Please describe your symptoms.`,
-          time: now,
-        },
-      ]);
-    }
-    if (window.innerWidth < 1024) setIsSidebarOpen(false);
-  }, [firstName, messages.length]);
+ useEffect(() => {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const name = user.name ? user.name.split(' ')[0] : 'there';
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  setMessages([{
+    sender: 'bot',
+    text: `${greeting}, ${name}! 👋 I'm HealthBot, your AI medical assistant.\n\nDescribe your symptoms and I'll analyze them. For example:\n"I have fever, headache and joint pain"\n\nThe more symptoms you mention, the more accurate my diagnosis! 🔍`
+  }]);
+}, []);
 
   // Auto-Save Chat History System
   useEffect(() => {
