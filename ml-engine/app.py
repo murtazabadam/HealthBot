@@ -139,6 +139,10 @@ NL_MAP = {
     'loss of taste': 'loss_of_smell',
     'hair loss': 'brittle_nails', 'hair fall': 'brittle_nails',
     'insomnia': 'restlessness', 'cant sleep': 'restlessness',
+    'excessive thirst': 'polyuria',
+'thirst': 'polyuria',
+'drinking a lot': 'polyuria',
+'excessive hunger': 'excessive_hunger',
 }
 
 def extract_symptoms(text):
