@@ -145,19 +145,23 @@ function buildBotReply(text, mlResult) {
   const symptoms = extractSymptoms(text);
 
   if (symptoms.length === 0) {
-    return `I'm HealthBot 🤖 Please describe your symptoms in detail.\n\nExample: "I have fever, cough and fatigue for 2 days"`;
+    return `I'm HealthBot 🤖 I can help analyze your symptoms.\n\nPlease describe what you're feeling. For example:\n"I have fever, headache and joint pain since 2 days"\n\nThe more symptoms you describe, the more accurate my analysis will be.`;
   }
 
   if (!mlResult || mlResult.error || !mlResult.predictions || mlResult.predictions.length === 0) {
-    return `I detected these symptoms: ${symptoms.join(', ')}. Could you describe them in more detail? For example, how long have you had these symptoms?`;
+    return `I detected: ${symptoms.join(', ')}.\n\nCould you describe more symptoms? For example, do you also have fever, headache, nausea or any other discomfort?`;
   }
 
   const top = mlResult.predictions[0];
   const others = mlResult.predictions
     .slice(1)
-    .filter(p => p.confidence > 2)
+    .filter(p => p.confidence > 3)
     .map(p => `${p.disease} (${p.confidence}%)`)
     .join(', ');
+
+  const matched = mlResult.matched_symptoms || symptoms;
+  const lowConf = mlResult.low_confidence;
+  const followup = mlResult.followup_question;
 
   const description = top.description
     ? `\n📖 ${top.description}`
@@ -167,7 +171,13 @@ function buildBotReply(text, mlResult) {
     ? `\n\n💡 Precautions:\n${top.precautions.map(p => `• ${p}`).join('\n')}`
     : '';
 
-  const matched = mlResult.matched_symptoms || symptoms;
+  const accuracyNote = lowConf
+    ? `\n\n⚡ Tip: Describe more symptoms for a more accurate diagnosis.`
+    : '';
+
+  const followupNote = followup
+    ? `\n\n❓ ${followup}`
+    : '';
 
   return `🔍 Based on your symptoms (${matched.join(', ')}):
 
@@ -175,12 +185,13 @@ function buildBotReply(text, mlResult) {
 ${others ? `📌 Also possible: ${others}` : ''}
 ⚠️ Severity: ${mlResult.severity}
 ${description}
-💊 Recommendation: ${mlResult.recommendation}
+💊 ${mlResult.recommendation}
 ${precautions}
+${accuracyNote}
+${followupNote}
 
 ⚕️ This is not a substitute for professional medical advice.`;
 }
-
 // Send a message
 router.post('/message', auth, async (req, res) => {
   try {
