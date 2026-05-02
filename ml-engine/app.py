@@ -6,19 +6,8 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import LabelEncoder
 import os
-import nltk
-
-# Download required NLTK data
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt', quiet=True)
-    nltk.download('stopwords', quiet=True)
-    nltk.download('wordnet', quiet=True)
-
-from nlp_extractor import extract_symptoms_from_text, get_symptom_suggestions
-from extra_diseases import EXTRA_DISEASES
 
 app = Flask(__name__)
 CORS(app)
@@ -45,7 +34,7 @@ prec_df.columns = prec_df.columns.str.strip()
 sev_df.columns  = sev_df.columns.str.strip()
 sev_df['Symptom'] = sev_df['Symptom'].str.strip().str.replace(' ', '_').str.lower()
 
-# ── Build symptom list & maps ──────────────────────────────────────────────────
+# ── Build maps ─────────────────────────────────────────────────────────────────
 ALL_SYMPTOMS = sorted(set(
     s for col in symptom_cols for s in df[col].unique() if s != ''
 ))
@@ -61,70 +50,146 @@ for _, row in prec_df.iterrows():
              if str(row.get(f'Precaution_{i}', '')).strip()]
     PREC_MAP[disease] = precs
 
-# Add extra diseases
-for disease, info in EXTRA_DISEASES.items():
-    DESC_MAP[disease] = info['description']
-    PREC_MAP[disease] = info['precautions']
-    for sym in info['symptoms']:
-        if sym not in ALL_SYMPTOMS:
-            ALL_SYMPTOMS.append(sym)
-ALL_SYMPTOMS = sorted(set(ALL_SYMPTOMS))
+# ── Natural language to symptom mapping ────────────────────────────────────────
+NL_MAP = {
+    # Fever
+    'fever': 'fever', 'high fever': 'high_fever', 'mild fever': 'mild_fever',
+    'feverish': 'fever', 'feel hot': 'fever', 'temperature': 'fever',
+    'high temperature': 'high_fever', 'burning up': 'high_fever',
+
+    # Cough
+    'cough': 'cough', 'coughing': 'cough', 'dry cough': 'cough',
+    'wet cough': 'cough', 'persistent cough': 'cough',
+    'mucus': 'mucoid_sputum', 'phlegm': 'mucoid_sputum',
+
+    # Fatigue
+    'fatigue': 'fatigue', 'tired': 'fatigue', 'exhausted': 'fatigue',
+    'weakness': 'weakness_in_limbs', 'weak': 'fatigue', 'no energy': 'fatigue',
+    'lethargic': 'lethargy', 'lethargy': 'lethargy',
+
+    # Head
+    'headache': 'headache', 'head pain': 'headache', 'head hurts': 'headache',
+    'migraine': 'headache', 'head ache': 'headache',
+    'severe headache': 'severe_headache',
+
+    # Stomach
+    'nausea': 'nausea', 'feel sick': 'nausea', 'nauseated': 'nausea',
+    'vomiting': 'vomiting', 'throwing up': 'vomiting', 'vomit': 'vomiting',
+    'stomach pain': 'stomach_pain', 'stomach ache': 'stomach_pain',
+    'belly pain': 'stomach_pain', 'tummy ache': 'stomach_pain',
+    'abdominal pain': 'abdominal_pain', 'stomach hurts': 'stomach_pain',
+    'diarrhea': 'diarrhoea', 'diarrhoea': 'diarrhoea',
+    'loose motion': 'diarrhoea', 'loose stool': 'diarrhoea',
+    'constipation': 'constipation', 'indigestion': 'indigestion',
+    'acidity': 'acidity', 'heartburn': 'acidity',
+    'bloating': 'distention_of_abdomen', 'bloated': 'distention_of_abdomen',
+
+    # Breathing
+    'breathlessness': 'breathlessness', 'cant breathe': 'breathlessness',
+    'hard to breathe': 'breathlessness', 'shortness of breath': 'breathlessness',
+    'short of breath': 'breathlessness', 'wheezing': 'wheezing',
+    'chest pain': 'chest_pain', 'chest hurts': 'chest_pain',
+    'chest tightness': 'chest_pain',
+
+    # Skin
+    'rash': 'skin_rash', 'skin rash': 'skin_rash', 'red spots': 'skin_rash',
+    'itching': 'itching', 'itchy': 'itching', 'itchy skin': 'itching',
+    'yellow skin': 'yellowing_of_skin', 'yellow eyes': 'yellowing_of_eyes',
+    'jaundice': 'yellowing_of_skin', 'pale skin': 'pale_skin',
+    'blisters': 'blister', 'pimples': 'pus_filled_pimples',
+
+    # Pain
+    'joint pain': 'joint_pain', 'joints hurt': 'joint_pain',
+    'muscle pain': 'muscle_pain', 'body ache': 'muscle_pain',
+    'back pain': 'back_pain', 'lower back pain': 'back_pain',
+    'neck pain': 'neck_pain', 'knee pain': 'knee_pain',
+    'hip pain': 'hip_joint_pain',
+
+    # Cold
+    'runny nose': 'runny_nose', 'blocked nose': 'continuous_sneezing',
+    'stuffy nose': 'continuous_sneezing', 'sneezing': 'continuous_sneezing',
+    'sore throat': 'throat_irritation', 'throat pain': 'throat_irritation',
+    'throat hurts': 'throat_irritation',
+    'chills': 'chills', 'shivering': 'chills', 'feel cold': 'chills',
+    'sweating': 'sweating', 'night sweats': 'sweating',
+
+    # Urinary
+    'frequent urination': 'frequent_urination', 'need to pee often': 'frequent_urination',
+    'burning urination': 'burning_micturition', 'painful urination': 'burning_micturition',
+    'dark urine': 'dark_urine', 'yellow urine': 'yellow_urine',
+
+    # Eyes
+    'blurry vision': 'blurred_and_distorted_vision', 'vision problems': 'blurred_and_distorted_vision',
+    'watery eyes': 'watering_from_eyes', 'eye pain': 'pain_in_eyes',
+    'red eyes': 'redness_of_eyes',
+
+    # Other
+    'weight loss': 'weight_loss', 'losing weight': 'weight_loss',
+    'no appetite': 'loss_of_appetite', 'loss of appetite': 'loss_of_appetite',
+    'not hungry': 'loss_of_appetite',
+    'dizziness': 'dizziness', 'dizzy': 'dizziness', 'vertigo': 'dizziness',
+    'lightheaded': 'dizziness',
+    'anxiety': 'anxiety', 'anxious': 'anxiety',
+    'depression': 'depression', 'depressed': 'depression',
+    'mood swings': 'mood_swings', 'irritable': 'irritability',
+    'palpitations': 'palpitations', 'heart racing': 'palpitations',
+    'swollen': 'swelling_joints', 'swelling': 'swelling_joints',
+    'numbness': 'loss_of_balance', 'tingling': 'drying_and_tingling_lips',
+    'loss of smell': 'loss_of_smell', 'cant smell': 'loss_of_smell',
+    'loss of taste': 'loss_of_smell',
+    'hair loss': 'brittle_nails', 'hair fall': 'brittle_nails',
+    'insomnia': 'restlessness', 'cant sleep': 'restlessness',
+}
+
+def extract_symptoms(text):
+    """Extract symptoms from natural language using NL mapping and direct matching"""
+    text_lower = text.lower()
+    found = set()
+
+    # Step 1: Natural language mapping (multi-word phrases first)
+    sorted_phrases = sorted(NL_MAP.keys(), key=len, reverse=True)
+    for phrase in sorted_phrases:
+        if phrase in text_lower:
+            symptom = NL_MAP[phrase]
+            if symptom in ALL_SYMPTOMS:
+                found.add(symptom)
+
+    # Step 2: Direct symptom name matching
+    for symptom in ALL_SYMPTOMS:
+        readable = symptom.replace('_', ' ')
+        if readable in text_lower or symptom in text_lower:
+            found.add(symptom)
+
+    return list(found)
 
 # ── Build feature matrix ───────────────────────────────────────────────────────
 print("Building feature matrix...")
 X, y = [], []
 for _, row in df.iterrows():
-    symptoms = set(row[col] for col in symptom_cols if row[col] != '')
-    features = [1 if s in symptoms else 0 for s in ALL_SYMPTOMS]
+    symptoms_in_row = set(row[col] for col in symptom_cols if row[col] != '')
+    features = [1 if s in symptoms_in_row else 0 for s in ALL_SYMPTOMS]
     X.append(features)
     y.append(row['Disease'].strip())
-
-# Add extra disease samples
-for disease, info in EXTRA_DISEASES.items():
-    syms = set(info['symptoms'])
-    features = [1 if s in syms else 0 for s in ALL_SYMPTOMS]
-    for _ in range(20):
-        noisy = features.copy()
-        for i in range(len(noisy)):
-            if noisy[i] == 0 and np.random.random() < 0.03:
-                noisy[i] = 1
-        X.append(noisy)
-        y.append(disease)
 
 X = np.array(X)
 y = np.array(y)
 
-# ── Train optimized models ─────────────────────────────────────────────────────
+# ── Train 3-model ensemble ─────────────────────────────────────────────────────
 print("Training optimized ensemble models...")
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42, stratify=y
 )
 
-# Model 1 — Random Forest (best for tabular medical data)
 rf_model = RandomForestClassifier(
-    n_estimators=300,
-    max_depth=None,
-    min_samples_split=2,
-    min_samples_leaf=1,
-    random_state=42,
-    n_jobs=-1
+    n_estimators=300, max_depth=None,
+    min_samples_split=2, min_samples_leaf=1,
+    random_state=42, n_jobs=-1
 )
-
-# Model 2 — Gradient Boosting (sequential learning)
 gb_model = GradientBoostingClassifier(
-    n_estimators=150,
-    learning_rate=0.1,
-    max_depth=5,
-    random_state=42
+    n_estimators=150, learning_rate=0.1,
+    max_depth=5, random_state=42
 )
-
-# Model 3 — SVM (good for high-dimensional data)
-svm_model = SVC(
-    kernel='rbf',
-    probability=True,
-    random_state=42,
-    C=10
-)
+svm_model = SVC(kernel='rbf', probability=True, random_state=42, C=10)
 
 rf_model.fit(X_train, y_train)
 gb_model.fit(X_train, y_train)
@@ -135,14 +200,14 @@ gb_acc  = accuracy_score(y_test, gb_model.predict(X_test))
 svm_acc = accuracy_score(y_test, svm_model.predict(X_test))
 cv_scores = cross_val_score(rf_model, X, y, cv=5)
 
-print(f"Random Forest accuracy:      {rf_acc*100:.1f}%")
-print(f"Gradient Boosting accuracy:  {gb_acc*100:.1f}%")
-print(f"SVM accuracy:                {svm_acc*100:.1f}%")
-print(f"Cross-validation (5-fold):   {cv_scores.mean()*100:.1f}% ± {cv_scores.std()*100:.1f}%")
-print(f"Total symptoms: {len(ALL_SYMPTOMS)} | Total diseases: {len(set(y))}")
+print(f"Random Forest:      {rf_acc*100:.1f}%")
+print(f"Gradient Boosting:  {gb_acc*100:.1f}%")
+print(f"SVM:                {svm_acc*100:.1f}%")
+print(f"Cross-validation:   {cv_scores.mean()*100:.1f}% ± {cv_scores.std()*100:.1f}%")
+print(f"Diseases: {len(set(y))} | Symptoms: {len(ALL_SYMPTOMS)}")
 print("ML Engine ready!")
 
-# ── Severity scoring ───────────────────────────────────────────────────────────
+# ── Helpers ────────────────────────────────────────────────────────────────────
 def severity_score(symptoms):
     total = sum(SEVERITY_MAP.get(s, 3) for s in symptoms)
     avg   = total / max(len(symptoms), 1)
@@ -159,17 +224,36 @@ def get_recommendation(level):
         4: "Seek immediate medical attention!"
     }.get(level, "Please consult a healthcare professional.")
 
+def get_followup_questions(symptoms, top_disease):
+    """Generate follow-up questions to improve accuracy"""
+    disease_symptoms = {
+        'Dengue': ['skin_rash', 'joint_pain', 'pain_behind_the_eyes'],
+        'Malaria': ['chills', 'sweating', 'vomiting'],
+        'Typhoid': ['stomach_pain', 'constipation', 'headache'],
+        'Pneumonia': ['chest_pain', 'breathlessness', 'cough'],
+        'Jaundice': ['yellowing_of_skin', 'dark_urine', 'abdominal_pain'],
+        'Diabetes': ['frequent_urination', 'excessive_thirst', 'weight_loss'],
+        'Tuberculosis': ['cough', 'weight_loss', 'night_sweats'],
+        'Hepatitis B': ['yellowing_of_skin', 'abdominal_pain', 'fatigue'],
+    }
+    if top_disease in disease_symptoms:
+        missing = [s for s in disease_symptoms[top_disease] if s not in symptoms]
+        if missing:
+            readable = [s.replace('_', ' ') for s in missing[:2]]
+            return f"Do you also have {' or '.join(readable)}?"
+    return None
+
 # ── Routes ─────────────────────────────────────────────────────────────────────
 @app.route('/')
 def home():
     return jsonify({
-        "message":      "HealthBot ML Engine running!",
-        "diseases":     len(set(y)),
-        "symptoms":     len(ALL_SYMPTOMS),
-        "rf_accuracy":  f"{rf_acc*100:.1f}%",
-        "gb_accuracy":  f"{gb_acc*100:.1f}%",
-        "svm_accuracy": f"{svm_acc*100:.1f}%",
-        "cv_score":     f"{cv_scores.mean()*100:.1f}%"
+        "status":    "HealthBot ML Engine running!",
+        "diseases":  len(set(y)),
+        "symptoms":  len(ALL_SYMPTOMS),
+        "rf_acc":    f"{rf_acc*100:.1f}%",
+        "gb_acc":    f"{gb_acc*100:.1f}%",
+        "svm_acc":   f"{svm_acc*100:.1f}%",
+        "cv_score":  f"{cv_scores.mean()*100:.1f}%"
     })
 
 @app.route('/symptoms', methods=['GET'])
@@ -180,48 +264,35 @@ def get_symptoms():
 def get_diseases():
     return jsonify({"diseases": sorted(set(y)), "total": len(set(y))})
 
-@app.route('/suggest', methods=['POST'])
-def suggest():
-    """Get symptom suggestions as user types"""
-    data = request.get_json()
-    partial = data.get('text', '')
-    suggestions = get_symptom_suggestions(partial, ALL_SYMPTOMS)
-    return jsonify({"suggestions": suggestions})
-
 @app.route('/predict', methods=['POST'])
 def predict():
-    data = request.get_json()
-
-    # Support both text input (NLP) and symptom list input
-    text_input   = data.get('text', '')
+    data        = request.get_json()
+    text_input  = data.get('text', '')
     symptom_list = data.get('symptoms', [])
 
+    # Extract symptoms
     if text_input:
-        # NLP extraction from natural language
-        matched, confidence_scores = extract_symptoms_from_text(text_input, ALL_SYMPTOMS)
-        symptoms = matched
+        symptoms = extract_symptoms(text_input)
     else:
         symptoms = [s.strip().lower().replace(' ', '_') for s in symptom_list]
-        matched  = [s for s in symptoms if s in ALL_SYMPTOMS]
-        confidence_scores = {s: 1.0 for s in matched}
-        symptoms = matched
+        symptoms = [s for s in symptoms if s in ALL_SYMPTOMS]
 
     if not symptoms:
         return jsonify({
-            "error": "No matching symptoms found",
-            "hint":  "Try describing your symptoms in more detail"
+            "error": "no_symptoms",
+            "message": "No symptoms recognized. Please describe your symptoms more clearly.",
+            "hint": "Example: 'I have fever, headache and joint pain'"
         }), 400
 
-    # Build feature vector
-    vec = [1 if s in symptoms else 0 for s in ALL_SYMPTOMS]
+    # Build vector
+    vec = np.array([1 if s in symptoms else 0 for s in ALL_SYMPTOMS]).reshape(1, -1)
 
     # Weighted ensemble prediction
-    rf_proba  = rf_model.predict_proba([vec])[0]
-    gb_proba  = gb_model.predict_proba([vec])[0]
-    svm_proba = svm_model.predict_proba([vec])[0]
+    rf_proba  = rf_model.predict_proba(vec)[0]
+    gb_proba  = gb_model.predict_proba(vec)[0]
+    svm_proba = svm_model.predict_proba(vec)[0]
     classes   = rf_model.classes_
 
-    # RF gets highest weight as it performs best
     avg_proba = (rf_proba * 0.45) + (gb_proba * 0.35) + (svm_proba * 0.20)
     top_idx   = np.argsort(avg_proba)[::-1][:5]
 
@@ -229,7 +300,7 @@ def predict():
     for idx in top_idx:
         disease    = classes[idx]
         confidence = round(float(avg_proba[idx]) * 100, 1)
-        if confidence < 1:
+        if confidence < 1.0:
             continue
         predictions.append({
             "disease":     disease,
@@ -238,23 +309,33 @@ def predict():
             "precautions": PREC_MAP.get(disease, [])
         })
 
+    if not predictions:
+        return jsonify({"error": "No predictions", "message": "Please provide more symptoms."}), 400
+
     severity_label, severity_level = severity_score(symptoms)
+    top_disease = predictions[0]["disease"]
+    followup    = get_followup_questions(symptoms, top_disease)
+
+    # Confidence warning for single symptom
+    low_confidence = len(symptoms) < 3
 
     return jsonify({
-        "matched_symptoms":   symptoms,
-        "symptom_confidence": confidence_scores,
-        "unmatched":          [s for s in (symptom_list or []) if s not in ALL_SYMPTOMS],
-        "predictions":        predictions,
-        "severity":           severity_label,
-        "severity_level":     severity_level,
-        "recommendation":     get_recommendation(severity_level),
+        "matched_symptoms":  symptoms,
+        "symptom_count":     len(symptoms),
+        "predictions":       predictions,
+        "severity":          severity_label,
+        "severity_level":    severity_level,
+        "recommendation":    get_recommendation(severity_level),
+        "followup_question": followup,
+        "low_confidence":    low_confidence,
+        "accuracy_note":     "Add more symptoms for better accuracy" if low_confidence else "",
         "model_info": {
-            "rf_accuracy":      f"{rf_acc*100:.1f}%",
-            "gb_accuracy":      f"{gb_acc*100:.1f}%",
-            "svm_accuracy":     f"{svm_acc*100:.1f}%",
-            "cv_score":         f"{cv_scores.mean()*100:.1f}%",
-            "total_diseases":   len(set(y)),
-            "total_symptoms":   len(ALL_SYMPTOMS)
+            "rf_accuracy":   f"{rf_acc*100:.1f}%",
+            "gb_accuracy":   f"{gb_acc*100:.1f}%",
+            "svm_accuracy":  f"{svm_acc*100:.1f}%",
+            "cv_score":      f"{cv_scores.mean()*100:.1f}%",
+            "total_diseases": len(set(y)),
+            "total_symptoms": len(ALL_SYMPTOMS)
         }
     })
 
@@ -271,4 +352,3 @@ def disease_info(name):
 
 if __name__ == '__main__':
     app.run(port=5001, debug=True)
-    
