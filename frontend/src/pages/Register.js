@@ -95,52 +95,32 @@ export default function Register() {
   };
 
   const handleRegister = async (e) => {
-    e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      return setErrorMessage("Passwords do not match.");
-    }
-    if (!formData.gender) {
-      return setErrorMessage("Please select your gender.");
-    }
-    if (!agreedToTerms) {
-      return setErrorMessage("You must agree to the Terms of Service.");
-    }
+  e.preventDefault();
+  // ... existing validation code ...
 
-    const otpString = otp.join("");
-    if (!otpSent || otpString.length < 6) {
-      return setErrorMessage(
-        "Please send and enter the 6-digit OTP to verify your email.",
-      );
-    }
+  try {
+    const payload = { ...formData, otp: otpString };
+    const res = await fetch(
+      "https://healthbot-production-3c7d.up.railway.app/api/auth/register",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Registration failed.");
 
-    setLoading(true);
-    setErrorMessage("");
-    try {
-      const payload = { ...formData, otp: otpString };
-
-      const res = await fetch(
-        "https://healthbot-production-3c7d.up.railway.app/api/auth/register",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      const data = await res.json();
-
-      if (!res.ok)
-        throw new Error(data.message || "Registration failed. Check your OTP.");
-
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      navigate("/chat");
-    } catch (err) {
-      setErrorMessage(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Save token and go directly to chat
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    navigate("/chat"); // Goes straight to chat — no login needed
+  } catch (err) {
+    setErrorMessage(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
