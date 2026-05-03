@@ -59,13 +59,15 @@ export default function Register() {
     setLoading(true);
     setErrorMessage("");
     try {
+      // BULLETPROOF: Force lowercase and remove accidental spaces
+      const safeEmail = formData.email.trim().toLowerCase();
+
       const res = await fetch(
         "https://healthbot-production-3c7d.up.railway.app/api/auth/send-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          // Ensure email is trimmed of accidental spaces
-          body: JSON.stringify({ email: formData.email.trim() }),
+          body: JSON.stringify({ email: safeEmail }),
         },
       );
       if (!res.ok) throw new Error("Failed to send OTP.");
@@ -78,14 +80,13 @@ export default function Register() {
     }
   };
 
-  // OTP 6-box handlers (with robust Mobile Auto-fill/Paste support)
+  // OTP 6-box handlers
   const handleOtpChange = (index, e) => {
     const value = e.target.value;
     const numericValue = value.replace(/[^0-9]/g, "");
 
     if (!numericValue && value !== "") return;
 
-    // Handle Pasting or Mobile Auto-fill (e.g. "123456")
     if (numericValue.length > 1) {
       const digits = numericValue.slice(0, 6).split("");
       const newOtp = ["", "", "", "", "", ""];
@@ -98,11 +99,11 @@ export default function Register() {
       return;
     }
 
-    // Handle Single Digit
     const newOtp = [...otp];
-    newOtp[index] = numericValue;
+    newOtp[index] = numericValue.slice(-1);
     setOtp(newOtp);
-    if (numericValue !== "" && index < 5) {
+
+    if (index < 5 && numericValue !== "") {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -135,11 +136,13 @@ export default function Register() {
     setLoading(true);
     setErrorMessage("");
     try {
-      // FIX: Apply .trim() to email here as well to match the sent OTP exactly
+      // BULLETPROOF: Force exact same lowercase email, and send OTP under both variable names
+      const safeEmail = formData.email.trim().toLowerCase();
       const payload = {
         ...formData,
-        email: formData.email.trim(),
+        email: safeEmail,
         otp: otpString,
+        code: otpString, // Added code variable just in case backend expects it
       };
 
       const res = await fetch(
@@ -252,6 +255,7 @@ export default function Register() {
                     name="name"
                     required
                     placeholder="Enter your full name"
+                    value={formData.name}
                     onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
@@ -270,6 +274,7 @@ export default function Register() {
                       name="email"
                       required
                       placeholder="Enter email"
+                      value={formData.email}
                       onChange={handleChange}
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                       style={{ colorScheme: "dark" }}
@@ -282,15 +287,21 @@ export default function Register() {
                     className="shrink-0 flex items-center justify-center gap-1.5 h-12 sm:h-auto px-4 bg-[#0B1120] border border-teal-500/50 text-teal-400 rounded-xl text-xs font-bold hover:bg-teal-500/10 transition-all disabled:opacity-50 whitespace-nowrap shadow-sm"
                   >
                     <Send size={14} className="shrink-0" />
-                    <span>{timer > 0 ? `${timer}s` : "Send OTP"}</span>
+                    <span>
+                      {timer > 0
+                        ? `Resend in ${timer}s`
+                        : otpSent
+                          ? "Resend OTP"
+                          : "Send OTP"}
+                    </span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* OTP Section - Perfectly Centered with mobile numpad */}
+            {/* OTP Entry Section (Centered layout) */}
             {otpSent && (
-              <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in duration-300 w-full mb-2">
+              <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in duration-300 bg-slate-800/30 p-5 border border-slate-700/50 rounded-xl w-full mb-2">
                 <label className="text-xs font-bold text-teal-400 flex items-center justify-center gap-2 uppercase tracking-wider w-full">
                   <ShieldCheck size={14} /> Enter Verification Code
                 </label>
@@ -326,6 +337,7 @@ export default function Register() {
                     name="password"
                     required
                     placeholder="Create password"
+                    value={formData.password}
                     onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
@@ -349,6 +361,7 @@ export default function Register() {
                     name="confirmPassword"
                     required
                     placeholder="Confirm password"
+                    value={formData.confirmPassword}
                     onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
@@ -377,6 +390,7 @@ export default function Register() {
                   type="number"
                   name="age"
                   placeholder="Age"
+                  value={formData.age}
                   onChange={handleChange}
                   className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
@@ -389,6 +403,7 @@ export default function Register() {
                   type="tel"
                   name="phoneNumber"
                   placeholder="Phone"
+                  value={formData.phoneNumber}
                   onChange={handleChange}
                   className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
@@ -401,6 +416,7 @@ export default function Register() {
                   type="text"
                   name="address"
                   placeholder="Address"
+                  value={formData.address}
                   onChange={handleChange}
                   className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
@@ -417,6 +433,7 @@ export default function Register() {
                   <select
                     name="gender"
                     required
+                    value={formData.gender}
                     onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-slate-300 focus:outline-none focus:border-teal-400 appearance-none transition-all cursor-pointer"
                   >
@@ -434,6 +451,7 @@ export default function Register() {
                 <div className="relative group">
                   <select
                     name="bloodGroup"
+                    value={formData.bloodGroup}
                     onChange={handleChange}
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-slate-300 focus:outline-none focus:border-teal-400 appearance-none transition-all cursor-pointer"
                   >
@@ -501,6 +519,7 @@ export default function Register() {
               <div className="h-[1px] flex-1 bg-slate-800"></div>
             </div>
 
+            {/* Google Sign Up */}
             <button
               type="button"
               onClick={handleGoogleSignUp}
