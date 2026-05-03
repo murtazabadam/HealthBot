@@ -33,8 +33,8 @@ function generateOTP() {
 // ── SEND OTP (for registration) ───────────────────────────────────────────────
 router.post('/send-otp', async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ message: 'Email is required' });
+  const email = req.body.email?.trim().toLowerCase();
+if (!email) return res.status(400).json({ message: 'Email is required' });
 
     // Check if already registered and verified
     const existingUser = await User.findOne({ email });
@@ -77,13 +77,56 @@ router.post('/send-otp', async (req, res) => {
   }
 });
 
+// ── VERIFY REGISTRATION OTP ────────────────────────────────────────────────────
+router.post('/verify-registration-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
+    const safeEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: safeEmail });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Please request an OTP first' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'Email already verified. Please login.' });
+    }
+
+    if (!user.verificationOTP) {
+      return res.status(400).json({ message: 'No OTP found. Please request a new one.' });
+    }
+
+    if (user.verificationOTP !== otp.trim()) {
+      return res.status(400).json({ message: 'Invalid OTP. Please check and try again.' });
+    }
+
+    if (user.verificationExpires < new Date()) {
+      return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
+    }
+
+    // Mark OTP as verified but don't complete registration yet
+    // Just confirm OTP is valid — registration happens on form submit
+    res.json({ message: 'OTP verified successfully!', verified: true });
+
+  } catch (err) {
+    console.error('Verify registration OTP error:', err);
+    res.status(500).json({ message: 'Server error. Please try again.' });
+  }
+});
+
 // ── REGISTER ──────────────────────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
   try {
     const {
-      name, email, password, otp,
-      age, gender, bloodGroup, address, phoneNumber
-    } = req.body;
+  name, password, otp,
+  age, gender, bloodGroup, address, phoneNumber
+} = req.body;
+const email = req.body.email?.trim().toLowerCase();
 
     if (!name || !email || !password || !otp) {
       return res.status(400).json({ message: 'Name, email, password and OTP are required' });
