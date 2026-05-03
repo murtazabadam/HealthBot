@@ -92,9 +92,11 @@ export default function Register() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          // FIX: Send BOTH 'otp' and 'code' to ensure the backend reads it perfectly
           body: JSON.stringify({
             email: formData.email.trim(),
             otp: otpString,
+            code: otpString,
           }),
         },
       );
@@ -113,11 +115,14 @@ export default function Register() {
 
   // OTP 6-box handlers
   const handleOtpChange = (index, value) => {
-    if (isNaN(value)) return;
+    // FIX: Force strictly numeric characters only
+    const numericValue = value.replace(/[^0-9]/g, "");
+    if (value !== "" && numericValue === "") return;
+
     const newOtp = [...otp];
-    newOtp[index] = value;
+    newOtp[index] = numericValue;
     setOtp(newOtp);
-    if (value !== "" && index < 5) {
+    if (numericValue !== "" && index < 5) {
       inputRefs.current[index + 1].focus();
     }
   };
@@ -313,16 +318,18 @@ export default function Register() {
 
             {/* OTP Entry Section (Visible only when OTP is sent and not yet verified) */}
             {otpSent && !emailVerified && (
-              <div className="flex flex-col gap-3 animate-in fade-in zoom-in duration-300 bg-slate-800/30 p-4 border border-slate-700/50 rounded-xl md:w-1/2 md:ml-auto">
-                <label className="text-xs font-bold text-teal-400 flex items-center gap-2 uppercase tracking-wider">
-                  <ShieldCheck size={14} /> Enter Verification Code
+              <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300 bg-slate-800/30 p-5 border border-slate-700/50 rounded-xl md:w-1/2 md:ml-auto mt-2">
+                <label className="text-xs font-bold text-teal-400 flex items-center justify-center gap-2 uppercase tracking-wider w-full">
+                  <ShieldCheck size={16} /> Enter Verification Code
                 </label>
-                <div className="flex gap-2 sm:gap-3 justify-start">
+                <div className="flex gap-2 sm:gap-3 justify-center w-full">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
                       ref={(el) => (inputRefs.current[index] = el)}
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       maxLength="1"
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
@@ -335,7 +342,7 @@ export default function Register() {
                   type="button"
                   disabled={loading || otp.join("").length < 6}
                   onClick={handleVerifyOTP}
-                  className="w-full bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-2.5 rounded-lg transition-all shadow-lg shadow-teal-500/20 disabled:opacity-50 mt-2 text-sm"
+                  className="w-full bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-3 rounded-lg transition-all shadow-lg shadow-teal-500/20 disabled:opacity-50 mt-2 text-sm"
                 >
                   {loading ? "Verifying..." : "Verify Email"}
                 </button>
