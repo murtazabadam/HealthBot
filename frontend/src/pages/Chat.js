@@ -32,6 +32,9 @@ import {
   Droplet,
   Mail,
   Store,
+  Edit2,
+  Save,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function Chat() {
@@ -49,6 +52,16 @@ export default function Chat() {
         '{"darkMode":true,"emailNotif":true,"smsAlerts":false,"saveHistory":true}',
     ),
   );
+
+  // FIX: Make User a state variable so it updates live on the screen
+  const [user, setUser] = useState(() =>
+    JSON.parse(localStorage.getItem("user") || "{}"),
+  );
+
+  // Profile Editing States
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState(user);
+  const [toastMessage, setToastMessage] = useState("");
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
@@ -80,7 +93,6 @@ export default function Chat() {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
   const token = localStorage.getItem("token");
 
   const formatName = (str) => {
@@ -99,22 +111,22 @@ export default function Chat() {
 
   // Initialize Welcome Message
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const name = user.name ? user.name.split(" ")[0] : "there";
-    const hour = new Date().getHours();
-    const greeting =
-      hour < 12
-        ? "Good morning"
-        : hour < 17
-          ? "Good afternoon"
-          : "Good evening";
-    setMessages([
-      {
-        sender: "bot",
-        text: `${greeting}, ${name}! 👋 I'm HealthBot, your AI medical assistant.\n\nDescribe your symptoms and I'll analyze them. For example:\n"I have fever, headache and joint pain"\n\nThe more symptoms you mention, the more accurate my diagnosis! 🔍`,
-      },
-    ]);
-  }, []);
+    const now = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: "welcome",
+          sender: "bot",
+          text: `Hello ${firstName}! I am your HealthBot. How are you feeling today? Please describe your symptoms.`,
+          time: now,
+        },
+      ]);
+    }
+    if (window.innerWidth < 1024) setIsSidebarOpen(false);
+  }, [firstName, messages.length]);
 
   // Auto-Save Chat History System
   useEffect(() => {
@@ -191,13 +203,37 @@ export default function Chat() {
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
   };
 
-  // Chat History Interactions
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 3000);
+  };
+
+  // Profile Interaction
+  const handleProfileChange = (e) => {
+    setProfileForm({ ...profileForm, [e.target.name]: e.target.value });
+  };
+
+  const saveProfile = () => {
+    setUser(profileForm);
+    localStorage.setItem("user", JSON.stringify(profileForm));
+    setIsEditingProfile(false);
+    showToast("Profile Successfully Updated!");
+  };
+
+  // Settings Interaction
+  const handleSettingChange = (key) => {
+    const newSettings = { ...appSettings, [key]: !appSettings[key] };
+    setAppSettings(newSettings);
+    localStorage.setItem("appSettings", JSON.stringify(newSettings));
+    showToast("Settings Updated!");
+  };
+
   const handleNewChat = () => {
     const now = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     });
-    setActiveSessionId(Date.now()); // Generate new ID for the new session
+    setActiveSessionId(Date.now());
     setMessages([
       {
         id: "welcome",
@@ -224,14 +260,8 @@ export default function Chat() {
       setChatHistoryList([]);
       localStorage.removeItem("chatHistory");
       handleNewChat();
+      showToast("History Cleared");
     }
-  };
-
-  // Settings Interaction
-  const handleSettingChange = (key) => {
-    const newSettings = { ...appSettings, [key]: !appSettings[key] };
-    setAppSettings(newSettings);
-    localStorage.setItem("appSettings", JSON.stringify(newSettings));
   };
 
   const sendMessage = async (textOverride = null) => {
@@ -380,6 +410,13 @@ export default function Chat() {
     <div className="fixed inset-0 bg-[#020617] text-slate-200 flex font-sans overflow-hidden selection:bg-teal-500/30">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
 
+      {/* Global Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 bg-teal-500 text-slate-900 px-5 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-3 z-[200] animate-in slide-in-from-bottom-5">
+          <CheckCircle2 size={20} /> {toastMessage}
+        </div>
+      )}
+
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-[100] transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
@@ -505,58 +542,196 @@ export default function Chat() {
           {/* VIEW: FIRST AID */}
           {page === "first-aid" && <FirstAidView />}
 
-          {/* VIEW: PROFILE */}
+          {/* VIEW: PROFILE (NOW EDITABLE) */}
           {page === "profile" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
-              <h2 className="text-3xl font-bold text-white mb-8">
-                Patient Profile
-              </h2>
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-bold text-white">
+                  Patient Profile
+                </h2>
+                {!isEditingProfile ? (
+                  <button
+                    onClick={() => setIsEditingProfile(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-white text-sm font-bold transition-all"
+                  >
+                    <Edit2 size={16} /> Edit Profile
+                  </button>
+                ) : (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setProfileForm(user);
+                        setIsEditingProfile(false);
+                      }}
+                      className="px-4 py-2 text-slate-400 hover:text-white text-sm font-bold transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={saveProfile}
+                      className="flex items-center gap-2 px-5 py-2 bg-teal-500 hover:bg-teal-400 text-slate-900 rounded-xl text-sm font-bold shadow-lg transition-all"
+                    >
+                      <Save size={16} /> Save Changes
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl">
                 <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-slate-700/50 text-center sm:text-left">
                   <div className="w-24 h-24 rounded-full bg-teal-500/10 border-2 border-teal-500/50 flex items-center justify-center text-teal-400 shrink-0">
                     <User size={40} />
                   </div>
-                  <div>
-                    <h3 className="text-3xl font-black text-white tracking-tight">
-                      {fullName}
-                    </h3>
-                    <p className="text-slate-400 font-medium mt-1 flex items-center justify-center sm:justify-start gap-2">
-                      <Mail size={14} /> {user.email || "No email linked"}
-                    </p>
-                    <span className="inline-block mt-3 px-3 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-[10px] font-bold uppercase tracking-widest rounded-full">
-                      Active Member
-                    </span>
+                  <div className="flex-1 w-full">
+                    {isEditingProfile ? (
+                      <div className="space-y-3 w-full sm:max-w-sm">
+                        <input
+                          type="text"
+                          name="name"
+                          value={profileForm.name || ""}
+                          onChange={handleProfileChange}
+                          placeholder="Full Name"
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-2 text-white font-bold"
+                        />
+                        <input
+                          type="email"
+                          name="email"
+                          value={profileForm.email || ""}
+                          onChange={handleProfileChange}
+                          placeholder="Email Address"
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-2 text-slate-300"
+                          disabled
+                        />
+                        <p className="text-[10px] text-slate-500 uppercase font-bold">
+                          Email cannot be changed
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <h3 className="text-3xl font-black text-white tracking-tight">
+                          {fullName}
+                        </h3>
+                        <p className="text-slate-400 font-medium mt-1 flex items-center justify-center sm:justify-start gap-2">
+                          <Mail size={14} /> {user.email || "No email linked"}
+                        </p>
+                        <span className="inline-block mt-3 px-3 py-1 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-[10px] font-bold uppercase tracking-widest rounded-full">
+                          Active Member
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <ProfileDetail
-                    label="Age"
-                    value={user.age ? `${user.age} years old` : "Not specified"}
-                  />
-                  <ProfileDetail
-                    label="Gender"
-                    value={user.gender || "Not specified"}
-                    className="capitalize"
-                  />
-                  <ProfileDetail
-                    label="Blood Group"
-                    value={user.bloodGroup || "Not specified"}
-                  />
-                  <ProfileDetail
-                    label="Phone Number"
-                    value={user.phoneNumber || "Not specified"}
-                  />
-                  <ProfileDetail
-                    label="Home Address"
-                    value={user.address || "Not specified"}
-                    className="sm:col-span-2"
-                  />
+                  {isEditingProfile ? (
+                    <>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                          Age
+                        </label>
+                        <input
+                          type="number"
+                          name="age"
+                          value={profileForm.age || ""}
+                          onChange={handleProfileChange}
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                          Gender
+                        </label>
+                        <select
+                          name="gender"
+                          value={profileForm.gender || ""}
+                          onChange={handleProfileChange}
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white appearance-none"
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                          Blood Group
+                        </label>
+                        <select
+                          name="bloodGroup"
+                          value={profileForm.bloodGroup || ""}
+                          onChange={handleProfileChange}
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white appearance-none"
+                        >
+                          <option value="">Select Blood Group</option>
+                          <option value="A+">A+</option>
+                          <option value="A-">A-</option>
+                          <option value="B+">B+</option>
+                          <option value="B-">B-</option>
+                          <option value="AB+">AB+</option>
+                          <option value="AB-">AB-</option>
+                          <option value="O+">O+</option>
+                          <option value="O-">O-</option>
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                          Phone Number
+                        </label>
+                        <input
+                          type="tel"
+                          name="phoneNumber"
+                          value={profileForm.phoneNumber || ""}
+                          onChange={handleProfileChange}
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2 sm:col-span-2">
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                          Home Address
+                        </label>
+                        <input
+                          type="text"
+                          name="address"
+                          value={profileForm.address || ""}
+                          onChange={handleProfileChange}
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <ProfileDetail
+                        label="Age"
+                        value={
+                          user.age ? `${user.age} years old` : "Not specified"
+                        }
+                      />
+                      <ProfileDetail
+                        label="Gender"
+                        value={user.gender || "Not specified"}
+                        className="capitalize"
+                      />
+                      <ProfileDetail
+                        label="Blood Group"
+                        value={user.bloodGroup || "Not specified"}
+                      />
+                      <ProfileDetail
+                        label="Phone Number"
+                        value={user.phoneNumber || "Not specified"}
+                      />
+                      <ProfileDetail
+                        label="Home Address"
+                        value={user.address || "Not specified"}
+                        className="sm:col-span-2"
+                      />
+                    </>
+                  )}
                 </div>
               </div>
             </div>
           )}
 
-          {/* VIEW: CHAT HISTORY (NOW FULLY FUNCTIONAL) */}
+          {/* VIEW: CHAT HISTORY */}
           {page === "history" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div className="flex justify-between items-center mb-8">
@@ -669,7 +844,7 @@ export default function Chat() {
             </div>
           )}
 
-          {/* VIEW: FACILITIES (NOW INCLUDES MEDICAL STORES) */}
+          {/* VIEW: FACILITIES */}
           {page === "facilities" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2 className="text-3xl font-bold text-white mb-8">
@@ -708,7 +883,7 @@ export default function Chat() {
             </div>
           )}
 
-          {/* VIEW: SETTINGS (NOW FULLY FUNCTIONAL) */}
+          {/* VIEW: SETTINGS */}
           {page === "settings" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2 className="text-3xl font-bold text-white mb-8">
@@ -806,7 +981,7 @@ export default function Chat() {
                     (e.preventDefault(), sendMessage())
                   }
                   placeholder="Describe symptoms..."
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm text-white py-3 resize-none no-scrollbar placeholder-slate-600"
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm text-white py-3 resize-none no-scrollbar placeholder-slate-600 outline-none"
                 />
                 <button
                   onClick={toggleRecording}
