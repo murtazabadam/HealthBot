@@ -21,7 +21,7 @@ export default function Register() {
 
   // OTP States
   const [otpSent, setOtpSent] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false); // FIXED: Added missing state
+  const [emailVerified, setEmailVerified] = useState(false);
   const [timer, setTimer] = useState(0);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputRefs = useRef([]);
@@ -80,7 +80,7 @@ export default function Register() {
     }
   };
 
-  // FIXED: Restored Verify OTP Function
+  // TEAMMATE'S FIX: Updated to /verify-registration-otp endpoint
   const handleVerifyOTP = async () => {
     const otpString = otp.join("");
     if (otpString.length < 6) {
@@ -91,14 +91,13 @@ export default function Register() {
     try {
       const safeEmail = formData.email.trim().toLowerCase();
       const res = await fetch(
-        "https://healthbot-production-3c7d.up.railway.app/api/auth/verify-otp",
+        "https://healthbot-production-3c7d.up.railway.app/api/auth/verify-registration-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: safeEmail,
             otp: otpString,
-            code: otpString,
           }),
         },
       );
@@ -108,6 +107,7 @@ export default function Register() {
       setEmailVerified(true);
       setOtpSent(false); // Hide the OTP boxes
       setTimer(0);
+      setErrorMessage("");
     } catch (err) {
       setErrorMessage(err.message);
     } finally {
@@ -177,7 +177,6 @@ export default function Register() {
         ...formData,
         email: safeEmail,
         otp: otpString,
-        code: otpString,
       };
 
       const res = await fetch(
