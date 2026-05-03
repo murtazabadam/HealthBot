@@ -21,6 +21,7 @@ export default function Register() {
 
   // OTP States
   const [otpSent, setOtpSent] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false); // FIXED: Added missing state
   const [timer, setTimer] = useState(0);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputRefs = useRef([]);
@@ -59,7 +60,6 @@ export default function Register() {
     setLoading(true);
     setErrorMessage("");
     try {
-      // BULLETPROOF: Force lowercase and remove accidental spaces
       const safeEmail = formData.email.trim().toLowerCase();
 
       const res = await fetch(
@@ -80,6 +80,41 @@ export default function Register() {
     }
   };
 
+  // FIXED: Restored Verify OTP Function
+  const handleVerifyOTP = async () => {
+    const otpString = otp.join("");
+    if (otpString.length < 6) {
+      return setErrorMessage("Please enter the complete 6-digit OTP.");
+    }
+    setLoading(true);
+    setErrorMessage("");
+    try {
+      const safeEmail = formData.email.trim().toLowerCase();
+      const res = await fetch(
+        "https://healthbot-production-3c7d.up.railway.app/api/auth/verify-otp",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: safeEmail,
+            otp: otpString,
+            code: otpString,
+          }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Invalid OTP. Try again.");
+
+      setEmailVerified(true);
+      setOtpSent(false); // Hide the OTP boxes
+      setTimer(0);
+    } catch (err) {
+      setErrorMessage(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // OTP 6-box handlers
   const handleOtpChange = (index, e) => {
     const value = e.target.value;
@@ -87,6 +122,7 @@ export default function Register() {
 
     if (!numericValue && value !== "") return;
 
+    // Handle Pasting or Mobile Auto-fill
     if (numericValue.length > 1) {
       const digits = numericValue.slice(0, 6).split("");
       const newOtp = ["", "", "", "", "", ""];
@@ -99,6 +135,7 @@ export default function Register() {
       return;
     }
 
+    // Handle Single Digit
     const newOtp = [...otp];
     newOtp[index] = numericValue.slice(-1);
     setOtp(newOtp);
@@ -116,6 +153,11 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    if (!emailVerified) {
+      return setErrorMessage(
+        "Please verify your email via OTP before creating an account.",
+      );
+    }
     if (formData.password !== formData.confirmPassword) {
       return setErrorMessage("Passwords do not match.");
     }
@@ -126,23 +168,16 @@ export default function Register() {
       return setErrorMessage("You must agree to the Terms of Service.");
     }
 
-    const otpString = otp.join("");
-    if (!otpSent || otpString.length < 6) {
-      return setErrorMessage(
-        "Please send and enter the 6-digit OTP to verify your email.",
-      );
-    }
-
     setLoading(true);
     setErrorMessage("");
     try {
-      // BULLETPROOF: Force exact same lowercase email, and send OTP under both variable names
+      const otpString = otp.join("");
       const safeEmail = formData.email.trim().toLowerCase();
       const payload = {
         ...formData,
         email: safeEmail,
         otp: otpString,
-        code: otpString, // Added code variable just in case backend expects it
+        code: otpString,
       };
 
       const res = await fetch(
@@ -157,7 +192,9 @@ export default function Register() {
       const data = await res.json();
 
       if (!res.ok)
-        throw new Error(data.message || "Registration failed. Check your OTP.");
+        throw new Error(
+          data.message || "Registration failed. Check your details.",
+        );
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
@@ -273,34 +310,40 @@ export default function Register() {
                       type="email"
                       name="email"
                       required
+                      disabled={emailVerified}
                       placeholder="Enter email"
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all disabled:opacity-50"
                       style={{ colorScheme: "dark" }}
                     />
+                    {emailVerified && (
+                      <CheckCircle2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-teal-400" />
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    disabled={timer > 0 || loading}
-                    onClick={handleSendOTP}
-                    className="shrink-0 flex items-center justify-center gap-1.5 h-12 sm:h-auto px-4 bg-[#0B1120] border border-teal-500/50 text-teal-400 rounded-xl text-xs font-bold hover:bg-teal-500/10 transition-all disabled:opacity-50 whitespace-nowrap shadow-sm"
-                  >
-                    <Send size={14} className="shrink-0" />
-                    <span>
-                      {timer > 0
-                        ? `Resend in ${timer}s`
-                        : otpSent
-                          ? "Resend OTP"
-                          : "Send OTP"}
-                    </span>
-                  </button>
+                  {!emailVerified && (
+                    <button
+                      type="button"
+                      disabled={timer > 0 || loading}
+                      onClick={handleSendOTP}
+                      className="shrink-0 flex items-center justify-center gap-1.5 h-12 sm:h-auto px-4 bg-[#0B1120] border border-teal-500/50 text-teal-400 rounded-xl text-xs font-bold hover:bg-teal-500/10 transition-all disabled:opacity-50 whitespace-nowrap shadow-sm"
+                    >
+                      <Send size={14} className="shrink-0" />
+                      <span>
+                        {timer > 0
+                          ? `Resend in ${timer}s`
+                          : otpSent
+                            ? "Resend OTP"
+                            : "Send OTP"}
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* OTP Entry Section (Centered layout) */}
-            {otpSent && (
+            {otpSent && !emailVerified && (
               <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in duration-300 bg-slate-800/30 p-5 border border-slate-700/50 rounded-xl w-full mb-2">
                 <label className="text-xs font-bold text-teal-400 flex items-center justify-center gap-2 uppercase tracking-wider w-full">
                   <ShieldCheck size={14} /> Enter Verification Code
@@ -321,6 +364,14 @@ export default function Register() {
                     />
                   ))}
                 </div>
+                <button
+                  type="button"
+                  disabled={loading || otp.join("").length < 6}
+                  onClick={handleVerifyOTP}
+                  className="w-full sm:w-[320px] bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-2.5 rounded-lg transition-all shadow-lg shadow-teal-500/20 disabled:opacity-50 mt-2 text-sm"
+                >
+                  {loading ? "Verifying..." : "Verify OTP"}
+                </button>
               </div>
             )}
 
