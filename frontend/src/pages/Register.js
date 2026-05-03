@@ -78,7 +78,7 @@ export default function Register() {
     }
   };
 
-  // NEW FUNCTION: Verify OTP specifically
+  // Verify OTP specifically
   const handleVerifyOTP = async () => {
     const otpString = otp.join("");
     if (otpString.length < 6) {
