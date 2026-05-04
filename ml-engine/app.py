@@ -18,7 +18,6 @@ from sklearn.model_selection import train_test_split, cross_val_score, Stratifie
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.class_weight import compute_class_weight
-from imblearn.over_sampling import SMOTE
 import os, joblib, warnings
 warnings.filterwarnings('ignore')
 
@@ -187,30 +186,21 @@ def extract_symptoms(text):
 le = LabelEncoder()
 y_encoded = le.fit_transform(y)
 
+
 # ── Train/test split ───────────────────────────────────────────────────────────
 print("Splitting data...")
 X_train, X_test, y_train, y_test = train_test_split(
     X, y_encoded, test_size=0.2, random_state=42, stratify=y_encoded
 )
 
-# ── Apply SMOTE for class balance ──────────────────────────────────────────────
-print("Balancing classes with SMOTE...")
-try:
-    smote = SMOTE(random_state=42, k_neighbors=min(3, min(np.bincount(y_train)) - 1))
-    X_train_bal, y_train_bal = smote.fit_resample(X_train, y_train)
-    print(f"After SMOTE: {len(X_train_bal)} training samples")
-except Exception as e:
-    print(f"SMOTE skipped: {e}")
-    X_train_bal, y_train_bal = X_train, y_train
-
-# ── Define all models ──────────────────────────────────────────────────────────
+# ── Train all models (NO SMOTE - data is already balanced) ────────────────────
 print("\nTraining all models...")
 
 models = {
     'RandomForest': RandomForestClassifier(
         n_estimators=300, max_depth=None,
         min_samples_split=2, min_samples_leaf=1,
-        random_state=42, n_jobs=-1, class_weight='balanced'
+        random_state=42, n_jobs=-1
     ),
     'GradientBoosting': GradientBoostingClassifier(
         n_estimators=200, learning_rate=0.1,
@@ -218,22 +208,18 @@ models = {
     ),
     'SVM': SVC(
         kernel='rbf', probability=True,
-        random_state=42, C=10, class_weight='balanced'
+        random_state=42, C=10
     ),
     'ExtraTrees': ExtraTreesClassifier(
-        n_estimators=300, random_state=42,
-        n_jobs=-1, class_weight='balanced'
+        n_estimators=300, random_state=42, n_jobs=-1
     ),
     'NaiveBayes': GaussianNB(),
     'KNN': KNeighborsClassifier(
-        n_neighbors=5, weights='distance', n_jobs=-1
+        n_neighbors=3, weights='distance', n_jobs=-1
     ),
-    'DecisionTree': DecisionTreeClassifier(
-        random_state=42, class_weight='balanced'
-    ),
+    'DecisionTree': DecisionTreeClassifier(random_state=42),
     'LogisticRegression': LogisticRegression(
-        random_state=42, max_iter=1000,
-        class_weight='balanced', n_jobs=-1
+        random_state=42, max_iter=2000, n_jobs=-1
     ),
 }
 
@@ -241,25 +227,23 @@ if XGBOOST_AVAILABLE:
     models['XGBoost'] = XGBClassifier(
         n_estimators=200, learning_rate=0.1,
         max_depth=5, random_state=42,
-        use_label_encoder=False,
         eval_metric='mlogloss', n_jobs=-1
     )
 
 if LIGHTGBM_AVAILABLE:
     models['LightGBM'] = LGBMClassifier(
         n_estimators=200, learning_rate=0.1,
-        random_state=42, n_jobs=-1,
-        class_weight='balanced', verbose=-1
+        random_state=42, n_jobs=-1, verbose=-1
     )
 
-# ── Train and evaluate all models ─────────────────────────────────────────────
+# ── Train and evaluate ─────────────────────────────────────────────────────────
 trained_models = {}
 model_scores = {}
 
 for name, model in models.items():
     try:
-        print(f"Training {name}...", end=' ')
-        model.fit(X_train_bal, y_train_bal)
+        print(f"Training {name}...", end=' ', flush=True)
+        model.fit(X_train, y_train)
         acc = accuracy_score(y_test, model.predict(X_test))
         model_scores[name] = acc
         trained_models[name] = model
@@ -273,7 +257,9 @@ best_model = trained_models[best_model_name]
 print(f"\nBest model: {best_model_name} ({model_scores[best_model_name]*100:.1f}%)")
 
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-cv_scores = cross_val_score(best_model, X, y_encoded, cv=cv, scoring='accuracy', n_jobs=-1)
+cv_scores = cross_val_score(
+    best_model, X, y_encoded, cv=cv, scoring='accuracy', n_jobs=-1
+)
 print(f"Cross-validation: {cv_scores.mean()*100:.1f}% ± {cv_scores.std()*100:.1f}%")
 
 # ── Build final ensemble from top 5 models ─────────────────────────────────────
@@ -284,7 +270,6 @@ print("Top 5 models:")
 for name, score in top5:
     print(f"  {name}: {score*100:.1f}%")
 
-# Weighted ensemble based on accuracy
 ensemble_estimators = [(name, trained_models[name]) for name, _ in top5]
 ensemble_weights = [score for _, score in top5]
 
@@ -295,7 +280,7 @@ ensemble = VotingClassifier(
     n_jobs=-1
 )
 print("Training final ensemble...")
-ensemble.fit(X_train_bal, y_train_bal)
+ensemble.fit(X_train, y_train)
 ensemble_acc = accuracy_score(y_test, ensemble.predict(X_test))
 print(f"Ensemble accuracy: {ensemble_acc*100:.1f}%")
 
