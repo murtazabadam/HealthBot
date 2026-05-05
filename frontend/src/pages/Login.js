@@ -98,12 +98,12 @@ export default function Login() {
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                 <input
-                  type="text" // Changed from "email" so HTML doesn't block usernames
+                  type="text"
                   placeholder="Enter your email or username"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="username" // This tells Chrome this is the main login identifier
+                  autoComplete="off"
                   className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
               </div>
@@ -130,6 +130,7 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
                   className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
                 <button

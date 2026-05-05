@@ -313,7 +313,7 @@ export default function Register() {
                       placeholder="Enter email"
                       value={formData.email}
                       onChange={handleChange}
-                      autoComplete="email" // <-- THIS IS THE MAGIC LINE TO FIX CHROME
+                      autoComplete="nope"
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all disabled:opacity-50"
                       style={{ colorScheme: "dark" }}
                     />
@@ -390,6 +390,7 @@ export default function Register() {
                     placeholder="Create password"
                     value={formData.password}
                     onChange={handleChange}
+                    autoComplete="new-password"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                   <button
