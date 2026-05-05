@@ -5,6 +5,11 @@ import { Activity, Mail, Lock, Eye, EyeOff } from "lucide-react";
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Controlled input states to prevent Chrome from auto-filling
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
   const navigate = useNavigate();
 
   const handleGoogleLogin = () => {
@@ -15,8 +20,7 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMessage("");
-    const email = e.target[0].value;
-    const password = e.target[1].value;
+
     try {
       const res = await fetch(
         "https://healthbot-production-3c7d.up.railway.app/api/auth/login",
@@ -97,6 +101,8 @@ export default function Login() {
                   type="email"
                   placeholder="Enter your email"
                   required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
               </div>
@@ -121,6 +127,8 @@ export default function Login() {
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
                 <button
