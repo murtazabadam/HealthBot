@@ -28,12 +28,7 @@ except ImportError:
     XGBOOST_AVAILABLE = False
     print("XGBoost not available")
 
-try:
-    from lightgbm import LGBMClassifier
-    LIGHTGBM_AVAILABLE = True
-except ImportError:
-    LIGHTGBM_AVAILABLE = False
-    print("LightGBM not available")
+LIGHTGBM_AVAILABLE = False  # Disabled — not compatible with Railway
 
 app = Flask(__name__)
 CORS(app)
@@ -230,11 +225,7 @@ if XGBOOST_AVAILABLE:
         eval_metric='mlogloss', n_jobs=-1
     )
 
-if LIGHTGBM_AVAILABLE:
-    models['LightGBM'] = LGBMClassifier(
-        n_estimators=200, learning_rate=0.1,
-        random_state=42, n_jobs=-1, verbose=-1
-    )
+
 
 # ── Train and evaluate ─────────────────────────────────────────────────────────
 trained_models = {}
