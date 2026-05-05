@@ -442,6 +442,19 @@ export default function Register() {
                   placeholder="Age"
                   value={formData.age}
                   onChange={handleChange}
+                  min="1"
+                  max="120"
+                  onKeyDown={(e) => {
+                    // Prevents typing negative signs, plus signs, or 'e' (math exponent)
+                    if (
+                      e.key === "-" ||
+                      e.key === "+" ||
+                      e.key === "e" ||
+                      e.key === "E"
+                    ) {
+                      e.preventDefault();
+                    }
+                  }}
                   className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
               </div>
