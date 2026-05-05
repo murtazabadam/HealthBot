@@ -11,9 +11,7 @@ from sklearn.ensemble import (
 )
 from sklearn.svm import SVC
 from sklearn.naive_bayes import GaussianNB
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.preprocessing import LabelEncoder
@@ -193,12 +191,11 @@ print("\nTraining all models...")
 
 models = {
     'RandomForest': RandomForestClassifier(
-        n_estimators=300, max_depth=None,
-        min_samples_split=2, min_samples_leaf=1,
-        random_state=42, n_jobs=-1
+        n_estimators=200, max_depth=None,
+        min_samples_split=2, random_state=42, n_jobs=1
     ),
     'GradientBoosting': GradientBoostingClassifier(
-        n_estimators=200, learning_rate=0.1,
+        n_estimators=150, learning_rate=0.1,
         max_depth=5, random_state=42
     ),
     'SVM': SVC(
@@ -206,23 +203,18 @@ models = {
         random_state=42, C=10
     ),
     'ExtraTrees': ExtraTreesClassifier(
-        n_estimators=300, random_state=42, n_jobs=-1
+        n_estimators=200, random_state=42, n_jobs=1
     ),
     'NaiveBayes': GaussianNB(),
-    'KNN': KNeighborsClassifier(
-        n_neighbors=3, weights='distance', n_jobs=-1
-    ),
     'DecisionTree': DecisionTreeClassifier(random_state=42),
-    'LogisticRegression': LogisticRegression(
-        random_state=42, max_iter=2000, n_jobs=-1
-    ),
 }
 
 if XGBOOST_AVAILABLE:
     models['XGBoost'] = XGBClassifier(
-        n_estimators=200, learning_rate=0.1,
-        max_depth=5, random_state=42,
-        eval_metric='mlogloss', n_jobs=-1
+        n_estimators=150, learning_rate=0.1,
+        max_depth=4, random_state=42,
+        eval_metric='mlogloss', n_jobs=1,
+        tree_method='hist'
     )
 
 
