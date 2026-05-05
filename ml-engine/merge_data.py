@@ -36,22 +36,9 @@ for _, row in df1.iterrows():
 merged_df = pd.DataFrame(rows, columns=ALL_SYMPTOMS + ['Disease'])
 
 # ── Add augmented samples for better generalization ───────────────────────────
-print("Augmenting data...")
-augmented = []
-for _, row in merged_df.iterrows():
-    disease = row['Disease']
-    features = row[ALL_SYMPTOMS].values.copy()
-    # Create 2 augmented versions per row with slight noise
-    for _ in range(2):
-        noisy = features.copy()
-        # Randomly drop 1-2 symptoms (10% chance each)
-        for i in range(len(noisy)):
-            if noisy[i] == 1 and np.random.random() < 0.10:
-                noisy[i] = 0
-        augmented.append(list(noisy) + [disease])
-
-aug_df = pd.DataFrame(augmented, columns=ALL_SYMPTOMS + ['Disease'])
-final_df = pd.concat([merged_df, aug_df], ignore_index=True)
+# Remove augmentation section entirely
+# Just save the original data
+final_df = merged_df
 
 # Save
 merged_path = os.path.join(DATA, 'merged_dataset.csv')

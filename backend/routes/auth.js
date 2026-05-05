@@ -38,9 +38,9 @@ if (!email) return res.status(400).json({ message: 'Email is required' });
 
     // Check if already registered and verified
     const existingUser = await User.findOne({ email });
-    if (existingUser && existingUser.isVerified) {
-      return res.status(400).json({ message: 'Email already registered. Please login.' });
-    }
+if (existingUser && existingUser.isVerified) {
+  return res.status(400).json({ message: 'Email already registered. Please login.' });
+}
 
     const otp = generateOTP();
     const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
@@ -337,5 +337,75 @@ router.get('/google/callback',
     }
   }
 );
+const authMiddleware = require('../middleware/auth');
 
+// ── GET PROFILE ────────────────────────────────────────────────────────────────
+router.get('/profile', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password -verificationOTP -resetOTP');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── UPDATE PROFILE ─────────────────────────────────────────────────────────────
+router.put('/profile', authMiddleware, async (req, res) => {
+  try {
+    const { name, age, gender, bloodGroup, address, phoneNumber } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (name) user.name = name;
+    if (age !== undefined) user.age = age;
+    if (gender) user.gender = gender;
+    if (bloodGroup !== undefined) user.bloodGroup = bloodGroup;
+    if (address !== undefined) user.address = address;
+    if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
+
+    await user.save();
+
+    // Update localStorage user data
+    const updatedUser = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar
+    };
+
+    res.json({
+      message: 'Profile updated successfully!',
+      user: updatedUser,
+      profile: {
+        name: user.name, email: user.email,
+        age: user.age, gender: user.gender,
+        bloodGroup: user.bloodGroup, address: user.address,
+        phoneNumber: user.phoneNumber, avatar: user.avatar,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── CHANGE PASSWORD ────────────────────────────────────────────────────────────
+router.put('/change-password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user.id);
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(400).json({ message: 'Current password is incorrect' });
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ message: 'Password changed successfully!' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 module.exports = router;
