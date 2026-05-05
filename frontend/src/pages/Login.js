@@ -93,16 +93,17 @@ export default function Login() {
 
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Email Address
+                Email or Username
               </label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                 <input
-                  type="email"
-                  placeholder="Enter your email"
+                  type="text" // Changed from "email" so HTML doesn't block usernames
+                  placeholder="Enter your email or username"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="username" // This tells Chrome this is the main login identifier
                   className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
               </div>

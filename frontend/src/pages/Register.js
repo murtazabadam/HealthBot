@@ -313,6 +313,7 @@ export default function Register() {
                       placeholder="Enter email"
                       value={formData.email}
                       onChange={handleChange}
+                      autoComplete="email" // <-- THIS IS THE MAGIC LINE TO FIX CHROME
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all disabled:opacity-50"
                       style={{ colorScheme: "dark" }}
                     />
@@ -445,7 +446,6 @@ export default function Register() {
                   min="1"
                   max="120"
                   onKeyDown={(e) => {
-                    // Prevents typing negative signs, plus signs, or 'e' (math exponent)
                     if (
                       e.key === "-" ||
                       e.key === "+" ||
@@ -455,7 +455,8 @@ export default function Register() {
                       e.preventDefault();
                     }
                   }}
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                  // Notice the new classes added at the end of this line:
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
               <div className="flex flex-col gap-2">
