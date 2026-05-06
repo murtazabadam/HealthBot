@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Activity,
   MessageSquare,
@@ -35,6 +35,10 @@ import {
   Edit2,
   Save,
   CheckCircle2,
+  Lock,
+  Eye,
+  EyeOff,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function Chat() {
@@ -53,7 +57,6 @@ export default function Chat() {
     ),
   );
 
-  // FIX: Make User a state variable so it updates live on the screen
   const [user, setUser] = useState(() =>
     JSON.parse(localStorage.getItem("user") || "{}"),
   );
@@ -62,6 +65,18 @@ export default function Chat() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState(user);
   const [toastMessage, setToastMessage] = useState("");
+
+  // Security & Password States
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
@@ -213,11 +228,73 @@ export default function Chat() {
     setProfileForm({ ...profileForm, [e.target.name]: e.target.value });
   };
 
-  const saveProfile = () => {
-    setUser(profileForm);
-    localStorage.setItem("user", JSON.stringify(profileForm));
-    setIsEditingProfile(false);
-    showToast("Profile Successfully Updated!");
+  const saveProfile = async () => {
+    try {
+      const res = await fetch(
+        `https://healthbot-production-3c7d.up.railway.app/api/auth/profile`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(profileForm),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      setUser(profileForm);
+      localStorage.setItem("user", JSON.stringify(profileForm));
+      setIsEditingProfile(false);
+      showToast("Profile Successfully Updated!");
+    } catch (err) {
+      showToast(err.message || "Failed to save profile.");
+    }
+  };
+
+  // Password Change Logic
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      showToast("New passwords do not match!");
+      return;
+    }
+    if (passwordData.newPassword.length < 8) {
+      showToast("Password must be at least 8 characters!");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      const res = await fetch(
+        `https://healthbot-production-3c7d.up.railway.app/api/auth/change-password`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            currentPassword: passwordData.currentPassword,
+            newPassword: passwordData.newPassword,
+          }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+
+      showToast("Password changed successfully!");
+      setShowPasswordForm(false);
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (err) {
+      showToast(err.message || "Failed to change password.");
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   // Settings Interaction
@@ -459,22 +536,22 @@ export default function Chat() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex flex-col items-end text-right">
-              <Link
-                to="/profile"
+              <button
+                onClick={() => handleNavClick("profile")}
                 className="text-sm text-slate-400 hover:text-teal-400 transition-colors font-bold"
               >
                 {user.name}
-              </Link>
+              </button>
               <span className="text-[8px] text-slate-500 font-bold uppercase opacity-60 hidden sm:block">
                 Verified User
               </span>
             </div>
-            <Link
-              to="/profile"
+            <button
+              onClick={() => handleNavClick("profile")}
               className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/80 shadow-md hover:border-teal-500/50 transition-colors"
             >
               <UserCircle className="text-slate-400" size={24} />
-            </Link>
+            </button>
           </div>
         </header>
 
@@ -544,7 +621,7 @@ export default function Chat() {
           {/* VIEW: FIRST AID */}
           {page === "first-aid" && <FirstAidView />}
 
-          {/* VIEW: PROFILE (NOW EDITABLE) */}
+          {/* VIEW: PROFILE (NOW FULLY EDITABLE WITH SETTINGS) */}
           {page === "profile" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div className="flex justify-between items-center mb-8">
@@ -579,7 +656,7 @@ export default function Chat() {
                 )}
               </div>
 
-              <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl">
+              <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl mb-6">
                 <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-slate-700/50 text-center sm:text-left">
                   <div className="w-24 h-24 rounded-full bg-teal-500/10 border-2 border-teal-500/50 flex items-center justify-center text-teal-400 shrink-0">
                     <User size={40} />
@@ -593,7 +670,7 @@ export default function Chat() {
                           value={profileForm.name || ""}
                           onChange={handleProfileChange}
                           placeholder="Full Name"
-                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-2 text-white font-bold"
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-2 text-white font-bold outline-none"
                         />
                         <input
                           type="email"
@@ -601,7 +678,7 @@ export default function Chat() {
                           value={profileForm.email || ""}
                           onChange={handleProfileChange}
                           placeholder="Email Address"
-                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-2 text-slate-300"
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-2 text-slate-300 outline-none"
                           disabled
                         />
                         <p className="text-[10px] text-slate-500 uppercase font-bold">
@@ -634,9 +711,21 @@ export default function Chat() {
                         <input
                           type="number"
                           name="age"
+                          min="1"
+                          max="120"
+                          onKeyDown={(e) => {
+                            if (
+                              e.key === "-" ||
+                              e.key === "+" ||
+                              e.key === "e" ||
+                              e.key === "E"
+                            ) {
+                              e.preventDefault();
+                            }
+                          }}
                           value={profileForm.age || ""}
                           onChange={handleProfileChange}
-                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white"
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                       </div>
                       <div className="flex flex-col gap-2">
@@ -647,11 +736,12 @@ export default function Chat() {
                           name="gender"
                           value={profileForm.gender || ""}
                           onChange={handleProfileChange}
-                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white appearance-none"
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white appearance-none outline-none"
                         >
                           <option value="">Select Gender</option>
                           <option value="male">Male</option>
                           <option value="female">Female</option>
+                          <option value="other">Other</option>
                         </select>
                       </div>
                       <div className="flex flex-col gap-2">
@@ -662,7 +752,7 @@ export default function Chat() {
                           name="bloodGroup"
                           value={profileForm.bloodGroup || ""}
                           onChange={handleProfileChange}
-                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white appearance-none"
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white appearance-none outline-none"
                         >
                           <option value="">Select Blood Group</option>
                           <option value="A+">A+</option>
@@ -684,7 +774,7 @@ export default function Chat() {
                           name="phoneNumber"
                           value={profileForm.phoneNumber || ""}
                           onChange={handleProfileChange}
-                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white"
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white outline-none"
                         />
                       </div>
                       <div className="flex flex-col gap-2 sm:col-span-2">
@@ -696,7 +786,7 @@ export default function Chat() {
                           name="address"
                           value={profileForm.address || ""}
                           onChange={handleProfileChange}
-                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white"
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white outline-none"
                         />
                       </div>
                     </>
@@ -729,6 +819,171 @@ export default function Chat() {
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* SECURITY SETTINGS / CHANGE PASSWORD CARD */}
+              <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-8 shadow-2xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="h-5 w-5 text-teal-400" />
+                    <h2 className="text-lg font-bold text-white">
+                      Security Settings
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowPasswordForm(!showPasswordForm);
+                    }}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-700 transition-all"
+                  >
+                    <Lock className="h-4 w-4" />
+                    {showPasswordForm ? "Cancel" : "Change Password"}
+                  </button>
+                </div>
+
+                {!showPasswordForm ? (
+                  <p className="text-slate-400 text-xs sm:text-sm">
+                    Your password is securely encrypted. Click "Change Password"
+                    to update it.
+                  </p>
+                ) : (
+                  <form
+                    onSubmit={handlePasswordChange}
+                    className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300"
+                    autoComplete="off"
+                  >
+                    <div className="absolute opacity-0 w-0 h-0 overflow-hidden pointer-events-none -z-50">
+                      <input
+                        type="text"
+                        name="prevent_autofill_email"
+                        autoComplete="username"
+                        tabIndex="-1"
+                      />
+                      <input
+                        type="password"
+                        name="prevent_autofill_password"
+                        autoComplete="current-password"
+                        tabIndex="-1"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        Current Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <input
+                          type={showCurrentPw ? "text" : "password"}
+                          required
+                          value={passwordData.currentPassword}
+                          onChange={(e) =>
+                            setPasswordData({
+                              ...passwordData,
+                              currentPassword: e.target.value,
+                            })
+                          }
+                          placeholder="Enter current password"
+                          autoComplete="off"
+                          className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPw(!showCurrentPw)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                        >
+                          {showCurrentPw ? (
+                            <EyeOff size={16} />
+                          ) : (
+                            <Eye size={16} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        New Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <input
+                          type={showNewPw ? "text" : "password"}
+                          required
+                          value={passwordData.newPassword}
+                          onChange={(e) =>
+                            setPasswordData({
+                              ...passwordData,
+                              newPassword: e.target.value,
+                            })
+                          }
+                          placeholder="Enter new password (min 8 chars)"
+                          autoComplete="new-password"
+                          className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPw(!showNewPw)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                        >
+                          {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        Confirm New Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <input
+                          type={showConfirmPw ? "text" : "password"}
+                          required
+                          value={passwordData.confirmPassword}
+                          onChange={(e) =>
+                            setPasswordData({
+                              ...passwordData,
+                              confirmPassword: e.target.value,
+                            })
+                          }
+                          placeholder="Confirm new password"
+                          autoComplete="new-password"
+                          className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPw(!showConfirmPw)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                        >
+                          {showConfirmPw ? (
+                            <EyeOff size={16} />
+                          ) : (
+                            <Eye size={16} />
+                          )}
+                        </button>
+                      </div>
+                      {passwordData.confirmPassword && (
+                        <p
+                          className={`text-[10px] sm:text-xs mt-1 ${passwordData.newPassword === passwordData.confirmPassword ? "text-emerald-400" : "text-rose-400"}`}
+                        >
+                          {passwordData.newPassword ===
+                          passwordData.confirmPassword
+                            ? "✓ Passwords match"
+                            : "✗ Passwords do not match"}
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={savingPassword}
+                      className="w-full bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-900 font-extrabold py-3.5 rounded-xl transition-all shadow-lg hover:brightness-110 active:scale-[0.98] disabled:opacity-50 mt-2 uppercase tracking-wide text-sm"
+                    >
+                      {savingPassword ? "Updating..." : "Update Password"}
+                    </button>
+                  </form>
+                )}
               </div>
             </div>
           )}
