@@ -27,10 +27,12 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
+
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
-  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false); // The 3rd Eye state
+
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -162,21 +164,26 @@ export default function Profile() {
     );
 
   return (
-    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
+    // THE MOBILE FIX: overflow-x-hidden and w-full prevents horizontal scrolling!
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative overflow-x-hidden w-full">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-teal-500/10 rounded-full blur-[80px] sm:blur-[120px] pointer-events-none" />
 
       {/* Nav */}
-      <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 lg:px-12 w-full bg-[#0B1120]/80 backdrop-blur-md border-b border-slate-800/50">
+      <nav className="sticky top-0 z-50 flex items-center justify-between px-4 sm:px-6 py-4 lg:px-12 w-full bg-[#0B1120]/80 backdrop-blur-md border-b border-slate-800/50">
         <Link to="/" className="flex items-center gap-2">
-          <Activity className="h-7 w-7 text-teal-400" />
-          <span className="text-xl font-bold text-white">HealthBot</span>
+          <Activity className="h-6 w-6 sm:h-7 sm:w-7 text-teal-400" />
+          <span className="text-lg sm:text-xl font-bold text-white">
+            HealthBot
+          </span>
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link
             to="/chat"
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-teal-400 transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-slate-400 hover:text-teal-400 transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Chat
+            <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />{" "}
+            <span className="hidden sm:inline">Back to Chat</span>
+            <span className="sm:hidden">Chat</span>
           </Link>
           <button
             onClick={logout}
@@ -187,84 +194,91 @@ export default function Profile() {
         </div>
       </nav>
 
-      <main className="max-w-3xl mx-auto px-4 py-10 z-10 relative">
+      <main className="max-w-3xl mx-auto px-4 py-8 sm:py-10 z-10 relative">
         {/* Message */}
         {message.text && (
           <div
-            className={`mb-6 p-4 rounded-xl text-sm font-medium text-center ${
+            className={`mb-6 p-4 rounded-xl text-sm font-medium text-center animate-in fade-in zoom-in duration-300 ${
               message.type === "success"
-                ? "bg-green-500/10 border border-green-500/30 text-green-400"
-                : "bg-red-500/10 border border-red-500/30 text-red-400"
+                ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+                : "bg-rose-500/10 border border-rose-500/30 text-rose-400"
             }`}
           >
             {message.type === "success" && (
-              <CheckCircle2 className="inline h-4 w-4 mr-2" />
+              <CheckCircle2 className="inline h-4 w-4 mr-2 mb-0.5" />
             )}
             {message.text}
           </div>
         )}
 
         {/* Profile Card */}
-        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 mb-6">
+        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-8 mb-6 shadow-2xl">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          {/* Header - THE MOBILE FIX: flex-col on mobile stops buttons from squishing! */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4 mb-8">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center">
-                <User className="h-8 w-8 text-teal-400" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center">
+                <User className="h-6 w-6 sm:h-8 sm:w-8 text-teal-400" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">
+              <div className="overflow-hidden">
+                <h1 className="text-xl sm:text-2xl font-bold text-white truncate">
                   {profile?.name}
                 </h1>
-                <p className="text-slate-400 text-sm">{profile?.email}</p>
-                <p className="text-xs text-teal-400 mt-1">
+                <p className="text-slate-400 text-xs sm:text-sm truncate">
+                  {profile?.email}
+                </p>
+                <p className="text-[10px] sm:text-xs text-teal-400 mt-1 font-medium">
                   Member since{" "}
-                  {new Date(profile?.createdAt).toLocaleDateString("en-US", {
-                    month: "long",
+                  {new Date(
+                    profile?.createdAt || Date.now(),
+                  ).toLocaleDateString("en-US", {
+                    month: "short",
                     year: "numeric",
                   })}
                 </p>
               </div>
             </div>
-            {!editing ? (
-              <button
-                onClick={() => {
-                  setEditing(true);
-                  setMessage({ text: "", type: "" });
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-teal-500/10 border border-teal-500/30 text-teal-400 rounded-xl text-sm font-bold hover:bg-teal-500/20 transition-all"
-              >
-                <Edit3 className="h-4 w-4" /> Edit
-              </button>
-            ) : (
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-slate-900 rounded-xl text-sm font-bold hover:bg-teal-400 transition-all disabled:opacity-50"
-                >
-                  <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save"}
-                </button>
+
+            <div className="w-full sm:w-auto">
+              {!editing ? (
                 <button
                   onClick={() => {
-                    setEditing(false);
+                    setEditing(true);
                     setMessage({ text: "", type: "" });
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-600 transition-all"
+                  className="w-full sm:w-auto flex justify-center items-center gap-2 px-6 py-2.5 bg-teal-500/10 border border-teal-500/30 text-teal-400 rounded-xl text-sm font-bold hover:bg-teal-500/20 transition-all"
                 >
-                  <X className="h-4 w-4" /> Cancel
+                  <Edit3 className="h-4 w-4" /> Edit Profile
                 </button>
-              </div>
-            )}
+              ) : (
+                <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 sm:flex-none flex justify-center items-center gap-2 px-6 py-2.5 bg-teal-500 text-slate-900 rounded-xl text-sm font-bold hover:bg-teal-400 transition-all disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditing(false);
+                      setMessage({ text: "", type: "" });
+                    }}
+                    className="flex-1 sm:flex-none flex justify-center items-center gap-2 px-6 py-2.5 bg-slate-700 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-600 transition-all"
+                  >
+                    <X className="h-4 w-4" /> Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Profile Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* Profile Fields Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
             {/* Name */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <User className="h-3 w-3" /> Full Name
               </label>
               {editing ? (
@@ -277,7 +291,7 @@ export default function Profile() {
                   className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
               ) : (
-                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl">
+                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl border border-transparent truncate">
                   {profile?.name || "—"}
                 </p>
               )}
@@ -285,20 +299,20 @@ export default function Profile() {
 
             {/* Email (readonly) */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Mail className="h-3 w-3" /> Email Address
               </label>
-              <p className="text-slate-400 text-sm py-3 px-4 bg-slate-800/30 rounded-xl flex items-center gap-2">
-                {profile?.email}
+              <div className="text-slate-400 text-sm py-3 px-4 bg-slate-800/30 rounded-xl flex items-center justify-between border border-transparent overflow-hidden">
+                <span className="truncate mr-2">{profile?.email}</span>
                 {profile?.isVerified && (
-                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
                 )}
-              </p>
+              </div>
             </div>
 
             {/* Phone */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Phone className="h-3 w-3" /> Phone Number
               </label>
               {editing ? (
@@ -312,7 +326,7 @@ export default function Profile() {
                   className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
               ) : (
-                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl">
+                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl border border-transparent">
                   {profile?.phoneNumber || "—"}
                 </p>
               )}
@@ -320,7 +334,7 @@ export default function Profile() {
 
             {/* Age */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Calendar className="h-3 w-3" /> Age
               </label>
               {editing ? (
@@ -331,10 +345,22 @@ export default function Profile() {
                     setFormData({ ...formData, age: e.target.value })
                   }
                   placeholder="Enter age"
-                  className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                  min="1"
+                  max="120"
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "-" ||
+                      e.key === "+" ||
+                      e.key === "e" ||
+                      e.key === "E"
+                    ) {
+                      e.preventDefault();
+                    }
+                  }}
+                  className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               ) : (
-                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl">
+                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl border border-transparent">
                   {profile?.age || "—"}
                 </p>
               )}
@@ -342,7 +368,7 @@ export default function Profile() {
 
             {/* Gender */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <User className="h-3 w-3" /> Gender
               </label>
               {editing ? (
@@ -359,7 +385,7 @@ export default function Profile() {
                   <option value="other">Other</option>
                 </select>
               ) : (
-                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl capitalize">
+                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl capitalize border border-transparent">
                   {profile?.gender || "—"}
                 </p>
               )}
@@ -367,7 +393,7 @@ export default function Profile() {
 
             {/* Blood Group */}
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Droplet className="h-3 w-3" /> Blood Group
               </label>
               {editing ? (
@@ -388,7 +414,7 @@ export default function Profile() {
                   )}
                 </select>
               ) : (
-                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl">
+                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl border border-transparent">
                   {profile?.bloodGroup || "—"}
                 </p>
               )}
@@ -396,7 +422,7 @@ export default function Profile() {
 
             {/* Address */}
             <div className="flex flex-col gap-2 sm:col-span-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                 <MapPin className="h-3 w-3" /> Address
               </label>
               {editing ? (
@@ -410,7 +436,7 @@ export default function Profile() {
                   className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
               ) : (
-                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl">
+                <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl border border-transparent">
                   {profile?.address || "—"}
                 </p>
               )}
@@ -418,9 +444,9 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Change Password Card */}
-        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8">
-          <div className="flex items-center justify-between mb-6">
+        {/* Change Password Card - THE MOBILE FIX: Stack items on mobile so buttons aren't squished */}
+        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-8 shadow-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <Shield className="h-5 w-5 text-teal-400" />
               <h2 className="text-lg font-bold text-white">Security</h2>
@@ -430,7 +456,7 @@ export default function Profile() {
                 setShowPasswordForm(!showPasswordForm);
                 setMessage({ text: "", type: "" });
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 border border-slate-600 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-700 transition-all"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-700 transition-all"
             >
               <Lock className="h-4 w-4" />
               {showPasswordForm ? "Cancel" : "Change Password"}
@@ -438,17 +464,17 @@ export default function Profile() {
           </div>
 
           {!showPasswordForm ? (
-            <p className="text-slate-400 text-sm">
+            <p className="text-slate-400 text-xs sm:text-sm">
               Your password is securely encrypted. Click "Change Password" to
               update it.
             </p>
           ) : (
             <form
               onSubmit={handlePasswordChange}
-              className="flex flex-col gap-4"
+              className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300"
             >
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">
                   Current Password
                 </label>
                 <div className="relative">
@@ -477,7 +503,7 @@ export default function Profile() {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">
                   New Password
                 </label>
                 <div className="relative">
@@ -505,8 +531,9 @@ export default function Profile() {
                 </div>
               </div>
 
+              {/* THE 3rd EYE ICON ADDED TO CONFIRM PASSWORD */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">
                   Confirm New Password
                 </label>
                 <div className="relative">
@@ -534,7 +561,7 @@ export default function Profile() {
                 </div>
                 {passwordData.confirmPassword && (
                   <p
-                    className={`text-xs ${passwordData.newPassword === passwordData.confirmPassword ? "text-green-400" : "text-red-400"}`}
+                    className={`text-[10px] sm:text-xs mt-1 ${passwordData.newPassword === passwordData.confirmPassword ? "text-emerald-400" : "text-rose-400"}`}
                   >
                     {passwordData.newPassword === passwordData.confirmPassword
                       ? "✓ Passwords match"
@@ -546,7 +573,7 @@ export default function Profile() {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-900 font-bold py-3 rounded-xl transition-all disabled:opacity-50 mt-2"
+                className="w-full bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-900 font-extrabold py-3.5 rounded-xl transition-all shadow-lg hover:brightness-110 active:scale-[0.98] disabled:opacity-50 mt-2 uppercase tracking-wide text-sm"
               >
                 {saving ? "Updating..." : "Update Password"}
               </button>
