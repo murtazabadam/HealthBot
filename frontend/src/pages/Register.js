@@ -295,7 +295,28 @@ export default function Register() {
             </p>
           </div>
 
-          <form onSubmit={handleRegister} className="flex flex-col gap-6">
+          <form
+            onSubmit={handleRegister}
+            className="flex flex-col gap-6"
+            autoComplete="off"
+          >
+            {/* --- CHROME AUTOFILL TRAP --- 
+                These invisible fields absorb Chrome's aggressive autofill so the real fields stay empty */}
+            <div className="absolute opacity-0 w-0 h-0 overflow-hidden pointer-events-none -z-50">
+              <input
+                type="text"
+                name="prevent_autofill_email"
+                autoComplete="username"
+                tabIndex="-1"
+              />
+              <input
+                type="password"
+                name="prevent_autofill_password"
+                autoComplete="current-password"
+                tabIndex="-1"
+              />
+            </div>
+
             {errorMessage && (
               <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-4 rounded-xl text-center font-bold animate-pulse">
                 {errorMessage}
@@ -337,6 +358,7 @@ export default function Register() {
                       placeholder="Enter email"
                       value={formData.email}
                       onChange={handleChange}
+                      autoComplete="off"
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all disabled:opacity-50"
                       style={{ colorScheme: "dark" }}
                     />
@@ -413,6 +435,7 @@ export default function Register() {
                     placeholder="Create password"
                     value={formData.password}
                     onChange={handleChange}
+                    autoComplete="new-password"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                   <button
@@ -437,6 +460,7 @@ export default function Register() {
                     placeholder="Confirm password"
                     value={formData.confirmPassword}
                     onChange={handleChange}
+                    autoComplete="new-password"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                   <button
