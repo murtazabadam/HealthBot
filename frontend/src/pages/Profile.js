@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { MemoryRouter, Link, useNavigate } from "react-router-dom";
 import {
   Activity,
   User,
@@ -21,7 +21,7 @@ import {
 
 const API = "https://healthbot-production-3c7d.up.railway.app";
 
-export default function Profile() {
+function Profile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -180,7 +180,6 @@ export default function Profile() {
 
       {/* Nav */}
       <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 lg:px-12 w-full bg-[#0B1120]/80 backdrop-blur-md border-b border-slate-800/50">
-        {/* FIXED: Link changed from "/" to "/chat" so you don't get sent to the home page */}
         <Link to="/chat" className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" />
           <span className="text-xl font-bold text-white">HealthBot</span>
@@ -531,7 +530,6 @@ export default function Profile() {
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  {/* FIXED: The 3rd Eye Icon is here, and 'pr-12' ensures the text doesn't overlap it! */}
                   <input
                     type={showConfirmPw ? "text" : "password"}
                     required
@@ -576,5 +574,13 @@ export default function Profile() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <MemoryRouter>
+      <Profile />
+    </MemoryRouter>
   );
 }
