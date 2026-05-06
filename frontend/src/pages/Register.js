@@ -71,15 +71,35 @@ export default function Register() {
         },
       );
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to send OTP.");
+      // BULLETPROOF CHECK: Read as text first in case the backend crashed and sent HTML
+      const text = await res.text();
+      let data = {};
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        throw new Error(
+          `Backend crashed or is offline: ${text.slice(0, 40)}...`,
+        );
+      }
+
+      // Check for both data.message AND data.error (depending on how your teammate wrote it)
+      if (!res.ok) {
+        throw new Error(
+          data.message || data.error || "Backend refused the request.",
+        );
+      }
 
       setOtpSent(true);
       setTimer(60);
     } catch (err) {
-      setErrorMessage(
-        err.message || "Error sending OTP. Please ensure backend is active.",
-      );
+      // DISPLAY THE EXACT ERROR ON SCREEN
+      if (err.message === "Failed to fetch") {
+        setErrorMessage(
+          "Server is asleep. Please wake up the Railway backend.",
+        );
+      } else {
+        setErrorMessage(err.message);
+      }
     } finally {
       setLoading(false);
     }
