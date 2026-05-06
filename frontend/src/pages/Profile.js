@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MemoryRouter, Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Activity,
   User,
@@ -21,7 +21,7 @@ import {
 
 const API = "https://healthbot-production-3c7d.up.railway.app";
 
-function Profile() {
+export default function Profile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -51,6 +51,7 @@ function Profile() {
 
   useEffect(() => {
     if (!token) {
+      setLoading(false); // Fixes the infinite blank loading screen
       navigate("/login");
       return;
     }
@@ -61,7 +62,7 @@ function Profile() {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
+        if (!res.ok) throw new Error(data.message || "Failed to fetch profile");
         setProfile(data);
         setFormData({
           name: data.name || "",
@@ -72,7 +73,8 @@ function Profile() {
           phoneNumber: data.phoneNumber || "",
         });
       } catch (err) {
-        setMessage({ text: err.message, type: "error" });
+        // Fixes the "Objects are not valid as a React child" error
+        setMessage({ text: err?.message || String(err), type: "error" });
       } finally {
         setLoading(false);
       }
@@ -94,14 +96,14 @@ function Profile() {
         body: JSON.stringify(formData),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (!res.ok) throw new Error(data.message || "Failed to update profile");
 
       setProfile((prev) => ({ ...prev, ...formData }));
       localStorage.setItem("user", JSON.stringify(data.user));
       setEditing(false);
       setMessage({ text: "Profile updated successfully!", type: "success" });
     } catch (err) {
-      setMessage({ text: err.message, type: "error" });
+      setMessage({ text: err?.message || String(err), type: "error" });
     } finally {
       setSaving(false);
     }
@@ -114,7 +116,6 @@ function Profile() {
       return;
     }
 
-    // --- STRICT PASSWORD VALIDATION ---
     const pw = passwordData.newPassword;
     const hasUpperCase = /[A-Z]/.test(pw);
     const hasLowerCase = /[a-z]/.test(pw);
@@ -147,7 +148,7 @@ function Profile() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (!res.ok) throw new Error(data.message || "Failed to change password");
       setMessage({ text: "Password changed successfully!", type: "success" });
       setShowPasswordForm(false);
       setPasswordData({
@@ -156,7 +157,7 @@ function Profile() {
         confirmPassword: "",
       });
     } catch (err) {
-      setMessage({ text: err.message, type: "error" });
+      setMessage({ text: err?.message || String(err), type: "error" });
     } finally {
       setSaving(false);
     }
@@ -522,6 +523,10 @@ function Profile() {
                     {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                <p className="text-[10px] text-slate-500 mt-1 leading-relaxed pl-1">
+                  Must contain 8+ characters, uppercase, lowercase, and a
+                  number/special character.
+                </p>
               </div>
 
               <div className="flex flex-col gap-2">
@@ -574,13 +579,5 @@ function Profile() {
         </div>
       </main>
     </div>
-  );
-}
-
-export default function App() {
-  return (
-    <MemoryRouter>
-      <Profile />
-    </MemoryRouter>
   );
 }
