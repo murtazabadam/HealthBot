@@ -27,13 +27,9 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
-
-  // Password toggle states
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
-  const [showConfirmPw, setShowConfirmPw] = useState(false); // <-- Added state for Confirm Password Eye icon
-
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -116,22 +112,13 @@ export default function Profile() {
       setMessage({ text: "New passwords do not match", type: "error" });
       return;
     }
-
-    // Strict password validation matching Chat.js
-    const pw = passwordData.newPassword;
-    if (
-      pw.length < 8 ||
-      !/[A-Z]/.test(pw) ||
-      !/[a-z]/.test(pw) ||
-      !/[0-9!@#$%^&*(),.?":{}|<>]/.test(pw)
-    ) {
+    if (passwordData.newPassword.length < 8) {
       setMessage({
-        text: "Please meet all password requirements!",
+        text: "Password must be at least 8 characters",
         type: "error",
       });
       return;
     }
-
     setSaving(true);
     try {
       const res = await fetch(`${API}/api/auth/change-password`, {
@@ -174,6 +161,7 @@ export default function Profile() {
     );
 
   return (
+    // FIX: Added overflow-x-hidden and relative to prevent mobile horizontal scrolling
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative overflow-x-hidden w-full">
       {/* Background Decor */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-teal-500/10 rounded-full blur-[80px] sm:blur-[120px] pointer-events-none" />
@@ -225,7 +213,7 @@ export default function Profile() {
         <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-8 mb-6 shadow-2xl">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
-          {/* Header */}
+          {/* Header - FIX: Changed to flex-col on mobile to prevent squishing */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4 mb-8">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center">
@@ -456,7 +444,7 @@ export default function Profile() {
 
         {/* Change Password Card */}
         <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-8 shadow-2xl">
-          {/* Header */}
+          {/* Header - FIX: Stack items on mobile */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <Shield className="h-5 w-5 text-teal-400" />
@@ -485,24 +473,7 @@ export default function Profile() {
             <form
               onSubmit={handlePasswordChange}
               className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300"
-              autoComplete="off"
             >
-              {/* Chrome Autofill Trap */}
-              <div className="absolute opacity-0 w-0 h-0 overflow-hidden pointer-events-none -z-50">
-                <input
-                  type="text"
-                  name="prevent_autofill_email"
-                  autoComplete="username"
-                  tabIndex="-1"
-                />
-                <input
-                  type="password"
-                  name="prevent_autofill_password"
-                  autoComplete="current-password"
-                  tabIndex="-1"
-                />
-              </div>
-
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">
                   Current Password
@@ -549,7 +520,7 @@ export default function Profile() {
                         newPassword: e.target.value,
                       })
                     }
-                    placeholder="Enter new password"
+                    placeholder="Enter new password (min 8 chars)"
                     autoComplete="new-password"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
@@ -561,40 +532,6 @@ export default function Profile() {
                     {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-
-                {/* Dynamic Password Strength Checklist */}
-                {passwordData.newPassword.length > 0 && (
-                  <div className="flex flex-col gap-1.5 mt-1 ml-1 bg-[#0B1120] p-3 rounded-xl border border-slate-800/50">
-                    <p
-                      className={`text-[10px] sm:text-xs flex items-center gap-1.5 transition-colors ${passwordData.newPassword.length >= 8 ? "text-emerald-400" : "text-slate-500"}`}
-                    >
-                      {passwordData.newPassword.length >= 8 ? "✓" : "○"} At
-                      least 8 characters
-                    </p>
-                    <p
-                      className={`text-[10px] sm:text-xs flex items-center gap-1.5 transition-colors ${/[A-Z]/.test(passwordData.newPassword) ? "text-emerald-400" : "text-slate-500"}`}
-                    >
-                      {/[A-Z]/.test(passwordData.newPassword) ? "✓" : "○"} One
-                      uppercase letter
-                    </p>
-                    <p
-                      className={`text-[10px] sm:text-xs flex items-center gap-1.5 transition-colors ${/[a-z]/.test(passwordData.newPassword) ? "text-emerald-400" : "text-slate-500"}`}
-                    >
-                      {/[a-z]/.test(passwordData.newPassword) ? "✓" : "○"} One
-                      lowercase letter
-                    </p>
-                    <p
-                      className={`text-[10px] sm:text-xs flex items-center gap-1.5 transition-colors ${/[0-9!@#$%^&*(),.?":{}|<>]/.test(passwordData.newPassword) ? "text-emerald-400" : "text-slate-500"}`}
-                    >
-                      {/[0-9!@#$%^&*(),.?":{}|<>]/.test(
-                        passwordData.newPassword,
-                      )
-                        ? "✓"
-                        : "○"}{" "}
-                      One number or special character
-                    </p>
-                  </div>
-                )}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -604,7 +541,7 @@ export default function Profile() {
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
-                    type={showConfirmPw ? "text" : "password"}
+                    type="password"
                     required
                     value={passwordData.confirmPassword}
                     onChange={(e) =>
@@ -615,15 +552,8 @@ export default function Profile() {
                     }
                     placeholder="Confirm new password"
                     autoComplete="new-password"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPw(!showConfirmPw)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
-                  >
-                    {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
                 </div>
                 {passwordData.confirmPassword && (
                   <p
