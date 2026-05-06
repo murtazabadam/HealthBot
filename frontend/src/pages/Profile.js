@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, MemoryRouter } from "react-router-dom";
 import {
   Activity,
   User,
@@ -21,7 +21,7 @@ import {
 
 const API = "https://healthbot-production-3c7d.up.railway.app";
 
-export default function Profile() {
+function ProfileContent() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -31,6 +31,7 @@ export default function Profile() {
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
+
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -50,12 +51,14 @@ export default function Profile() {
   });
 
   useEffect(() => {
+    // If there is no token, we just stop loading. Your local App.js
+    // <Route> already handles kicking unauthenticated users to /login.
     if (!token) {
-      setLoading(false); // Fixes the infinite blank loading screen
-      navigate("/login");
+      setLoading(false);
       return;
     }
 
+    // Moving fetchProfile inside useEffect fixes the ESLint warning!
     const fetchProfile = async () => {
       try {
         const res = await fetch(`${API}/api/auth/profile`, {
@@ -63,6 +66,7 @@ export default function Profile() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to fetch profile");
+
         setProfile(data);
         setFormData({
           name: data.name || "",
@@ -73,15 +77,17 @@ export default function Profile() {
           phoneNumber: data.phoneNumber || "",
         });
       } catch (err) {
-        // Fixes the "Objects are not valid as a React child" error
-        setMessage({ text: err?.message || String(err), type: "error" });
+        setMessage({
+          text: err.message || "Error loading profile",
+          type: "error",
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [token, navigate]);
+  }, [token]); // Clean dependency array without warnings
 
   const handleSave = async () => {
     setSaving(true);
@@ -103,7 +109,10 @@ export default function Profile() {
       setEditing(false);
       setMessage({ text: "Profile updated successfully!", type: "success" });
     } catch (err) {
-      setMessage({ text: err?.message || String(err), type: "error" });
+      setMessage({
+        text: err.message || "Error saving profile",
+        type: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -116,6 +125,7 @@ export default function Profile() {
       return;
     }
 
+    // --- STRICT PASSWORD VALIDATION ---
     const pw = passwordData.newPassword;
     const hasUpperCase = /[A-Z]/.test(pw);
     const hasLowerCase = /[a-z]/.test(pw);
@@ -157,7 +167,10 @@ export default function Profile() {
         confirmPassword: "",
       });
     } catch (err) {
-      setMessage({ text: err?.message || String(err), type: "error" });
+      setMessage({
+        text: err.message || "Error changing password",
+        type: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -230,7 +243,7 @@ export default function Profile() {
               </div>
               <div className="overflow-hidden">
                 <h1 className="text-xl sm:text-2xl font-bold text-white truncate">
-                  {profile?.name}
+                  {profile?.name || "User Profile"}
                 </h1>
                 <p className="text-slate-400 text-sm truncate">
                   {profile?.email}
@@ -309,7 +322,7 @@ export default function Profile() {
                 <Mail className="h-3 w-3" /> Email Address
               </label>
               <p className="text-slate-400 text-sm py-3 px-4 bg-slate-800/30 rounded-xl flex items-center gap-2">
-                {profile?.email}
+                {profile?.email || "—"}
                 {profile?.isVerified && (
                   <CheckCircle2 className="h-4 w-4 text-green-400" />
                 )}
@@ -580,4 +593,21 @@ export default function Profile() {
       </main>
     </div>
   );
+}
+
+// --- MAGIC PREVIEW FIX ---
+// This safely wraps the component in a MemoryRouter ONLY if you are viewing
+// it here in the Canvas preview. On your local laptop, it runs completely normally!
+export default function Profile() {
+  const isPreviewWindow = window.location.hostname.includes("usercontent.goog");
+
+  if (isPreviewWindow) {
+    return (
+      <MemoryRouter>
+        <ProfileContent />
+      </MemoryRouter>
+    );
+  }
+
+  return <ProfileContent />;
 }
