@@ -54,32 +54,31 @@ export default function Profile() {
       navigate("/login");
       return;
     }
-
-    const fetchProfile = async () => {
-      try {
-        const res = await fetch(`${API}/api/auth/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-        setProfile(data);
-        setFormData({
-          name: data.name || "",
-          age: data.age || "",
-          gender: data.gender || "",
-          bloodGroup: data.bloodGroup || "",
-          address: data.address || "",
-          phoneNumber: data.phoneNumber || "",
-        });
-      } catch (err) {
-        setMessage({ text: err.message, type: "error" });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProfile();
-  }, [token, navigate]);
+  },);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch(`${API}/api/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setProfile(data);
+      setFormData({
+        name: data.name || "",
+        age: data.age || "",
+        gender: data.gender || "",
+        bloodGroup: data.bloodGroup || "",
+        address: data.address || "",
+        phoneNumber: data.phoneNumber || "",
+      });
+    } catch (err) {
+      setMessage({ text: err.message, type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -221,9 +220,7 @@ export default function Profile() {
                 <p className="text-slate-400 text-sm">{profile?.email}</p>
                 <p className="text-xs text-teal-400 mt-1">
                   Member since{" "}
-                  {new Date(
-                    profile?.createdAt || Date.now(),
-                  ).toLocaleDateString("en-US", {
+                  {new Date(profile?.createdAt).toLocaleDateString("en-US", {
                     month: "long",
                     year: "numeric",
                   })}
@@ -494,7 +491,7 @@ export default function Profile() {
                         newPassword: e.target.value,
                       })
                     }
-                    placeholder="Enter new password"
+                    placeholder="Enter new password (min 8 chars)"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                   <button
