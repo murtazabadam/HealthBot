@@ -30,6 +30,7 @@ export default function Profile() {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -511,7 +512,7 @@ export default function Profile() {
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
                   <input
-                    type="password"
+                    type={showConfirmPw ? "text" : "password"}
                     required
                     value={passwordData.confirmPassword}
                     onChange={(e) =>
@@ -521,8 +522,15 @@ export default function Profile() {
                       })
                     }
                     placeholder="Confirm new password"
-                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                    className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPw(!showConfirmPw)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  >
+                    {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
                 {passwordData.confirmPassword && (
                   <p
