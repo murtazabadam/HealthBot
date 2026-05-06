@@ -57,31 +57,32 @@ export default function Profile() {
       navigate("/login");
       return;
     }
-    fetchProfile();
-  }, []);
 
-  const fetchProfile = async () => {
-    try {
-      const res = await fetch(`${API}/api/auth/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      setProfile(data);
-      setFormData({
-        name: data.name || "",
-        age: data.age || "",
-        gender: data.gender || "",
-        bloodGroup: data.bloodGroup || "",
-        address: data.address || "",
-        phoneNumber: data.phoneNumber || "",
-      });
-    } catch (err) {
-      setMessage({ text: err.message, type: "error" });
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`${API}/api/auth/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        setProfile(data);
+        setFormData({
+          name: data.name || "",
+          age: data.age || "",
+          gender: data.gender || "",
+          bloodGroup: data.bloodGroup || "",
+          address: data.address || "",
+          phoneNumber: data.phoneNumber || "",
+        });
+      } catch (err) {
+        setMessage({ text: err.message, type: "error" });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [token, navigate]);
 
   const handleSave = async () => {
     setSaving(true);
