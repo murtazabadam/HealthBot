@@ -30,7 +30,7 @@ export default function Profile() {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
-  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false); // Added 3rd eye state
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -54,31 +54,33 @@ export default function Profile() {
       navigate("/login");
       return;
     }
-    fetchProfile();
-  },);
 
-  const fetchProfile = async () => {
-    try {
-      const res = await fetch(`${API}/api/auth/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
-      setProfile(data);
-      setFormData({
-        name: data.name || "",
-        age: data.age || "",
-        gender: data.gender || "",
-        bloodGroup: data.bloodGroup || "",
-        address: data.address || "",
-        phoneNumber: data.phoneNumber || "",
-      });
-    } catch (err) {
-      setMessage({ text: err.message, type: "error" });
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Moved fetchProfile inside useEffect to fix ESLint warning
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`${API}/api/auth/profile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        setProfile(data);
+        setFormData({
+          name: data.name || "",
+          age: data.age || "",
+          gender: data.gender || "",
+          bloodGroup: data.bloodGroup || "",
+          address: data.address || "",
+          phoneNumber: data.phoneNumber || "",
+        });
+      } catch (err) {
+        setMessage({ text: err.message, type: "error" });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [token, navigate]);
 
   const handleSave = async () => {
     setSaving(true);
