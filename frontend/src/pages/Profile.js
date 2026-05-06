@@ -30,7 +30,7 @@ export default function Profile() {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
-  const [showConfirmPw, setShowConfirmPw] = useState(false); // Added 3rd eye state
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -55,7 +55,6 @@ export default function Profile() {
       return;
     }
 
-    // Moved fetchProfile inside useEffect to fix ESLint warning
     const fetchProfile = async () => {
       try {
         const res = await fetch(`${API}/api/auth/profile`, {
@@ -114,13 +113,22 @@ export default function Profile() {
       setMessage({ text: "New passwords do not match", type: "error" });
       return;
     }
-    if (passwordData.newPassword.length < 8) {
+
+    // STRICT PASSWORD VALIDATION
+    const pw = passwordData.newPassword;
+    if (
+      pw.length < 8 ||
+      !/[A-Z]/.test(pw) ||
+      !/[a-z]/.test(pw) ||
+      !/[0-9!@#$%^&*(),.?":{}|<>]/.test(pw)
+    ) {
       setMessage({
-        text: "Password must be at least 8 characters",
+        text: "Password must have 8+ chars, an uppercase, a lowercase, and a number or special char.",
         type: "error",
       });
       return;
     }
+
     setSaving(true);
     try {
       const res = await fetch(`${API}/api/auth/change-password`, {
@@ -163,12 +171,13 @@ export default function Profile() {
     );
 
   return (
-    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50">
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative overflow-x-hidden w-full">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Nav */}
       <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-4 lg:px-12 w-full bg-[#0B1120]/80 backdrop-blur-md border-b border-slate-800/50">
-        <Link to="/" className="flex items-center gap-2">
+        {/* FIXED: Link changed from "/" to "/chat" so you don't get sent to the home page */}
+        <Link to="/chat" className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" />
           <span className="text-xl font-bold text-white">HealthBot</span>
         </Link>
@@ -206,59 +215,65 @@ export default function Profile() {
         )}
 
         {/* Profile Card */}
-        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 mb-6">
+        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-8 mb-6">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          {/* Header - MOBILE RESPONSIVE */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4 mb-8">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center shrink-0">
                 <User className="h-8 w-8 text-teal-400" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">
+              <div className="overflow-hidden">
+                <h1 className="text-xl sm:text-2xl font-bold text-white truncate">
                   {profile?.name}
                 </h1>
-                <p className="text-slate-400 text-sm">{profile?.email}</p>
+                <p className="text-slate-400 text-sm truncate">
+                  {profile?.email}
+                </p>
                 <p className="text-xs text-teal-400 mt-1">
                   Member since{" "}
-                  {new Date(profile?.createdAt).toLocaleDateString("en-US", {
+                  {new Date(
+                    profile?.createdAt || Date.now(),
+                  ).toLocaleDateString("en-US", {
                     month: "long",
                     year: "numeric",
                   })}
                 </p>
               </div>
             </div>
-            {!editing ? (
-              <button
-                onClick={() => {
-                  setEditing(true);
-                  setMessage({ text: "", type: "" });
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-teal-500/10 border border-teal-500/30 text-teal-400 rounded-xl text-sm font-bold hover:bg-teal-500/20 transition-all"
-              >
-                <Edit3 className="h-4 w-4" /> Edit
-              </button>
-            ) : (
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-slate-900 rounded-xl text-sm font-bold hover:bg-teal-400 transition-all disabled:opacity-50"
-                >
-                  <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save"}
-                </button>
+            <div className="w-full sm:w-auto">
+              {!editing ? (
                 <button
                   onClick={() => {
-                    setEditing(false);
+                    setEditing(true);
                     setMessage({ text: "", type: "" });
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-600 transition-all"
+                  className="w-full sm:w-auto flex justify-center items-center gap-2 px-4 py-2 bg-teal-500/10 border border-teal-500/30 text-teal-400 rounded-xl text-sm font-bold hover:bg-teal-500/20 transition-all"
                 >
-                  <X className="h-4 w-4" /> Cancel
+                  <Edit3 className="h-4 w-4" /> Edit
                 </button>
-              </div>
-            )}
+              ) : (
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 sm:flex-none flex justify-center items-center gap-2 px-4 py-2 bg-teal-500 text-slate-900 rounded-xl text-sm font-bold hover:bg-teal-400 transition-all disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditing(false);
+                      setMessage({ text: "", type: "" });
+                    }}
+                    className="flex-1 sm:flex-none flex justify-center items-center gap-2 px-4 py-2 bg-slate-700 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-600 transition-all"
+                  >
+                    <X className="h-4 w-4" /> Cancel
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Profile Fields */}
@@ -420,8 +435,8 @@ export default function Profile() {
         </div>
 
         {/* Change Password Card */}
-        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <Shield className="h-5 w-5 text-teal-400" />
               <h2 className="text-lg font-bold text-white">Security</h2>
@@ -431,7 +446,7 @@ export default function Profile() {
                 setShowPasswordForm(!showPasswordForm);
                 setMessage({ text: "", type: "" });
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 border border-slate-600 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-700 transition-all"
+              className="w-full sm:w-auto flex justify-center items-center gap-2 px-4 py-2 bg-slate-700/50 border border-slate-600 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-700 transition-all"
             >
               <Lock className="h-4 w-4" />
               {showPasswordForm ? "Cancel" : "Change Password"}
@@ -493,7 +508,7 @@ export default function Profile() {
                         newPassword: e.target.value,
                       })
                     }
-                    placeholder="Enter new password (min 8 chars)"
+                    placeholder="Enter new password"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                   <button
@@ -512,6 +527,7 @@ export default function Profile() {
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  {/* FIXED: The 3rd Eye Icon is here, and 'pr-12' ensures the text doesn't overlap it! */}
                   <input
                     type={showConfirmPw ? "text" : "password"}
                     required
