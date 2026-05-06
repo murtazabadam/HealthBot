@@ -17,6 +17,7 @@ import {
   Save,
   X,
   Shield,
+  Check,
 } from "lucide-react";
 
 const API = "https://healthbot-production-3c7d.up.railway.app";
@@ -50,15 +51,23 @@ function ProfileContent() {
     confirmPassword: "",
   });
 
+  // Real-time password validation logic
+  const passwordRequirements = [
+    { label: "8+ characters", met: passwordData.newPassword.length >= 8 },
+    { label: "Uppercase letter", met: /[A-Z]/.test(passwordData.newPassword) },
+    { label: "Lowercase letter", met: /[a-z]/.test(passwordData.newPassword) },
+    {
+      label: "Number or special character",
+      met: /[0-9!@#$%^&*(),.?":{}|<>]/.test(passwordData.newPassword),
+    },
+  ];
+
   useEffect(() => {
-    // If there is no token, we just stop loading. Your local App.js
-    // <Route> already handles kicking unauthenticated users to /login.
     if (!token) {
       setLoading(false);
       return;
     }
 
-    // Moving fetchProfile inside useEffect fixes the ESLint warning!
     const fetchProfile = async () => {
       try {
         const res = await fetch(`${API}/api/auth/profile`, {
@@ -87,7 +96,7 @@ function ProfileContent() {
     };
 
     fetchProfile();
-  }, [token]); // Clean dependency array without warnings
+  }, [token]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -125,20 +134,12 @@ function ProfileContent() {
       return;
     }
 
-    // --- STRICT PASSWORD VALIDATION ---
-    const pw = passwordData.newPassword;
-    const hasUpperCase = /[A-Z]/.test(pw);
-    const hasLowerCase = /[a-z]/.test(pw);
-    const hasNumberOrSpecial = /[0-9!@#$%^&*(),.?":{}|<>]/.test(pw);
+    // Check if all requirements are met
+    const allMet = passwordRequirements.every((req) => req.met);
 
-    if (
-      pw.length < 8 ||
-      !hasUpperCase ||
-      !hasLowerCase ||
-      !hasNumberOrSpecial
-    ) {
+    if (!allMet) {
       setMessage({
-        text: "Weak Password! Must be 8+ chars, with an uppercase, lowercase, and a number/special character.",
+        text: "Please fulfill all password requirements below.",
         type: "error",
       });
       return;
@@ -235,7 +236,7 @@ function ProfileContent() {
         <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-8 mb-6">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
-          {/* Header - MOBILE RESPONSIVE */}
+          {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4 mb-8">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center shrink-0">
@@ -295,7 +296,6 @@ function ProfileContent() {
 
           {/* Profile Fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {/* Name */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <User className="h-3 w-3" /> Full Name
@@ -316,7 +316,6 @@ function ProfileContent() {
               )}
             </div>
 
-            {/* Email (readonly) */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <Mail className="h-3 w-3" /> Email Address
@@ -329,7 +328,6 @@ function ProfileContent() {
               </p>
             </div>
 
-            {/* Phone */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <Phone className="h-3 w-3" /> Phone Number
@@ -351,7 +349,6 @@ function ProfileContent() {
               )}
             </div>
 
-            {/* Age */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <Calendar className="h-3 w-3" /> Age
@@ -373,7 +370,6 @@ function ProfileContent() {
               )}
             </div>
 
-            {/* Gender */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <User className="h-3 w-3" /> Gender
@@ -398,7 +394,6 @@ function ProfileContent() {
               )}
             </div>
 
-            {/* Blood Group */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <Droplet className="h-3 w-3" /> Blood Group
@@ -427,7 +422,6 @@ function ProfileContent() {
               )}
             </div>
 
-            {/* Address */}
             <div className="flex flex-col gap-2 sm:col-span-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <MapPin className="h-3 w-3" /> Address
@@ -536,13 +530,33 @@ function ProfileContent() {
                     {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-500 mt-1 leading-relaxed pl-1">
-                  Must contain 8+ characters, uppercase, lowercase, and a
-                  number/special character.
-                </p>
+
+                {/* VISIBLE PASSWORD RULES CHECKLIST */}
+                <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 mt-2">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+                    Password Requirements:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4">
+                    {passwordRequirements.map((req, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-400" : "text-slate-600"}`}
+                      >
+                        <div
+                          className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${req.met ? "bg-teal-500/20 border-teal-500/50" : "border-slate-700"}`}
+                        >
+                          {req.met && <Check size={10} strokeWidth={4} />}
+                        </div>
+                        <span className="text-[11px] font-medium">
+                          {req.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 mt-2">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                   Confirm New Password
                 </label>
@@ -583,7 +597,7 @@ function ProfileContent() {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-900 font-bold py-3 rounded-xl transition-all disabled:opacity-50 mt-2"
+                className="w-full bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-900 font-bold py-3 rounded-xl transition-all disabled:opacity-50 mt-4 shadow-lg shadow-teal-500/20"
               >
                 {saving ? "Updating..." : "Update Password"}
               </button>
@@ -595,12 +609,8 @@ function ProfileContent() {
   );
 }
 
-// --- MAGIC PREVIEW FIX ---
-// This safely wraps the component in a MemoryRouter ONLY if you are viewing
-// it here in the Canvas preview. On your local laptop, it runs completely normally!
 export default function Profile() {
   const isPreviewWindow = window.location.hostname.includes("usercontent.goog");
-
   if (isPreviewWindow) {
     return (
       <MemoryRouter>
@@ -608,6 +618,5 @@ export default function Profile() {
       </MemoryRouter>
     );
   }
-
   return <ProfileContent />;
 }
