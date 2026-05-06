@@ -70,11 +70,16 @@ export default function Register() {
           body: JSON.stringify({ email: safeEmail }),
         },
       );
-      if (!res.ok) throw new Error("Failed to send OTP.");
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to send OTP.");
+
       setOtpSent(true);
       setTimer(60);
     } catch (err) {
-      setErrorMessage("Error sending OTP. Please ensure backend is active.");
+      setErrorMessage(
+        err.message || "Error sending OTP. Please ensure backend is active.",
+      );
     } finally {
       setLoading(false);
     }
@@ -105,7 +110,7 @@ export default function Register() {
       if (!res.ok) throw new Error(data.message || "Invalid OTP. Try again.");
 
       setEmailVerified(true);
-      setOtpSent(false); // Hide the OTP boxes
+      setOtpSent(false);
       setTimer(0);
       setErrorMessage("");
     } catch (err) {
@@ -122,7 +127,6 @@ export default function Register() {
 
     if (!numericValue && value !== "") return;
 
-    // Handle Pasting or Mobile Auto-fill
     if (numericValue.length > 1) {
       const digits = numericValue.slice(0, 6).split("");
       const newOtp = ["", "", "", "", "", ""];
@@ -135,7 +139,6 @@ export default function Register() {
       return;
     }
 
-    // Handle Single Digit
     const newOtp = [...otp];
     newOtp[index] = numericValue.slice(-1);
     setOtp(newOtp);
@@ -173,6 +176,7 @@ export default function Register() {
     try {
       const otpString = otp.join("");
       const safeEmail = formData.email.trim().toLowerCase();
+
       const payload = {
         ...formData,
         email: safeEmail,
@@ -313,7 +317,6 @@ export default function Register() {
                       placeholder="Enter email"
                       value={formData.email}
                       onChange={handleChange}
-                      autoComplete="nope"
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all disabled:opacity-50"
                       style={{ colorScheme: "dark" }}
                     />
@@ -390,7 +393,6 @@ export default function Register() {
                     placeholder="Create password"
                     value={formData.password}
                     onChange={handleChange}
-                    autoComplete="new-password"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                   <button
@@ -444,20 +446,7 @@ export default function Register() {
                   placeholder="Age"
                   value={formData.age}
                   onChange={handleChange}
-                  min="1"
-                  max="120"
-                  onKeyDown={(e) => {
-                    if (
-                      e.key === "-" ||
-                      e.key === "+" ||
-                      e.key === "e" ||
-                      e.key === "E"
-                    ) {
-                      e.preventDefault();
-                    }
-                  }}
-                  // Notice the new classes added at the end of this line:
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
               </div>
               <div className="flex flex-col gap-2">
