@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Activity,
   MessageSquare,
@@ -457,22 +457,24 @@ export default function Chat() {
             </div>
           </div>
 
-          <div
-            className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => handleNavClick("profile")}
-          >
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex flex-col items-end text-right">
-              <span className="text-[11px] lg:text-xs font-black text-white tracking-wider max-w-[80px] sm:max-w-[150px] truncate">
-                <span className="sm:hidden">{firstName}</span>
-                <span className="hidden sm:inline">{fullName}</span>
-              </span>
+              <Link
+                to="/profile"
+                className="text-sm text-slate-400 hover:text-teal-400 transition-colors font-bold"
+              >
+                {user.name}
+              </Link>
               <span className="text-[8px] text-slate-500 font-bold uppercase opacity-60 hidden sm:block">
                 Verified User
               </span>
             </div>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/80 shadow-md">
+            <Link
+              to="/profile"
+              className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/80 shadow-md hover:border-teal-500/50 transition-colors"
+            >
               <UserCircle className="text-slate-400" size={24} />
-            </div>
+            </Link>
           </div>
         </header>
 
@@ -626,7 +628,7 @@ export default function Chat() {
                   {isEditingProfile ? (
                     <>
                       <div className="flex flex-col gap-2">
-                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
                           Age
                         </label>
                         <input
@@ -634,19 +636,7 @@ export default function Chat() {
                           name="age"
                           value={profileForm.age || ""}
                           onChange={handleProfileChange}
-                          min="1"
-                          max="120"
-                          onKeyDown={(e) => {
-                            if (
-                              e.key === "-" ||
-                              e.key === "+" ||
-                              e.key === "e" ||
-                              e.key === "E"
-                            ) {
-                              e.preventDefault();
-                            }
-                          }}
-                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white"
                         />
                       </div>
                       <div className="flex flex-col gap-2">
