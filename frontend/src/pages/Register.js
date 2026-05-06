@@ -478,7 +478,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 3: Age, Phone, Address */}
+            {/* Row 3: Age, Gender, Blood Group */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
@@ -488,41 +488,23 @@ export default function Register() {
                   type="number"
                   name="age"
                   placeholder="Age"
+                  min="1"
+                  max="120"
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "-" ||
+                      e.key === "+" ||
+                      e.key === "e" ||
+                      e.key === "E"
+                    ) {
+                      e.preventDefault();
+                    }
+                  }}
                   value={formData.age}
                   onChange={handleChange}
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  name="phoneNumber"
-                  placeholder="Phone"
-                  value={formData.phoneNumber}
-                  onChange={handleChange}
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Address
-                </label>
-                <input
-                  type="text"
-                  name="address"
-                  placeholder="Address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Row 4: Gender and Blood Group */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Gender <span className="text-red-500">*</span>
@@ -564,6 +546,36 @@ export default function Register() {
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
                 </div>
+              </div>
+            </div>
+
+            {/* Row 4: Phone and Address */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  placeholder="Phone"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  Address
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  placeholder="Address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                />
               </div>
             </div>
 
