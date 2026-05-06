@@ -626,7 +626,7 @@ export default function Chat() {
                   {isEditingProfile ? (
                     <>
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                           Age
                         </label>
                         <input
@@ -634,7 +634,19 @@ export default function Chat() {
                           name="age"
                           value={profileForm.age || ""}
                           onChange={handleProfileChange}
-                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white"
+                          min="1"
+                          max="120"
+                          onKeyDown={(e) => {
+                            if (
+                              e.key === "-" ||
+                              e.key === "+" ||
+                              e.key === "e" ||
+                              e.key === "E"
+                            ) {
+                              e.preventDefault();
+                            }
+                          }}
+                          className="w-full bg-slate-800/50 border border-slate-700 focus:border-teal-500 rounded-xl px-4 py-3 text-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                       </div>
                       <div className="flex flex-col gap-2">
