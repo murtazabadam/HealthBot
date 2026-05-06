@@ -114,16 +114,20 @@ export default function Profile() {
       return;
     }
 
-    // STRICT PASSWORD VALIDATION
+    // --- STRICT PASSWORD VALIDATION ---
     const pw = passwordData.newPassword;
+    const hasUpperCase = /[A-Z]/.test(pw);
+    const hasLowerCase = /[a-z]/.test(pw);
+    const hasNumberOrSpecial = /[0-9!@#$%^&*(),.?":{}|<>]/.test(pw);
+
     if (
       pw.length < 8 ||
-      !/[A-Z]/.test(pw) ||
-      !/[a-z]/.test(pw) ||
-      !/[0-9!@#$%^&*(),.?":{}|<>]/.test(pw)
+      !hasUpperCase ||
+      !hasLowerCase ||
+      !hasNumberOrSpecial
     ) {
       setMessage({
-        text: "Password must have 8+ chars, an uppercase, a lowercase, and a number or special char.",
+        text: "Weak Password! Must be 8+ chars, with an uppercase, lowercase, and a number/special character.",
         type: "error",
       });
       return;
