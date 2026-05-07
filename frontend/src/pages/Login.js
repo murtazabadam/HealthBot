@@ -52,7 +52,7 @@ export default function Login() {
         }}
       />
 
-      <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-6 lg:px-12 w-full bg-[#0B1120]/80 backdrop-blur-md border-b border-slate-800/50">
+      <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
         <Link to="/" className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-7 w-7 text-teal-400" />
           <span className="text-2xl font-bold tracking-tight text-white">
@@ -86,7 +86,7 @@ export default function Login() {
 
           <form className="flex flex-col gap-5" onSubmit={handleLogin}>
             {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center font-bold animate-pulse">
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center font-bold">
                 {errorMessage}
               </div>
             )}
@@ -114,19 +114,19 @@ export default function Login() {
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Password
                 </label>
-                <button
-                  type="button"
-                  onClick={() => navigate("/forgot-password")}
+                <Link
+                  to="/forgot-password"
+                  hidden
                   className="text-[10px] text-teal-400 hover:underline uppercase tracking-tighter font-bold"
                 >
                   Forgot?
-                </button>
+                </Link>
               </div>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                 <input
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -144,13 +144,13 @@ export default function Login() {
             </div>
 
             <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => navigate("/forgot-password")}
+              <Link
+                to="/forgot-password"
+                title="Coming Soon"
                 className="text-xs text-teal-400 hover:text-teal-300 font-medium transition-colors"
               >
                 Forgot Password?
-              </button>
+              </Link>
             </div>
 
             <button
