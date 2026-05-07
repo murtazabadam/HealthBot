@@ -373,6 +373,29 @@ export function ChatDashboard() {
     handleNavClick("chat");
   };
 
+  const loadSavedAdvice = (title) => {
+    const now = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    let text = "";
+
+    if (title === "Cold Remedies") {
+      text =
+        "Here are your saved Cold Remedies:\n1. Drink plenty of warm fluids (tea, broth).\n2. Get at least 8 hours of sleep.\n3. Take Vitamin C and Zinc supplements.\n4. Use a humidifier at night.";
+    } else if (title === "Hydration Schedule") {
+      text =
+        "Here is your pinned Hydration Schedule:\n- 8:00 AM: 2 glasses of water\n- 11:00 AM: 1 glass\n- 1:00 PM: 1 glass\n- 4:00 PM: 1 glass\n- 7:00 PM: 2 glasses.";
+    } else if (title === "Emergency Contacts") {
+      text =
+        "Your Emergency Contacts:\n- Ambulance/Emergency: 112\n- Primary Doctor: +1-555-0198\n- Next of Kin: +1-555-0102.";
+    }
+
+    setActiveSessionId(Date.now());
+    setMessages([{ id: Date.now(), sender: "bot", text, time: now }]);
+    handleNavClick("chat");
+  };
+
   const clearChatHistory = () => {
     if (
       window.confirm(
@@ -795,7 +818,6 @@ export function ChatDashboard() {
                         <option value="">Select gender</option>
                         <option value="male">Male</option>
                         <option value="female">Female</option>
-                        <option value="other">Other</option>
                       </select>
                     ) : (
                       <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl capitalize">
@@ -1024,16 +1046,19 @@ export function ChatDashboard() {
                   title="Cold Remedies"
                   date="Oct 24, 2026"
                   icon={Activity}
+                  onClick={() => loadSavedAdvice("Cold Remedies")}
                 />
                 <SavedCard
                   title="Hydration Schedule"
                   date="Oct 20, 2026"
                   icon={Clock}
+                  onClick={() => loadSavedAdvice("Hydration Schedule")}
                 />
                 <SavedCard
                   title="Emergency Contacts"
                   date="Pinned"
                   icon={Bell}
+                  onClick={() => loadSavedAdvice("Emergency Contacts")}
                 />
               </div>
             </div>
@@ -1457,7 +1482,7 @@ const SidebarBtn = ({ icon: Icon, label, active, onClick }) => (
 const HistoryCard = ({ date, title, desc, onClick }) => (
   <div
     onClick={onClick}
-    className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800/80 hover:border-teal-500/30 transition-all cursor-pointer flex items-center justify-between group backdrop-blur-md shadow-sm"
+    className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800/80 hover:border-teal-500/30 transition-all cursor-pointer flex items-center justify-between group backdrop-blur-md shadow-sm"
   >
     <div>
       <h4 className="text-white font-bold text-lg mb-1 group-hover:text-teal-400 transition-colors">
@@ -1472,8 +1497,11 @@ const HistoryCard = ({ date, title, desc, onClick }) => (
   </div>
 );
 
-const SavedCard = ({ title, date, icon: Icon }) => (
-  <div className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 transition-all cursor-pointer flex items-start gap-4 backdrop-blur-md group">
+const SavedCard = ({ title, date, icon: Icon, onClick }) => (
+  <div
+    onClick={onClick}
+    className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 transition-all cursor-pointer flex items-start gap-4 backdrop-blur-md group"
+  >
     <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
       <Icon size={24} />
     </div>
@@ -1548,9 +1576,17 @@ const ProfileField = ({
       <input
         name={name}
         type={type}
+        min={type === "number" ? "1" : undefined}
+        onKeyDown={
+          type === "number"
+            ? (e) => {
+                if (["-", "+", "e", "E"].includes(e.key)) e.preventDefault();
+              }
+            : undefined
+        }
         value={String(value || "")}
         onChange={onChange}
-        className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:border-teal-400 outline-none transition-all"
+        className={`bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:border-teal-400 outline-none transition-all ${type === "number" ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : ""}`}
       />
     ) : (
       <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl">
