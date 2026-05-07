@@ -349,6 +349,7 @@ function ProfileContent() {
               )}
             </div>
 
+            {/* AGE FIELD - UPDATED */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <Calendar className="h-3 w-3" /> Age
@@ -361,7 +362,12 @@ function ProfileContent() {
                     setFormData({ ...formData, age: e.target.value })
                   }
                   placeholder="Enter age"
-                  className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                  min="1"
+                  onKeyDown={(e) => {
+                    if (["-", "+", "e", "E"].includes(e.key))
+                      e.preventDefault();
+                  }}
+                  className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               ) : (
                 <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl">
@@ -370,6 +376,7 @@ function ProfileContent() {
               )}
             </div>
 
+            {/* GENDER FIELD - UPDATED */}
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                 <User className="h-3 w-3" /> Gender
@@ -380,12 +387,11 @@ function ProfileContent() {
                   onChange={(e) =>
                     setFormData({ ...formData, gender: e.target.value })
                   }
-                  className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                  className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all outline-none"
                 >
                   <option value="">Select gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
-                  <option value="other">Other</option>
                 </select>
               ) : (
                 <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl capitalize">
