@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Activity,
@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   ChevronDown,
+  Check,
 } from "lucide-react";
 
 export default function Register() {
@@ -43,6 +44,20 @@ export default function Register() {
 
   const navigate = useNavigate();
 
+  // --- Real-time password requirements logic ---
+  const passwordRequirements = useMemo(
+    () => [
+      { label: "8+ characters", met: (formData.password || "").length >= 8 },
+      { label: "Uppercase letter", met: /[A-Z]/.test(formData.password || "") },
+      { label: "Lowercase letter", met: /[a-z]/.test(formData.password || "") },
+      {
+        label: "Number or special char",
+        met: /[0-9!@#$%^&*(),.?":{}|<>]/.test(formData.password || ""),
+      },
+    ],
+    [formData.password],
+  );
+
   // Resend Timer Logic
   useEffect(() => {
     let interval;
@@ -71,7 +86,6 @@ export default function Register() {
         },
       );
 
-      // BULLETPROOF CHECK: Read as text first in case the backend crashed and sent HTML
       const text = await res.text();
       let data = {};
       try {
@@ -82,7 +96,6 @@ export default function Register() {
         );
       }
 
-      // Check for both data.message AND data.error (depending on how your teammate wrote it)
       if (!res.ok) {
         throw new Error(
           data.message || data.error || "Backend refused the request.",
@@ -92,7 +105,6 @@ export default function Register() {
       setOtpSent(true);
       setTimer(60);
     } catch (err) {
-      // DISPLAY THE EXACT ERROR ON SCREEN
       if (err.message === "Failed to fetch") {
         setErrorMessage(
           "Server is asleep. Please wake up the Railway backend.",
@@ -105,7 +117,6 @@ export default function Register() {
     }
   };
 
-  // TEAMMATE'S FIX: Updated to /verify-registration-otp endpoint
   const handleVerifyOTP = async () => {
     const otpString = otp.join("");
     if (otpString.length < 6) {
@@ -120,10 +131,7 @@ export default function Register() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: safeEmail,
-            otp: otpString,
-          }),
+          body: JSON.stringify({ email: safeEmail, otp: otpString }),
         },
       );
       const data = await res.json();
@@ -140,13 +148,10 @@ export default function Register() {
     }
   };
 
-  // OTP 6-box handlers
   const handleOtpChange = (index, e) => {
     const value = e.target.value;
     const numericValue = value.replace(/[^0-9]/g, "");
-
     if (!numericValue && value !== "") return;
-
     if (numericValue.length > 1) {
       const digits = numericValue.slice(0, 6).split("");
       const newOtp = ["", "", "", "", "", ""];
@@ -158,14 +163,10 @@ export default function Register() {
       inputRefs.current[focusIndex]?.focus();
       return;
     }
-
     const newOtp = [...otp];
     newOtp[index] = numericValue.slice(-1);
     setOtp(newOtp);
-
-    if (index < 5 && numericValue !== "") {
-      inputRefs.current[index + 1]?.focus();
-    }
+    if (index < 5 && numericValue !== "") inputRefs.current[index + 1]?.focus();
   };
 
   const handleOtpKeyDown = (index, e) => {
@@ -181,6 +182,13 @@ export default function Register() {
         "Please verify your email via OTP before creating an account.",
       );
     }
+
+    // CHECK PASSWORD REQUIREMENTS
+    const allMet = passwordRequirements.every((req) => req.met);
+    if (!allMet) {
+      return setErrorMessage("Please fulfill all password requirements.");
+    }
+
     if (formData.password !== formData.confirmPassword) {
       return setErrorMessage("Passwords do not match.");
     }
@@ -194,15 +202,11 @@ export default function Register() {
     setLoading(true);
     setErrorMessage("");
     try {
-      const otpString = otp.join("");
-      const safeEmail = formData.email.trim().toLowerCase();
-
       const payload = {
         ...formData,
-        email: safeEmail,
-        otp: otpString,
+        email: formData.email.trim().toLowerCase(),
+        otp: otp.join(""),
       };
-
       const res = await fetch(
         "https://healthbot-production-3c7d.up.railway.app/api/auth/register",
         {
@@ -211,13 +215,8 @@ export default function Register() {
           body: JSON.stringify(payload),
         },
       );
-
       const data = await res.json();
-
-      if (!res.ok)
-        throw new Error(
-          data.message || "Registration failed. Check your details.",
-        );
+      if (!res.ok) throw new Error(data.message || "Registration failed.");
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
@@ -241,28 +240,15 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
       <style>{`
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover, 
-        input:-webkit-autofill:focus, 
-        input:-webkit-autofill:active {
+        input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active {
           -webkit-box-shadow: 0 0 0 30px #0B1120 inset !important;
           -webkit-text-fill-color: white !important;
           transition: background-color 5000s ease-in-out 0s;
         }
       `}</style>
 
-      {/* Background Decor */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div
-        className="absolute inset-0 pointer-events-none opacity-20"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)",
-          backgroundSize: "40px 40px",
-        }}
-      />
 
-      {/* Navigation */}
       <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-6 lg:px-12 w-full bg-[#0B1120]/80 backdrop-blur-md border-b border-slate-800/50">
         <Link to="/" className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" />
@@ -300,30 +286,12 @@ export default function Register() {
             className="flex flex-col gap-6"
             autoComplete="off"
           >
-            {/* --- CHROME AUTOFILL TRAP --- 
-                These invisible fields absorb Chrome's aggressive autofill so the real fields stay empty */}
-            <div className="absolute opacity-0 w-0 h-0 overflow-hidden pointer-events-none -z-50">
-              <input
-                type="text"
-                name="prevent_autofill_email"
-                autoComplete="username"
-                tabIndex="-1"
-              />
-              <input
-                type="password"
-                name="prevent_autofill_password"
-                autoComplete="current-password"
-                tabIndex="-1"
-              />
-            </div>
-
             {errorMessage && (
               <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-4 rounded-xl text-center font-bold animate-pulse">
                 {errorMessage}
               </div>
             )}
 
-            {/* Row 1: Name & Email */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
@@ -358,9 +326,7 @@ export default function Register() {
                       placeholder="Enter email"
                       value={formData.email}
                       onChange={handleChange}
-                      autoComplete="off"
                       className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all disabled:opacity-50"
-                      style={{ colorScheme: "dark" }}
                     />
                     {emailVerified && (
                       <CheckCircle2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-teal-400" />
@@ -387,7 +353,6 @@ export default function Register() {
               </div>
             </div>
 
-            {/* OTP Entry Section (Centered layout) */}
             {otpSent && !emailVerified && (
               <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in duration-300 bg-slate-800/30 p-5 border border-slate-700/50 rounded-xl w-full mb-2">
                 <label className="text-xs font-bold text-teal-400 flex items-center justify-center gap-2 uppercase tracking-wider w-full">
@@ -400,8 +365,6 @@ export default function Register() {
                       ref={(el) => (inputRefs.current[index] = el)}
                       type="text"
                       inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength="6"
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
@@ -413,14 +376,13 @@ export default function Register() {
                   type="button"
                   disabled={loading || otp.join("").length < 6}
                   onClick={handleVerifyOTP}
-                  className="w-full sm:w-[320px] bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-2.5 rounded-lg transition-all shadow-lg shadow-teal-500/20 disabled:opacity-50 mt-2 text-sm"
+                  className="w-full sm:w-[320px] bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-2.5 rounded-lg transition-all text-sm mt-2"
                 >
                   {loading ? "Verifying..." : "Verify OTP"}
                 </button>
               </div>
             )}
 
-            {/* Row 2: Passwords */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
@@ -435,7 +397,6 @@ export default function Register() {
                     placeholder="Create password"
                     value={formData.password}
                     onChange={handleChange}
-                    autoComplete="new-password"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                   <button
@@ -445,6 +406,29 @@ export default function Register() {
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
+                </div>
+                {/* VISIBLE PASSWORD RULES CHECKLIST */}
+                <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 mt-2">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
+                    Password Requirements:
+                  </p>
+                  <div className="grid grid-cols-1 gap-y-2">
+                    {passwordRequirements.map((req, i) => (
+                      <div
+                        key={i}
+                        className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-400" : "text-slate-600"}`}
+                      >
+                        <div
+                          className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${req.met ? "bg-teal-500/20 border-teal-500/50" : "border-slate-700"}`}
+                        >
+                          {req.met && <Check size={10} strokeWidth={4} />}
+                        </div>
+                        <span className="text-[11px] font-medium">
+                          {req.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="flex flex-col gap-2">
@@ -460,7 +444,6 @@ export default function Register() {
                     placeholder="Confirm password"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    autoComplete="new-password"
                     className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                   />
                   <button
@@ -475,10 +458,18 @@ export default function Register() {
                     )}
                   </button>
                 </div>
+                {formData.confirmPassword && (
+                  <p
+                    className={`text-xs mt-1 ${formData.password === formData.confirmPassword ? "text-green-400" : "text-red-400"}`}
+                  >
+                    {formData.password === formData.confirmPassword
+                      ? "✓ Passwords match"
+                      : "✗ Passwords do not match"}
+                  </p>
+                )}
               </div>
             </div>
 
-            {/* Row 3: Age, Gender, Blood Group */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
@@ -489,16 +480,9 @@ export default function Register() {
                   name="age"
                   placeholder="Age"
                   min="1"
-                  max="120"
                   onKeyDown={(e) => {
-                    if (
-                      e.key === "-" ||
-                      e.key === "+" ||
-                      e.key === "e" ||
-                      e.key === "E"
-                    ) {
+                    if (["-", "+", "e", "E"].includes(e.key))
                       e.preventDefault();
-                    }
                   }}
                   value={formData.age}
                   onChange={handleChange}
@@ -549,7 +533,6 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Row 4: Phone and Address */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
@@ -579,7 +562,6 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Terms */}
             <div className="flex items-center gap-3 mt-1">
               <div
                 className={`w-5 h-5 rounded border transition-all flex items-center justify-center cursor-pointer ${agreedToTerms ? "bg-teal-500 border-teal-500" : "bg-[#0B1120] border-slate-700"}`}
@@ -595,23 +577,22 @@ export default function Register() {
               </div>
               <label className="text-xs text-slate-300">
                 I agree to the{" "}
-                <Link
-                  to="/terms"
-                  className="text-teal-400 font-bold hover:underline"
+                <button
+                  type="button"
+                  className="text-teal-400 font-bold hover:underline bg-transparent border-none p-0 inline"
                 >
                   Terms of Service
-                </Link>{" "}
+                </button>{" "}
                 and{" "}
-                <Link
-                  to="/privacy"
-                  className="text-teal-400 font-bold hover:underline"
+                <button
+                  type="button"
+                  className="text-teal-400 font-bold hover:underline bg-transparent border-none p-0 inline"
                 >
                   Privacy Policy
-                </Link>
+                </button>
               </label>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
@@ -629,7 +610,7 @@ export default function Register() {
               <div className="h-[1px] flex-1 bg-slate-800"></div>
             </div>
 
-            {/* Google Sign Up */}
+            {/* Google Sign Up Button */}
             <button
               type="button"
               onClick={handleGoogleSignUp}
@@ -655,35 +636,38 @@ export default function Register() {
               </svg>
               Continue with Google
             </button>
-
-            <div className="mt-4 text-center">
-              <p className="text-sm text-slate-400 font-medium">
-                Already have an account?{" "}
-                <Link
-                  to="/login"
-                  className="text-teal-400 font-extrabold hover:underline ml-1"
-                >
-                  Log In
-                </Link>
-              </p>
-            </div>
           </form>
+
+          <div className="mt-8 text-center">
+            <p className="text-sm text-slate-400 font-medium">
+              Already have an account?{" "}
+              <Link
+                to="/login"
+                className="text-teal-400 font-extrabold hover:underline ml-1"
+              >
+                Log In
+              </Link>
+            </p>
+          </div>
         </div>
       </main>
 
       <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10 text-center text-slate-500 text-xs font-medium">
         <p>© 2026 HealthBot. All rights reserved.</p>
         <div className="flex items-center gap-4">
-          <Link
-            to="/privacy"
-            className="hover:text-slate-400 transition-colors"
+          <button
+            type="button"
+            className="hover:text-slate-400 transition-colors bg-transparent border-none p-0"
           >
             Privacy Policy
-          </Link>
+          </button>
           <span className="text-slate-700">|</span>
-          <Link to="/terms" className="hover:text-slate-400 transition-colors">
+          <button
+            type="button"
+            className="hover:text-slate-400 transition-colors bg-transparent border-none p-0"
+          >
             Terms of Service
-          </Link>
+          </button>
         </div>
       </footer>
     </div>
