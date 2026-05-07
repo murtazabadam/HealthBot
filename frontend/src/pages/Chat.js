@@ -89,6 +89,14 @@ export function ChatDashboard() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // --- Theme Logic ---
+  const isDark = appSettings.darkMode;
+
+  // Sync global body background color
+  useEffect(() => {
+    document.body.style.backgroundColor = isDark ? "#020617" : "#ffffff";
+  }, [isDark]);
+
   // --- Real-time password requirements logic (Matched to Profile.js) ---
   const passwordRequirements = useMemo(
     () => [
@@ -347,7 +355,11 @@ export function ChatDashboard() {
     const newSettings = { ...appSettings, [key]: !appSettings[key] };
     setAppSettings(newSettings);
     localStorage.setItem("appSettings", JSON.stringify(newSettings));
-    showToast("Settings Updated!");
+    showToast(
+      key === "darkMode"
+        ? `Theme switched to ${newSettings.darkMode ? "Dark" : "Light"}`
+        : "Settings Updated!",
+    );
   };
 
   const handleNewChat = () => {
@@ -467,16 +479,22 @@ export function ChatDashboard() {
   };
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-[#020617] border-r border-slate-800/60 shadow-2xl relative z-[100]">
-      <div className="p-6 flex items-center justify-between border-b border-slate-800/40 mb-2">
+    <div
+      className={`flex flex-col h-full border-r shadow-2xl relative z-[100] transition-colors duration-300 ${isDark ? "bg-[#020617] border-slate-800/60" : "bg-slate-50 border-slate-200"}`}
+    >
+      <div
+        className={`p-6 flex items-center justify-between border-b mb-2 transition-colors duration-300 ${isDark ? "border-slate-800/40" : "border-slate-200"}`}
+      >
         <div className="flex items-center gap-2">
-          <Activity className="h-7 w-7 text-teal-400" strokeWidth={3} />
-          <span className="text-2xl font-bold text-white tracking-tight">
+          <Activity className="h-7 w-7 text-teal-500" strokeWidth={3} />
+          <span
+            className={`text-2xl font-bold tracking-tight transition-colors duration-300 ${isDark ? "text-white" : "text-slate-900"}`}
+          >
             HealthBot
           </span>
         </div>
         <button
-          className="lg:hidden text-slate-400 p-1 hover:bg-slate-800 rounded-lg"
+          className={`lg:hidden p-1 rounded-lg transition-colors ${isDark ? "text-slate-400 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-200"}`}
           onClick={() => setIsSidebarOpen(false)}
         >
           <X size={24} />
@@ -487,36 +505,42 @@ export function ChatDashboard() {
           icon={MessageSquare}
           label="New Chat"
           active={page === "chat"}
+          isDark={isDark}
           onClick={handleNewChat}
         />
         <SidebarBtn
           icon={History}
           label="Chat History"
           active={page === "history"}
+          isDark={isDark}
           onClick={() => handleNavClick("history")}
         />
         <SidebarBtn
           icon={Bookmark}
           label="Saved Advice"
           active={page === "saved"}
+          isDark={isDark}
           onClick={() => handleNavClick("saved")}
         />
         <SidebarBtn
           icon={Bell}
           label="Reminders"
           active={page === "reminders"}
+          isDark={isDark}
           onClick={() => handleNavClick("reminders")}
         />
         <SidebarBtn
           icon={LifeBuoy}
           label="First Aid"
           active={page === "first-aid"}
+          isDark={isDark}
           onClick={() => handleNavClick("first-aid")}
         />
         <SidebarBtn
           icon={MapPin}
           label="Facilities"
           active={page === "facilities"}
+          isDark={isDark}
           onClick={() => handleNavClick("facilities")}
         />
 
@@ -529,12 +553,14 @@ export function ChatDashboard() {
           icon={User}
           label="Profile"
           active={page === "profile"}
+          isDark={isDark}
           onClick={() => handleNavClick("profile")}
         />
         <SidebarBtn
           icon={Settings}
           label="Settings"
           active={page === "settings"}
+          isDark={isDark}
           onClick={() => handleNavClick("settings")}
         />
 
@@ -543,7 +569,7 @@ export function ChatDashboard() {
             localStorage.clear();
             navigate("/login");
           }}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 mt-8 hover:bg-rose-500/10 transition-all font-bold uppercase tracking-wider text-xs"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-500 mt-8 hover:bg-rose-500/10 transition-all font-bold uppercase tracking-wider text-xs"
         >
           <LogOut size={18} /> <span>Log Out</span>
         </button>
@@ -552,8 +578,12 @@ export function ChatDashboard() {
   );
 
   return (
-    <div className="fixed inset-0 bg-[#020617] text-slate-200 flex font-sans overflow-hidden selection:bg-teal-500/30">
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-teal-500/5 rounded-full blur-[120px] pointer-events-none" />
+    <div
+      className={`fixed inset-0 flex font-sans overflow-hidden selection:bg-teal-500/30 transition-colors duration-300 ${isDark ? "bg-[#020617] text-slate-200" : "bg-white text-slate-900"}`}
+    >
+      <div
+        className={`absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] pointer-events-none ${isDark ? "bg-teal-500/5" : "bg-teal-500/10"}`}
+      />
 
       {/* Global Toast Notification */}
       {toastMessage && (
@@ -578,24 +608,30 @@ export function ChatDashboard() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative">
         {/* HEADER */}
-        <header className="fixed top-0 left-0 right-0 lg:static z-[90] h-[72px] border-b border-slate-800/60 flex items-center justify-between px-3 sm:px-4 lg:px-8 bg-[#020617]/95 backdrop-blur-md shadow-xl lg:w-auto">
+        <header
+          className={`fixed top-0 left-0 right-0 lg:static z-[90] h-[72px] border-b flex items-center justify-between px-3 sm:px-4 lg:px-8 backdrop-blur-md transition-colors duration-300 ${isDark ? "bg-[#020617]/95 border-slate-800/60 shadow-xl" : "bg-white/95 border-slate-200 shadow-sm"}`}
+        >
           <div className="flex items-center gap-2 sm:gap-3">
             <button
-              className={`p-1.5 sm:p-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-all ${isSidebarOpen ? "lg:hidden" : "block"}`}
+              className={`p-1.5 sm:p-2 rounded-lg transition-all ${isDark ? "text-slate-400 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-100"} ${isSidebarOpen ? "lg:hidden" : "block"}`}
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu size={24} />
             </button>
             <div className="flex items-center gap-2 sm:gap-2.5">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-800 flex items-center justify-center border border-teal-500/20 shadow-[0_0_10px_rgba(45,212,191,0.1)]">
-                <Activity size={20} className="text-teal-400" />
+              <div
+                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center border transition-colors duration-300 ${isDark ? "bg-slate-800 border-teal-500/20" : "bg-slate-100 border-teal-500/30"}`}
+              >
+                <Activity size={20} className="text-teal-500" />
               </div>
               <div className="flex flex-col justify-center">
-                <h3 className="text-white text-sm lg:text-base font-bold tracking-tight leading-tight">
+                <h3
+                  className={`text-sm lg:text-base font-bold tracking-tight leading-tight ${isDark ? "text-white" : "text-slate-900"}`}
+                >
                   HealthBot
                 </h3>
-                <p className="text-[9px] sm:text-[10px] text-teal-400 font-bold uppercase flex items-center gap-1.5 mt-0.5">
-                  <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />
+                <p className="text-[9px] sm:text-[10px] text-teal-500 font-bold uppercase flex items-center gap-1.5 mt-0.5">
+                  <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />
                   Online
                 </p>
               </div>
@@ -603,22 +639,20 @@ export function ChatDashboard() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* FIXED: Removed the 'hidden sm:flex' to show username on mobile */}
             <div className="flex flex-col items-end text-right">
               <Link
                 to="/profile"
-                className="text-sm text-slate-400 hover:text-teal-400 transition-colors font-bold"
+                className={`text-sm font-bold transition-colors ${isDark ? "text-slate-400 hover:text-teal-400" : "text-slate-600 hover:text-teal-500"}`}
               >
                 {user.name}
               </Link>
-              {/* FIXED: Removed the 'hidden sm:block' to show badge on mobile */}
               <span className="text-[8px] text-slate-500 font-bold uppercase opacity-60">
                 Verified User
               </span>
             </div>
             <Link
               to="/profile"
-              className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full border border-slate-700 flex items-center justify-center bg-slate-800/80 shadow-md hover:border-teal-500/50 transition-colors"
+              className={`w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full border flex items-center justify-center transition-colors duration-300 shadow-md ${isDark ? "bg-slate-800/80 border-slate-700 hover:border-teal-500/50" : "bg-slate-100 border-slate-200 hover:border-teal-500/50"}`}
             >
               <UserCircle className="text-slate-400" size={24} />
             </Link>
@@ -626,12 +660,14 @@ export function ChatDashboard() {
         </header>
 
         {/* --- DYNAMIC VIEW SWITCHER --- */}
-        <div className="flex-1 overflow-y-auto pt-[88px] lg:pt-6 pb-6 px-4 lg:px-6 no-scrollbar bg-gradient-to-b from-transparent to-[#020617]/50 relative z-0">
+        <div className="flex-1 overflow-y-auto pt-[88px] lg:pt-6 pb-6 px-4 lg:px-6 no-scrollbar relative z-0">
           {/* VIEW: CHAT */}
           {page === "chat" && (
             <div className="max-w-4xl mx-auto space-y-6">
               <div className="flex justify-center">
-                <span className="text-[9px] bg-slate-800/50 px-3 py-1 rounded-full text-slate-500 font-bold uppercase tracking-widest border border-slate-700/50">
+                <span
+                  className={`text-[9px] px-3 py-1 rounded-full font-bold uppercase tracking-widest border transition-colors duration-300 ${isDark ? "bg-slate-800/50 text-slate-500 border-slate-700/50" : "bg-slate-100 text-slate-400 border-slate-200"}`}
+                >
                   Session Started Today
                 </span>
               </div>
@@ -641,19 +677,19 @@ export function ChatDashboard() {
                   className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2`}
                 >
                   <div
-                    className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : "bg-slate-800 border-slate-700"}`}
+                    className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : isDark ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"}`}
                   >
                     {msg.sender === "user" ? (
-                      <User size={18} className="text-teal-400" />
+                      <User size={18} className="text-teal-500" />
                     ) : (
-                      <Activity size={18} className="text-teal-400" />
+                      <Activity size={18} className="text-teal-500" />
                     )}
                   </div>
                   <div
                     className={`flex flex-col gap-1.5 ${msg.sender === "user" ? "items-end" : ""}`}
                   >
                     <div
-                      className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md"}`}
+                      className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none"}`}
                     >
                       {msg.image && (
                         <img
@@ -666,7 +702,7 @@ export function ChatDashboard() {
                         <div className="whitespace-pre-wrap">{msg.text}</div>
                       )}
                     </div>
-                    <span className="text-[8px] text-slate-600 font-bold uppercase tracking-tighter">
+                    <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter">
                       {msg.time}
                     </span>
                   </div>
@@ -674,13 +710,17 @@ export function ChatDashboard() {
               ))}
               {loading && (
                 <div className="flex gap-3 animate-pulse">
-                  <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
-                    <Activity size={18} className="text-teal-400 opacity-50" />
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center border ${isDark ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"}`}
+                  >
+                    <Activity size={18} className="text-teal-500 opacity-50" />
                   </div>
-                  <div className="bg-slate-800/40 p-4 rounded-2xl rounded-tl-none border border-slate-700/30 flex gap-1">
-                    <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce" />
-                    <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-1 h-1 bg-teal-400 rounded-full animate-bounce [animation-delay:0.4s]" />
+                  <div
+                    className={`p-4 rounded-2xl rounded-tl-none border flex gap-1 ${isDark ? "bg-slate-800/40 border-slate-700/30" : "bg-slate-50 border-slate-200"}`}
+                  >
+                    <span className="w-1 h-1 bg-teal-500 rounded-full animate-bounce" />
+                    <span className="w-1 h-1 bg-teal-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <span className="w-1 h-1 bg-teal-500 rounded-full animate-bounce [animation-delay:0.4s]" />
                   </div>
                 </div>
               )}
@@ -689,27 +729,31 @@ export function ChatDashboard() {
           )}
 
           {/* VIEW: FIRST AID */}
-          {page === "first-aid" && <FirstAidView />}
+          {page === "first-aid" && <FirstAidView isDark={isDark} />}
 
           {/* VIEW: PROFILE (SYNCED WITH PROFILE.JS) */}
           {page === "profile" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
-              <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-8 mb-6 relative overflow-hidden">
+              <div
+                className={`border rounded-3xl p-6 sm:p-8 mb-6 relative overflow-hidden transition-colors duration-300 ${isDark ? "bg-[#111827]/80 backdrop-blur-xl border-slate-700/50" : "bg-white border-slate-200 shadow-sm"}`}
+              >
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4 mb-8">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center shrink-0">
-                      <User className="h-8 w-8 text-teal-400" />
+                      <User className="h-8 w-8 text-teal-500" />
                     </div>
                     <div className="overflow-hidden">
-                      <h1 className="text-xl sm:text-2xl font-bold text-white truncate">
+                      <h1
+                        className={`text-xl sm:text-2xl font-bold truncate ${isDark ? "text-white" : "text-slate-900"}`}
+                      >
                         {user?.name || "User Profile"}
                       </h1>
                       <p className="text-slate-400 text-sm truncate">
                         {user?.email}
                       </p>
-                      <p className="text-xs text-teal-400 mt-1">
+                      <p className="text-xs text-teal-500 mt-1">
                         Member since{" "}
                         {new Date(
                           user?.createdAt || Date.now(),
@@ -728,7 +772,7 @@ export function ChatDashboard() {
                           setIsEditingProfile(true);
                           setToastMessage("");
                         }}
-                        className="w-full sm:w-auto flex justify-center items-center gap-2 px-4 py-2 bg-teal-500/10 border border-teal-500/30 text-teal-400 rounded-xl text-sm font-bold hover:bg-teal-500/20 transition-all"
+                        className="w-full sm:w-auto flex justify-center items-center gap-2 px-4 py-2 bg-teal-500/10 border border-teal-500/30 text-teal-500 rounded-xl text-sm font-bold hover:bg-teal-500/20 transition-all"
                       >
                         <Edit3 className="h-4 w-4" /> Edit Profile
                       </button>
@@ -770,6 +814,7 @@ export function ChatDashboard() {
                     icon={User}
                     value={profileForm.name}
                     editing={isEditingProfile}
+                    isDark={isDark}
                     name="name"
                     onChange={handleProfileChange}
                   />
@@ -778,10 +823,12 @@ export function ChatDashboard() {
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                       <Mail className="h-3 w-3" /> Email Address
                     </label>
-                    <p className="text-slate-400 text-sm py-3 px-4 bg-slate-800/30 rounded-xl flex items-center gap-2">
+                    <p
+                      className={`text-sm py-3 px-4 rounded-xl flex items-center gap-2 ${isDark ? "bg-slate-800/30 text-slate-400" : "bg-slate-50 text-slate-500 border border-slate-200"}`}
+                    >
                       {user?.email}
                       {user?.isVerified && (
-                        <CheckCircle2 className="h-4 w-4 text-green-400" />
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
                       )}
                     </p>
                   </div>
@@ -791,6 +838,7 @@ export function ChatDashboard() {
                     icon={Phone}
                     value={profileForm.phoneNumber}
                     editing={isEditingProfile}
+                    isDark={isDark}
                     name="phoneNumber"
                     onChange={handleProfileChange}
                   />
@@ -799,6 +847,7 @@ export function ChatDashboard() {
                     icon={Calendar}
                     value={profileForm.age}
                     editing={isEditingProfile}
+                    isDark={isDark}
                     name="age"
                     type="number"
                     onChange={handleProfileChange}
@@ -813,14 +862,16 @@ export function ChatDashboard() {
                         name="gender"
                         value={profileForm.gender}
                         onChange={handleProfileChange}
-                        className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all outline-none"
+                        className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
                       >
                         <option value="">Select gender</option>
                         <option value="male">Male</option>
                         <option value="female">Female</option>
                       </select>
                     ) : (
-                      <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl capitalize">
+                      <p
+                        className={`text-sm py-3 px-4 rounded-xl capitalize ${isDark ? "bg-slate-800/30 text-white" : "bg-slate-50 text-slate-900 border border-slate-200"}`}
+                      >
                         {user?.gender || "—"}
                       </p>
                     )}
@@ -835,7 +886,7 @@ export function ChatDashboard() {
                         name="bloodGroup"
                         value={profileForm.bloodGroup}
                         onChange={handleProfileChange}
-                        className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all outline-none"
+                        className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
                       >
                         <option value="">Select blood group</option>
                         {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
@@ -847,7 +898,9 @@ export function ChatDashboard() {
                         )}
                       </select>
                     ) : (
-                      <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl">
+                      <p
+                        className={`text-sm py-3 px-4 rounded-xl ${isDark ? "bg-slate-800/30 text-white" : "bg-slate-50 text-slate-900 border border-slate-200"}`}
+                      >
                         {user?.bloodGroup || "—"}
                       </p>
                     )}
@@ -864,10 +917,12 @@ export function ChatDashboard() {
                         value={profileForm.address}
                         onChange={handleProfileChange}
                         placeholder="Enter address"
-                        className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all outline-none"
+                        className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
                       />
                     ) : (
-                      <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl">
+                      <p
+                        className={`text-sm py-3 px-4 rounded-xl ${isDark ? "bg-slate-800/30 text-white" : "bg-slate-50 text-slate-900 border border-slate-200"}`}
+                      >
                         {user?.address || "—"}
                       </p>
                     )}
@@ -876,11 +931,15 @@ export function ChatDashboard() {
               </div>
 
               {/* Security Card */}
-              <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-8">
+              <div
+                className={`border rounded-3xl p-6 sm:p-8 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 backdrop-blur-xl border-slate-700/50" : "bg-white border-slate-200 shadow-sm"}`}
+              >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-3">
-                    <Shield className="h-5 w-5 text-teal-400" />
-                    <h2 className="text-lg font-bold text-white">
+                    <Shield className="h-5 w-5 text-teal-500" />
+                    <h2
+                      className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}
+                    >
                       Security Settings
                     </h2>
                   </div>
@@ -889,7 +948,7 @@ export function ChatDashboard() {
                       setShowPasswordForm(!showPasswordForm);
                       setToastMessage("");
                     }}
-                    className="w-full sm:w-auto flex justify-center items-center gap-2 px-4 py-2 bg-slate-700/50 border border-slate-600 text-slate-300 rounded-xl text-sm font-bold hover:bg-slate-700 transition-all"
+                    className={`flex justify-center items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold transition-all ${isDark ? "bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700" : "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200"}`}
                   >
                     <Lock className="h-4 w-4" />
                     {showPasswordForm ? "Cancel" : "Change Password"}
@@ -909,6 +968,7 @@ export function ChatDashboard() {
                     <PasswordField
                       label="Current Password"
                       value={passwordData.currentPassword}
+                      isDark={isDark}
                       show={showCurrentPw}
                       onToggle={() => setShowCurrentPw(!showCurrentPw)}
                       onChange={(e) =>
@@ -923,6 +983,7 @@ export function ChatDashboard() {
                       <PasswordField
                         label="New Password"
                         value={passwordData.newPassword}
+                        isDark={isDark}
                         show={showNewPw}
                         onToggle={() => setShowNewPw(!showNewPw)}
                         onChange={(e) =>
@@ -933,8 +994,10 @@ export function ChatDashboard() {
                         }
                       />
 
-                      {/* REAL-TIME PASSWORD RULES CHECKLIST (MATCHED TO PROFILE.JS) */}
-                      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 mt-2">
+                      {/* REAL-TIME PASSWORD RULES CHECKLIST */}
+                      <div
+                        className={`p-4 rounded-xl border mt-2 ${isDark ? "bg-slate-900/50 border-slate-800" : "bg-slate-50 border-slate-200"}`}
+                      >
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
                           Password Requirements:
                         </p>
@@ -942,10 +1005,10 @@ export function ChatDashboard() {
                           {passwordRequirements.map((req, i) => (
                             <div
                               key={i}
-                              className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-400" : "text-slate-600"}`}
+                              className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-500" : "text-slate-400"}`}
                             >
                               <div
-                                className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${req.met ? "bg-teal-500/20 border-teal-500/50" : "border-slate-700"}`}
+                                className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${req.met ? "bg-teal-500/20 border-teal-500/50" : "border-slate-300"}`}
                               >
                                 {req.met && <Check size={10} strokeWidth={4} />}
                               </div>
@@ -961,6 +1024,7 @@ export function ChatDashboard() {
                     <PasswordField
                       label="Confirm New Password"
                       value={passwordData.confirmPassword}
+                      isDark={isDark}
                       show={showConfirmPw}
                       onToggle={() => setShowConfirmPw(!showConfirmPw)}
                       onChange={(e) =>
@@ -973,7 +1037,7 @@ export function ChatDashboard() {
 
                     {passwordData.confirmPassword && (
                       <p
-                        className={`text-xs ${passwordData.newPassword === passwordData.confirmPassword ? "text-green-400" : "text-red-400"}`}
+                        className={`text-xs ${passwordData.newPassword === passwordData.confirmPassword ? "text-green-500" : "text-rose-500"}`}
                       >
                         {passwordData.newPassword ===
                         passwordData.confirmPassword
@@ -999,13 +1063,15 @@ export function ChatDashboard() {
           {page === "history" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold text-white">
+                <h2
+                  className={`text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
+                >
                   Consultation History
                 </h2>
                 {chatHistoryList.length > 0 && (
                   <button
                     onClick={clearChatHistory}
-                    className="text-rose-400 hover:text-rose-300 text-sm font-bold flex items-center gap-1 transition-colors"
+                    className="text-rose-500 hover:text-rose-600 text-sm font-bold flex items-center gap-1 transition-colors"
                   >
                     <Trash2 size={16} /> Clear All
                   </button>
@@ -1013,9 +1079,11 @@ export function ChatDashboard() {
               </div>
               <div className="space-y-4">
                 {chatHistoryList.length === 0 ? (
-                  <div className="text-center py-10 bg-[#111827]/80 rounded-3xl border border-slate-700/50 shadow-lg">
-                    <History className="h-12 w-12 text-slate-500 mx-auto mb-3" />
-                    <p className="text-slate-400 font-medium">
+                  <div
+                    className={`text-center py-10 rounded-3xl border shadow-lg ${isDark ? "bg-[#111827]/80 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
+                  >
+                    <History className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-500 font-medium">
                       No previous consultations found.
                     </p>
                   </div>
@@ -1026,6 +1094,7 @@ export function ChatDashboard() {
                       date={session.date}
                       title={session.title}
                       desc={session.desc}
+                      isDark={isDark}
                       onClick={() => loadChatSession(session)}
                     />
                   ))
@@ -1037,27 +1106,31 @@ export function ChatDashboard() {
           {/* VIEW: SAVED ADVICE */}
           {page === "saved" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
-              <h2 className="text-3xl font-bold text-white mb-8">
+              <h2
+                className={`text-3xl font-bold mb-8 ${isDark ? "text-white" : "text-slate-900"}`}
+              >
                 Saved Prescriptions & Advice
               </h2>
-              {/* FIXED: Added functional cards for the saved advice view */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <SavedCard
                   title="Cold Remedies"
                   date="Oct 24, 2026"
                   icon={Activity}
+                  isDark={isDark}
                   onClick={() => loadSavedAdvice("Cold Remedies")}
                 />
                 <SavedCard
                   title="Hydration Schedule"
                   date="Oct 20, 2026"
                   icon={Clock}
+                  isDark={isDark}
                   onClick={() => loadSavedAdvice("Hydration Schedule")}
                 />
                 <SavedCard
                   title="Emergency Contacts"
                   date="Pinned"
                   icon={Bell}
+                  isDark={isDark}
                   onClick={() => loadSavedAdvice("Emergency Contacts")}
                 />
               </div>
@@ -1068,7 +1141,11 @@ export function ChatDashboard() {
           {page === "reminders" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold text-white">Reminders</h2>
+                <h2
+                  className={`text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
+                >
+                  Reminders
+                </h2>
                 <button
                   onClick={handleAddReminder}
                   className="bg-teal-500 text-slate-900 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:brightness-110 transition-all text-sm"
@@ -1080,22 +1157,24 @@ export function ChatDashboard() {
                 {reminders.map((r) => (
                   <div
                     key={r.id}
-                    className="bg-[#111827]/80 border border-slate-700/50 p-6 rounded-2xl flex items-center justify-between backdrop-blur-md hover:border-teal-500/30 transition-all"
+                    className={`border p-6 rounded-2xl flex items-center justify-between backdrop-blur-md transition-all ${isDark ? "bg-[#111827]/80 border-slate-700/50 hover:border-teal-500/30" : "bg-slate-50 border-slate-200 hover:border-teal-500/50 shadow-sm"}`}
                   >
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-teal-500/10 rounded-xl">
-                        <Clock className="h-6 w-6 text-teal-400" />
+                        <Clock className="h-6 w-6 text-teal-500" />
                       </div>
                       <div>
-                        <h4 className="text-white font-bold text-lg">
+                        <h4
+                          className={`font-bold text-lg ${isDark ? "text-white" : "text-slate-900"}`}
+                        >
                           {r.name}
                         </h4>
-                        <p className="text-slate-400 text-sm">{r.time}</p>
+                        <p className="text-slate-500 text-sm">{r.time}</p>
                       </div>
                     </div>
                     <button
                       onClick={() => handleDeleteReminder(r.id)}
-                      className="p-2 text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 rounded-lg transition-colors"
+                      className="p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-colors"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -1108,7 +1187,9 @@ export function ChatDashboard() {
           {/* VIEW: FACILITIES */}
           {page === "facilities" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
-              <h2 className="text-3xl font-bold text-white mb-8">
+              <h2
+                className={`text-3xl font-bold mb-8 ${isDark ? "text-white" : "text-slate-900"}`}
+              >
                 Nearby Facilities
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1117,6 +1198,7 @@ export function ChatDashboard() {
                   desc="Find general and specialized hospitals near your location."
                   icon={Building}
                   query="hospitals"
+                  isDark={isDark}
                   userAddress={user.address}
                 />
                 <FacilityCard
@@ -1124,6 +1206,7 @@ export function ChatDashboard() {
                   desc="Locate community health centers and primary care facilities."
                   icon={Activity}
                   query="health centers"
+                  isDark={isDark}
                   userAddress={user.address}
                 />
                 <FacilityCard
@@ -1131,6 +1214,7 @@ export function ChatDashboard() {
                   desc="Discover nearby walk-in clinics and outpatient care."
                   icon={HeartPulse}
                   query="clinics"
+                  isDark={isDark}
                   userAddress={user.address}
                 />
                 <FacilityCard
@@ -1138,6 +1222,7 @@ export function ChatDashboard() {
                   desc="Find local pharmacies and 24/7 medical stores."
                   icon={Store}
                   query="pharmacies medical stores"
+                  isDark={isDark}
                   userAddress={user.address}
                 />
               </div>
@@ -1147,35 +1232,49 @@ export function ChatDashboard() {
           {/* VIEW: SETTINGS */}
           {page === "settings" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
-              <h2 className="text-3xl font-bold text-white mb-8">
+              <h2
+                className={`text-3xl font-bold mb-8 ${isDark ? "text-white" : "text-slate-900"}`}
+              >
                 App Settings
               </h2>
-              <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-8 shadow-2xl space-y-8">
+              <div
+                className={`border rounded-3xl p-8 shadow-2xl space-y-8 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 backdrop-blur-xl border-slate-700/50" : "bg-white border-slate-200"}`}
+              >
                 <SettingToggle
                   label="Dark Mode"
                   desc="Enable sleek dark theme across the app."
                   checked={appSettings.darkMode}
+                  isDark={isDark}
                   onChange={() => handleSettingChange("darkMode")}
                 />
-                <div className="h-[1px] w-full bg-slate-800" />
+                <div
+                  className={`h-[1px] w-full ${isDark ? "bg-slate-800" : "bg-slate-100"}`}
+                />
                 <SettingToggle
                   label="Email Notifications"
                   desc="Receive weekly health summaries."
                   checked={appSettings.emailNotif}
+                  isDark={isDark}
                   onChange={() => handleSettingChange("emailNotif")}
                 />
-                <div className="h-[1px] w-full bg-slate-800" />
+                <div
+                  className={`h-[1px] w-full ${isDark ? "bg-slate-800" : "bg-slate-100"}`}
+                />
                 <SettingToggle
                   label="SMS Alerts"
                   desc="Get urgent reminders via text."
                   checked={appSettings.smsAlerts}
+                  isDark={isDark}
                   onChange={() => handleSettingChange("smsAlerts")}
                 />
-                <div className="h-[1px] w-full bg-slate-800" />
+                <div
+                  className={`h-[1px] w-full ${isDark ? "bg-slate-800" : "bg-slate-100"}`}
+                />
                 <SettingToggle
                   label="Save Chat History"
                   desc="Securely save conversations to your device."
                   checked={appSettings.saveHistory}
+                  isDark={isDark}
                   onChange={() => handleSettingChange("saveHistory")}
                 />
               </div>
@@ -1185,14 +1284,16 @@ export function ChatDashboard() {
 
         {/* --- INPUT BAR --- */}
         {page === "chat" && (
-          <div className="flex-none p-3 sm:p-4 lg:p-6 bg-[#020617] border-t border-slate-800/40 w-full relative z-10 pb-4 sm:pb-6 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
+          <div
+            className={`flex-none p-3 sm:p-4 lg:p-6 border-t w-full relative z-10 pb-4 sm:pb-6 transition-colors duration-300 ${isDark ? "bg-[#020617] border-slate-800/40 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]" : "bg-white border-slate-200 shadow-sm"}`}
+          >
             <div className="max-w-4xl mx-auto">
               <div className="flex overflow-x-auto gap-2 mb-3 no-scrollbar pb-1">
                 {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
                   <button
                     key={symptom}
                     onClick={() => sendMessage(`I have a ${symptom}`)}
-                    className="whitespace-nowrap bg-slate-800/40 border border-slate-700/50 px-3 py-1.5 rounded-full text-[10px] text-slate-400 hover:text-teal-400 hover:border-teal-500/30 transition-all flex items-center gap-1 font-bold"
+                    className={`whitespace-nowrap border px-3 py-1.5 rounded-full text-[10px] transition-all flex items-center gap-1 font-bold ${isDark ? "bg-slate-800/40 border-slate-700/50 text-slate-400 hover:text-teal-400 hover:border-teal-500/30" : "bg-slate-100 border-slate-200 text-slate-600 hover:text-teal-600 hover:border-teal-400"}`}
                   >
                     {symptom} <ChevronRight size={10} />
                   </button>
@@ -1200,25 +1301,29 @@ export function ChatDashboard() {
               </div>
 
               {uploadedImage && (
-                <div className="mb-3 flex items-center gap-3 bg-slate-800 p-2 rounded-xl border border-slate-700 animate-in slide-in-from-bottom-2">
+                <div
+                  className={`mb-3 flex items-center gap-3 p-2 rounded-xl border animate-in slide-in-from-bottom-2 ${isDark ? "bg-slate-800 border-slate-700" : "bg-slate-50 border-slate-200"}`}
+                >
                   <img
                     src={uploadedImage}
                     alt="Preview"
                     className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
                   />
-                  <span className="text-xs text-slate-300 flex-1 truncate font-medium">
+                  <span className="text-xs text-slate-400 flex-1 truncate font-medium">
                     Image attached
                   </span>
                   <button
                     onClick={() => setUploadedImage(null)}
-                    className="p-1 hover:bg-slate-700 rounded-lg text-rose-400"
+                    className="p-1 hover:bg-slate-200 rounded-lg text-rose-500"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
               )}
 
-              <div className="bg-slate-900/90 border border-slate-700/50 rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl focus-within:border-teal-500/40 transition-all">
+              <div
+                className={`border rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl focus-within:border-teal-500/40 transition-all ${isDark ? "bg-slate-900/90 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
+              >
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -1228,7 +1333,7 @@ export function ChatDashboard() {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-slate-500 hover:text-teal-400 transition-colors"
+                  className="p-2 text-slate-400 hover:text-teal-500 transition-colors"
                 >
                   <Paperclip size={18} />
                 </button>
@@ -1242,11 +1347,11 @@ export function ChatDashboard() {
                     (e.preventDefault(), sendMessage())
                   }
                   placeholder="Describe symptoms..."
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm text-white py-3 resize-none no-scrollbar placeholder-slate-600 outline-none"
+                  className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar placeholder-slate-400 outline-none ${isDark ? "text-white" : "text-slate-900"}`}
                 />
                 <button
                   onClick={toggleRecording}
-                  className={`p-2 transition-colors ${isRecording ? "text-rose-500 animate-pulse" : "text-slate-500 hover:text-teal-400"}`}
+                  className={`p-2 transition-colors ${isRecording ? "text-rose-500 animate-pulse" : "text-slate-400 hover:text-teal-500"}`}
                 >
                   <Mic size={18} />
                 </button>
@@ -1259,7 +1364,7 @@ export function ChatDashboard() {
                 </button>
               </div>
 
-              <p className="mt-3 text-[9px] lg:text-[10px] text-teal-400 font-bold text-center italic opacity-80 leading-relaxed border-t border-slate-800/40 pt-3">
+              <p className="mt-3 text-[9px] lg:text-[10px] text-teal-500 font-bold text-center italic opacity-80 leading-relaxed border-t border-slate-800/10 pt-3">
                 🩺 For guidance only • Consult a doctor for emergencies
               </p>
             </div>
@@ -1276,7 +1381,7 @@ export function ChatDashboard() {
 }
 
 // --- First Aid Component ---
-const FirstAidView = () => {
+const FirstAidView = ({ isDark }) => {
   const [selected, setSelected] = useState(null);
 
   const topics = [
@@ -1285,10 +1390,10 @@ const FirstAidView = () => {
       title: "CPR (Adult)",
       icon: HeartPulse,
       themeClasses: {
-        bg: "bg-rose-500/10",
-        border: "border-rose-500/30",
+        bg: isDark ? "bg-rose-500/10" : "bg-rose-50",
+        border: isDark ? "border-rose-500/30" : "border-rose-200",
         iconBg: "bg-rose-500/20",
-        text: "text-rose-400",
+        text: "text-rose-500",
       },
       short: "Cardiopulmonary Resuscitation",
       steps: [
@@ -1305,10 +1410,10 @@ const FirstAidView = () => {
       title: "Choking",
       icon: Wind,
       themeClasses: {
-        bg: "bg-blue-500/10",
-        border: "border-blue-500/30",
+        bg: isDark ? "bg-blue-500/10" : "bg-blue-50",
+        border: isDark ? "border-blue-500/30" : "border-blue-200",
         iconBg: "bg-blue-500/20",
-        text: "text-blue-400",
+        text: "text-blue-500",
       },
       short: "Heimlich Maneuver for blocked airway",
       steps: [
@@ -1325,10 +1430,10 @@ const FirstAidView = () => {
       title: "Severe Bleeding",
       icon: Droplet,
       themeClasses: {
-        bg: "bg-red-500/10",
-        border: "border-red-500/30",
+        bg: isDark ? "bg-red-500/10" : "bg-red-50",
+        border: isDark ? "border-red-500/30" : "border-red-200",
         iconBg: "bg-red-500/20",
-        text: "text-red-400",
+        text: "text-red-500",
       },
       short: "Stopping heavy blood loss",
       steps: [
@@ -1344,10 +1449,10 @@ const FirstAidView = () => {
       title: "Burns",
       icon: Flame,
       themeClasses: {
-        bg: "bg-orange-500/10",
-        border: "border-orange-500/30",
+        bg: isDark ? "bg-orange-500/10" : "bg-orange-50",
+        border: isDark ? "border-orange-500/30" : "border-orange-200",
         iconBg: "bg-orange-500/20",
-        text: "text-orange-400",
+        text: "text-orange-500",
       },
       short: "Thermal burns from heat or fire",
       steps: [
@@ -1365,24 +1470,28 @@ const FirstAidView = () => {
       <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-right-4 duration-500 pb-6">
         <button
           onClick={() => setSelected(null)}
-          className="flex items-center gap-2 text-slate-400 hover:text-teal-400 mb-6 transition-colors font-medium"
+          className="flex items-center gap-2 text-slate-500 hover:text-teal-500 mb-6 transition-colors font-medium"
         >
           <ArrowLeft size={18} /> Back to First Aid Guide
         </button>
         <div
-          className={`${selected.themeClasses.bg} border ${selected.themeClasses.border} rounded-3xl p-6 sm:p-8 backdrop-blur-md`}
+          className={`${selected.themeClasses.bg} border ${selected.themeClasses.border} rounded-3xl p-6 sm:p-8 backdrop-blur-md transition-colors duration-300`}
         >
-          <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-700/50">
+          <div
+            className={`flex items-center gap-4 mb-8 pb-6 border-b ${isDark ? "border-slate-700/50" : "border-slate-200"}`}
+          >
             <div
               className={`p-4 ${selected.themeClasses.iconBg} rounded-2xl ${selected.themeClasses.text}`}
             >
               <selected.icon size={32} />
             </div>
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+              <h2
+                className={`text-2xl sm:text-3xl font-bold mb-1 ${isDark ? "text-white" : "text-slate-900"}`}
+              >
                 {selected.title}
               </h2>
-              <p className="text-sm sm:text-base text-slate-400">
+              <p className="text-sm sm:text-base text-slate-500">
                 {selected.short}
               </p>
             </div>
@@ -1391,14 +1500,16 @@ const FirstAidView = () => {
             {selected.steps.map((step, idx) => (
               <div
                 key={idx}
-                className="flex items-start gap-4 bg-[#111827]/80 p-4 sm:p-5 rounded-2xl border border-slate-700/50 shadow-lg"
+                className={`flex items-start gap-4 p-4 sm:p-5 rounded-2xl border shadow-lg transition-colors duration-300 ${isDark ? "bg-[#111827]/80 border-slate-700/50" : "bg-white border-slate-100"}`}
               >
                 <div
                   className={`w-8 h-8 shrink-0 rounded-full ${selected.themeClasses.iconBg} ${selected.themeClasses.text} flex items-center justify-center font-black text-sm`}
                 >
                   {idx + 1}
                 </div>
-                <p className="text-slate-200 leading-relaxed font-medium pt-1 text-sm sm:text-base">
+                <p
+                  className={`leading-relaxed font-medium pt-1 text-sm sm:text-base ${isDark ? "text-slate-200" : "text-slate-700"}`}
+                >
                   {step}
                 </p>
               </div>
@@ -1413,10 +1524,12 @@ const FirstAidView = () => {
     <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-white mb-2">
+          <h2
+            className={`text-3xl font-bold mb-2 ${isDark ? "text-white" : "text-slate-900"}`}
+          >
             First Aid Guide
           </h2>
-          <p className="text-slate-400">Emergency step-by-step instructions.</p>
+          <p className="text-slate-500">Emergency step-by-step instructions.</p>
         </div>
         <a
           href="tel:112"
@@ -1431,7 +1544,7 @@ const FirstAidView = () => {
           <div
             key={topic.id}
             onClick={() => setSelected(topic)}
-            className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 hover:bg-slate-800/80 transition-all cursor-pointer group backdrop-blur-md shadow-lg"
+            className={`border rounded-2xl p-6 transition-all cursor-pointer group backdrop-blur-md shadow-lg ${isDark ? "bg-[#111827]/80 border-slate-700/50 hover:border-teal-500/30 hover:bg-slate-800/80" : "bg-white border-slate-200 hover:border-teal-500/50 hover:bg-slate-50"}`}
           >
             <div className="flex items-start gap-4">
               <div
@@ -1440,10 +1553,12 @@ const FirstAidView = () => {
                 <topic.icon size={28} />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white mb-1 group-hover:text-teal-400 transition-colors">
+                <h3
+                  className={`text-xl font-bold mb-1 transition-colors ${isDark ? "text-white group-hover:text-teal-400" : "text-slate-900 group-hover:text-teal-500"}`}
+                >
                   {topic.title}
                 </h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
+                <p className="text-sm text-slate-500 leading-relaxed">
                   {topic.short}
                 </p>
               </div>
@@ -1453,10 +1568,10 @@ const FirstAidView = () => {
       </div>
 
       <div className="mt-8 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex gap-4 backdrop-blur-md">
-        <AlertCircle className="text-amber-400 shrink-0 mt-0.5" />
+        <AlertCircle className="text-amber-500 shrink-0 mt-0.5" />
         <div>
-          <h4 className="text-amber-400 font-bold mb-1">Medical Disclaimer</h4>
-          <p className="text-amber-400/80 text-xs sm:text-sm leading-relaxed">
+          <h4 className="text-amber-600 font-bold mb-1">Medical Disclaimer</h4>
+          <p className="text-amber-700/80 text-xs sm:text-sm leading-relaxed">
             This guide provides basic first aid information for emergencies. It
             is not a substitute for professional medical training or immediate
             emergency services. Always call for professional help first in
@@ -1470,51 +1585,64 @@ const FirstAidView = () => {
 
 // --- Helper Components ---
 
-const SidebarBtn = ({ icon: Icon, label, active, onClick }) => (
+const SidebarBtn = ({ icon: Icon, label, active, onClick, isDark }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-medium ${active ? "bg-teal-500/10 text-teal-400 border border-teal-500/20" : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200"}`}
+    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-medium ${active ? "bg-teal-500/10 text-teal-500 border border-teal-500/20" : isDark ? "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200" : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"}`}
   >
     <Icon size={18} /> <span className="text-sm">{label}</span>
   </button>
 );
 
-const HistoryCard = ({ date, title, desc, onClick }) => (
+const HistoryCard = ({ date, title, desc, onClick, isDark }) => (
   <div
     onClick={onClick}
-    className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800/80 hover:border-teal-500/30 transition-all cursor-pointer flex items-center justify-between group backdrop-blur-md shadow-sm"
+    className={`border rounded-2xl p-6 transition-all cursor-pointer flex items-center justify-between group backdrop-blur-md shadow-sm ${isDark ? "bg-slate-900/80 border-slate-700/50 hover:bg-slate-800/80 hover:border-teal-500/30" : "bg-white border-slate-200 hover:bg-slate-50 hover:border-teal-500/50"}`}
   >
     <div>
-      <h4 className="text-white font-bold text-lg mb-1 group-hover:text-teal-400 transition-colors">
+      <h4
+        className={`font-bold text-lg mb-1 transition-colors ${isDark ? "text-white group-hover:text-teal-400" : "text-slate-900 group-hover:text-teal-500"}`}
+      >
         {title}
       </h4>
-      <p className="text-slate-400 text-sm mb-2">{desc}</p>
-      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+      <p className="text-slate-500 text-sm mb-2">{desc}</p>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
         {date}
       </span>
     </div>
-    <ChevronRight className="text-slate-600 group-hover:text-teal-400 transition-colors" />
+    <ChevronRight className="text-slate-400 group-hover:text-teal-500 transition-colors" />
   </div>
 );
 
-const SavedCard = ({ title, date, icon: Icon, onClick }) => (
+const SavedCard = ({ title, date, icon: Icon, onClick, isDark }) => (
   <div
     onClick={onClick}
-    className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 transition-all cursor-pointer flex items-start gap-4 backdrop-blur-md group"
+    className={`border rounded-2xl p-6 transition-all cursor-pointer flex items-start gap-4 backdrop-blur-md group ${isDark ? "bg-slate-900/80 border-slate-700/50 hover:border-teal-500/30" : "bg-white border-slate-200 hover:border-teal-500/50 shadow-sm"}`}
   >
-    <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
+    <div className="p-3 bg-teal-500/10 rounded-xl text-teal-500 group-hover:scale-110 transition-transform">
       <Icon size={24} />
     </div>
     <div>
-      <h4 className="text-white font-bold text-lg mb-1">{title}</h4>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+      <h4
+        className={`font-bold text-lg mb-1 ${isDark ? "text-white" : "text-slate-900"}`}
+      >
+        {title}
+      </h4>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
         {date}
       </p>
     </div>
   </div>
 );
 
-const FacilityCard = ({ title, desc, icon: Icon, query, userAddress }) => {
+const FacilityCard = ({
+  title,
+  desc,
+  icon: Icon,
+  query,
+  userAddress,
+  isDark,
+}) => {
   const location = userAddress ? `near ${userAddress}` : "near me";
   const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(query + " " + location)}`;
 
@@ -1523,32 +1651,40 @@ const FacilityCard = ({ title, desc, icon: Icon, query, userAddress }) => {
       href={mapUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 hover:-translate-y-1 transition-all flex flex-col items-start gap-4 backdrop-blur-md group shadow-lg"
+      className={`border rounded-2xl p-6 transition-all flex flex-col items-start gap-4 backdrop-blur-md group shadow-lg ${isDark ? "bg-[#111827]/80 border-slate-700/50 hover:border-teal-500/30 hover:-translate-y-1" : "bg-white border-slate-200 hover:border-teal-500/50 hover:-translate-y-1"}`}
     >
-      <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
+      <div className="p-3 bg-teal-500/10 rounded-xl text-teal-500 group-hover:scale-110 transition-transform">
         <Icon size={28} />
       </div>
       <div className="flex-1">
-        <h4 className="text-white font-bold text-xl mb-2">{title}</h4>
-        <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+        <h4
+          className={`font-bold text-xl mb-2 ${isDark ? "text-white" : "text-slate-900"}`}
+        >
+          {title}
+        </h4>
+        <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
       </div>
-      <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-teal-400 mt-2 opacity-80 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-teal-500 mt-2 opacity-80 group-hover:opacity-100 transition-opacity">
         Open Map <ChevronRight size={12} />
       </div>
     </a>
   );
 };
 
-const SettingToggle = ({ label, desc, checked, onChange }) => {
+const SettingToggle = ({ label, desc, checked, onChange, isDark }) => {
   return (
     <div className="flex items-center justify-between">
       <div>
-        <span className="text-white font-bold text-lg block mb-1">{label}</span>
-        <span className="text-slate-400 text-sm">{desc}</span>
+        <span
+          className={`font-bold text-lg block mb-1 ${isDark ? "text-white" : "text-slate-900"}`}
+        >
+          {label}
+        </span>
+        <span className="text-slate-500 text-sm">{desc}</span>
       </div>
       <button
         onClick={onChange}
-        className={`w-14 h-7 rounded-full transition-colors relative shadow-inner flex-shrink-0 ${checked ? "bg-teal-500" : "bg-slate-700"}`}
+        className={`w-14 h-7 rounded-full transition-colors relative shadow-inner flex-shrink-0 ${checked ? "bg-teal-500" : "bg-slate-300"}`}
       >
         <div
           className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all shadow-md ${checked ? "left-8" : "left-1"}`}
@@ -1567,6 +1703,7 @@ const ProfileField = ({
   onChange,
   type = "text",
   name,
+  isDark,
 }) => (
   <div className="flex flex-col gap-2">
     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
@@ -1586,35 +1723,37 @@ const ProfileField = ({
         }
         value={String(value || "")}
         onChange={onChange}
-        className={`bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:border-teal-400 outline-none transition-all ${type === "number" ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : ""}`}
+        className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"} ${type === "number" ? "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" : ""}`}
       />
     ) : (
-      <p className="text-white text-sm py-3 px-4 bg-slate-800/30 rounded-xl">
+      <p
+        className={`text-sm py-3 px-4 rounded-xl transition-colors duration-300 ${isDark ? "bg-slate-800/30 text-white" : "bg-slate-50 text-slate-900 border border-slate-100"}`}
+      >
         {String(value || "—")}
       </p>
     )}
   </div>
 );
 
-const PasswordField = ({ label, value, show, onToggle, onChange }) => (
+const PasswordField = ({ label, value, show, onToggle, onChange, isDark }) => (
   <div className="flex flex-col gap-2">
     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
       {label}
     </label>
     <div className="relative">
-      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
       <input
         type={show ? "text" : "password"}
         required
         value={String(value || "")}
         onChange={onChange}
         placeholder={`Enter ${label.toLowerCase()}`}
-        className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3 pl-12 pr-12 text-sm text-white focus:border-teal-400 outline-none transition-all"
+        className={`w-full border rounded-xl py-3 pl-12 pr-12 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
       />
       <button
         type="button"
         onClick={onToggle}
-        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-500"
       >
         {show ? <EyeOff size={16} /> : <Eye size={16} />}
       </button>
