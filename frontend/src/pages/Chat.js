@@ -228,7 +228,7 @@ export function ChatDashboard() {
 
   const toggleRecording = () => {
     if (!recognition)
-      return alert("Speech recognition is not supported in this browser.");
+      return showToast("Speech recognition is not supported in this browser.");
     if (isRecording) {
       recognition.stop();
     } else {
@@ -252,7 +252,6 @@ export function ChatDashboard() {
   };
 
   const showToast = (msg) => {
-    // Explicit string conversion to prevent "Objects are not valid as React child" error
     const text =
       typeof msg === "object"
         ? msg.message || "An error occurred"
@@ -581,13 +580,15 @@ export function ChatDashboard() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="flex flex-col items-end text-right hidden sm:flex">
+            {/* FIXED: Removed the 'hidden sm:flex' to show username on mobile */}
+            <div className="flex flex-col items-end text-right">
               <Link
                 to="/profile"
                 className="text-sm text-slate-400 hover:text-teal-400 transition-colors font-bold"
               >
                 {user.name}
               </Link>
+              {/* FIXED: Removed the 'hidden sm:block' to show badge on mobile */}
               <span className="text-[8px] text-slate-500 font-bold uppercase opacity-60">
                 Verified User
               </span>
@@ -670,11 +671,9 @@ export function ChatDashboard() {
           {/* VIEW: PROFILE (SYNCED WITH PROFILE.JS) */}
           {page === "profile" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
-              {/* Profile Card */}
               <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-6 sm:p-8 mb-6 relative overflow-hidden">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
 
-                {/* Header (Mobile Responsive Stacking Fix) */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4 mb-8">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center shrink-0">
@@ -742,7 +741,6 @@ export function ChatDashboard() {
                   </div>
                 </div>
 
-                {/* Profile Fields Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <ProfileField
                     label="Full Name"
@@ -792,7 +790,7 @@ export function ChatDashboard() {
                         name="gender"
                         value={profileForm.gender}
                         onChange={handleProfileChange}
-                        className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all appearance-none outline-none"
+                        className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all outline-none"
                       >
                         <option value="">Select gender</option>
                         <option value="male">Male</option>
@@ -815,7 +813,7 @@ export function ChatDashboard() {
                         name="bloodGroup"
                         value={profileForm.bloodGroup}
                         onChange={handleProfileChange}
-                        className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all appearance-none outline-none"
+                        className="bg-[#0B1120] border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all outline-none"
                       >
                         <option value="">Select blood group</option>
                         {["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-"].map(
@@ -993,7 +991,7 @@ export function ChatDashboard() {
               </div>
               <div className="space-y-4">
                 {chatHistoryList.length === 0 ? (
-                  <div className="text-center py-10 bg-slate-900/50 rounded-3xl border border-slate-800 shadow-lg">
+                  <div className="text-center py-10 bg-[#111827]/80 rounded-3xl border border-slate-700/50 shadow-lg">
                     <History className="h-12 w-12 text-slate-500 mx-auto mb-3" />
                     <p className="text-slate-400 font-medium">
                       No previous consultations found.
@@ -1010,13 +1008,6 @@ export function ChatDashboard() {
                     />
                   ))
                 )}
-                {chatHistoryList.length > 0 && (
-                  <div className="text-center pt-8">
-                    <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">
-                      End of history
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -1027,6 +1018,7 @@ export function ChatDashboard() {
               <h2 className="text-3xl font-bold text-white mb-8">
                 Saved Prescriptions & Advice
               </h2>
+              {/* FIXED: Added functional cards for the saved advice view */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <SavedCard
                   title="Cold Remedies"
@@ -1063,7 +1055,7 @@ export function ChatDashboard() {
                 {reminders.map((r) => (
                   <div
                     key={r.id}
-                    className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex items-center justify-between backdrop-blur-md hover:border-teal-500/30 transition-all"
+                    className="bg-[#111827]/80 border border-slate-700/50 p-6 rounded-2xl flex items-center justify-between backdrop-blur-md hover:border-teal-500/30 transition-all"
                   >
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-teal-500/10 rounded-xl">
@@ -1374,7 +1366,7 @@ const FirstAidView = () => {
             {selected.steps.map((step, idx) => (
               <div
                 key={idx}
-                className="flex items-start gap-4 bg-slate-900/80 p-4 sm:p-5 rounded-2xl border border-slate-700/50 shadow-lg"
+                className="flex items-start gap-4 bg-[#111827]/80 p-4 sm:p-5 rounded-2xl border border-slate-700/50 shadow-lg"
               >
                 <div
                   className={`w-8 h-8 shrink-0 rounded-full ${selected.themeClasses.iconBg} ${selected.themeClasses.text} flex items-center justify-center font-black text-sm`}
@@ -1414,7 +1406,7 @@ const FirstAidView = () => {
           <div
             key={topic.id}
             onClick={() => setSelected(topic)}
-            className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 hover:bg-slate-800/80 transition-all cursor-pointer group backdrop-blur-md shadow-lg"
+            className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 hover:bg-slate-800/80 transition-all cursor-pointer group backdrop-blur-md shadow-lg"
           >
             <div className="flex items-start gap-4">
               <div
@@ -1465,7 +1457,7 @@ const SidebarBtn = ({ icon: Icon, label, active, onClick }) => (
 const HistoryCard = ({ date, title, desc, onClick }) => (
   <div
     onClick={onClick}
-    className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800/80 hover:border-teal-500/30 transition-all cursor-pointer flex items-center justify-between group backdrop-blur-md shadow-sm"
+    className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:bg-slate-800/80 hover:border-teal-500/30 transition-all cursor-pointer flex items-center justify-between group backdrop-blur-md shadow-sm"
   >
     <div>
       <h4 className="text-white font-bold text-lg mb-1 group-hover:text-teal-400 transition-colors">
@@ -1481,7 +1473,7 @@ const HistoryCard = ({ date, title, desc, onClick }) => (
 );
 
 const SavedCard = ({ title, date, icon: Icon }) => (
-  <div className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 transition-all cursor-pointer flex items-start gap-4 backdrop-blur-md group">
+  <div className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 transition-all cursor-pointer flex items-start gap-4 backdrop-blur-md group">
     <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
       <Icon size={24} />
     </div>
@@ -1503,7 +1495,7 @@ const FacilityCard = ({ title, desc, icon: Icon, query, userAddress }) => {
       href={mapUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="bg-slate-900/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 hover:-translate-y-1 transition-all flex flex-col items-start gap-4 backdrop-blur-md group shadow-lg"
+      className="bg-[#111827]/80 border border-slate-700/50 rounded-2xl p-6 hover:border-teal-500/30 hover:-translate-y-1 transition-all flex flex-col items-start gap-4 backdrop-blur-md group shadow-lg"
     >
       <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
         <Icon size={28} />
