@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const Conversation = require('../models/Conversation');
-
+const { getGeminiResponse } = require('../config/gemini');
 async function getMLPrediction(text, symptoms) {
   try {
     const controller = new AbortController();
@@ -233,17 +233,52 @@ router.post('/message', auth, async (req, res) => {
   try {
     const { text } = req.body;
     const user = await require('../models/User').findById(req.user.id);
-    const userName = user ? user.name : '';
+    const userName = user ? user.name.split(' ')[0] : 'there';
     const intent = detectIntent(text);
     let botReply = '';
     let mlResult = null;
 
     if (intent === 'symptoms') {
+      // Get ML prediction first
       const symptoms = extractSymptoms(text);
       mlResult = await getMLPrediction(text, symptoms);
-      botReply = buildBotReply(text, mlResult, userName);
+
+      // Format ML result for Gemini
+      const mlSummary = mlResult && mlResult.predictions
+        ? `Top prediction: ${mlResult.predictions[0].disease} (${mlResult.predictions[0].confidence}% confidence). Severity: ${mlResult.severity}`
+        : null;
+
+      // Try Gemini for natural response
+      if (process.env.GEMINI_API_KEY) {
+        try {
+          botReply = await getGeminiResponse(text, mlSummary, userName);
+          // Append ML structured data below Gemini response
+          if (mlResult && mlResult.predictions) {
+            const top = mlResult.predictions[0];
+            botReply += `\n\n📊 ML Analysis:\n📋 Most likely: ${top.disease} (${top.confidence}%)\n⚠️ Severity: ${mlResult.severity}\n💊 ${mlResult.recommendation}`;
+            if (top.precautions && top.precautions.length > 0) {
+              botReply += `\n\n💡 Precautions:\n${top.precautions.slice(0, 3).map(p => `• ${p}`).join('\n')}`;
+            }
+            botReply += `\n\n⚕️ Not a substitute for professional medical advice.`;
+          }
+        } catch (geminiErr) {
+          console.error('Gemini error:', geminiErr.message);
+          botReply = buildBotReply(text, mlResult, userName);
+        }
+      } else {
+        botReply = buildBotReply(text, mlResult, userName);
+      }
     } else {
-      botReply = getConversationalReply(intent, text, userName);
+      // For greetings, thanks etc — use Gemini
+      if (process.env.GEMINI_API_KEY) {
+        try {
+          botReply = await getGeminiResponse(text, null, userName);
+        } catch {
+          botReply = getConversationalReply(intent, text, userName);
+        }
+      } else {
+        botReply = getConversationalReply(intent, text, userName);
+      }
     }
 
     let conversation = await Conversation.findOne({ userId: req.user.id });
@@ -257,15 +292,6 @@ router.post('/message', auth, async (req, res) => {
     res.json({ reply: botReply, mlResult, intent });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-router.get('/history', auth, async (req, res) => {
-  try {
-    const conversation = await Conversation.findOne({ userId: req.user.id });
-    res.json(conversation ? conversation.messages : []);
-  } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
