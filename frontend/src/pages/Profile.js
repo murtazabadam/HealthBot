@@ -20,7 +20,7 @@ import {
   Check,
 } from "lucide-react";
 
-const API = "https://healthbot-production-3c7d.up.railway.app";
+const API = "https://healthbot-backend.onrender.com";
 
 function ProfileContent() {
   const [profile, setProfile] = useState(null);
