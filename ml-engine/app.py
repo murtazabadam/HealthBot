@@ -29,7 +29,7 @@ except ImportError:
 LIGHTGBM_AVAILABLE = False  # Disabled — not compatible with Railway
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, 'data')
@@ -458,4 +458,5 @@ def disease_info(name):
     })
 
 if __name__ == '__main__':
-    app.run(port=5001, debug=True)
+    port = int(os.environ.get('PORT', 7860))
+    app.run(host='0.0.0.0', port=port, debug=False)

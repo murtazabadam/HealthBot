@@ -63,7 +63,7 @@ export default function ForgotPassword() {
     setError("");
     try {
       const res = await fetch(
-        "https://healthbot-production-3c7d.up.railway.app/api/auth/forgot-password",
+        "https://healthbot-backend.onrender.com/api/auth/forgot-password",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -94,7 +94,7 @@ export default function ForgotPassword() {
     setError("");
     try {
       const res = await fetch(
-        "https://healthbot-production-3c7d.up.railway.app/api/auth/verify-otp",
+        "https://healthbot-backend.onrender.com/api/auth/verify-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -127,7 +127,7 @@ export default function ForgotPassword() {
     setError("");
     try {
       const res = await fetch(
-        "https://healthbot-production-3c7d.up.railway.app/api/auth/reset-password",
+        "https://healthbot-backend.onrender.com/api/auth/reset-password",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
