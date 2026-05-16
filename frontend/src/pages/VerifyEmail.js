@@ -20,7 +20,7 @@ export default function VerifyEmail() {
     const verifyEmail = async () => {
       try {
         const res = await fetch(
-          `https://healthbot-backend.onrender.com/api/auth/verify-email?token=${token}`
+          `https://healthbot-backend-ezxv.onrender.com/api/auth/verify-email?token=${token}`
         );
         const data = await res.json();
         if (!res.ok) {
