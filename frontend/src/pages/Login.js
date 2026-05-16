@@ -14,7 +14,7 @@ export default function Login() {
 
   const handleGoogleLogin = () => {
     window.location.href =
-      "https://healthbot-backend.onrender.com/api/auth/google";
+      "https://healthbot-backend-ezxv.onrender.com/api/auth/google";
   };
 
   const handleLogin = async (e) => {
@@ -23,7 +23,7 @@ export default function Login() {
 
     try {
       const res = await fetch(
-        "https://healthbot-backend.onrender.com/api/auth/login",
+        "https://healthbot-backend-ezxv.onrender.com/api/auth/login",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

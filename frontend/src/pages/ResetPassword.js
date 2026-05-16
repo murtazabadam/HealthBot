@@ -48,7 +48,7 @@ export default function ResetPassword() {
     setMessage("");
     try {
       const res = await fetch(
-        "https://healthbot-backend.onrender.com/api/auth/reset-password",
+        "https://healthbot-backend-ezxv.onrender.com/api/auth/reset-password",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
