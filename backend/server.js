@@ -43,9 +43,8 @@ app.use('/api/chat', require('./routes/chat'));
 
 /* Test Route */
 app.get('/', (req, res) => {
-  res.json({ message: 'HealthBot API is running!' });
+  res.json({ message: 'HealthBot API is running!', status: 'ok' });
 });
-
 /* MongoDB */
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
