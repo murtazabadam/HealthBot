@@ -32,7 +32,9 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(BASE, 'data')
+# Check data/ subfolder first, fall back to root directory
+DATA = os.path.join(BASE, 'data') if os.path.exists(os.path.join(BASE, 'data', 'dataset.csv')) else BASE
+print(f"Using data directory: {DATA}")
 MODELS_DIR = os.path.join(BASE, 'saved_models')
 os.makedirs(MODELS_DIR, exist_ok=True)
 
