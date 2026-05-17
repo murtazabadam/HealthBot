@@ -9,7 +9,9 @@ function initGemini() {
   }
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-   model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-8b' });
+  model = genAI.getGenerativeModel({
+  model: process.env.GEMINI_MODEL || 'gemini-1.5-flash-8b'
+});
     console.log('Gemini AI ready!');
     return true;
   } catch (err) {
