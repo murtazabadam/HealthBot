@@ -9,7 +9,7 @@ function initGemini() {
   }
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+   model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-8b' });
     console.log('Gemini AI ready!');
     return true;
   } catch (err) {
@@ -26,20 +26,55 @@ async function getGeminiResponse(userMessage, mlPrediction, userName, chatHistor
   try {
     const systemContext = `You are HealthBot, a compassionate AI medical assistant helping patients understand their symptoms.
 
-RULES you must always follow:
+RULES:
 - Always remind users you are an AI and NOT a replacement for a real doctor
 - Be warm, empathetic and easy to understand
 - Keep responses to 3-4 sentences maximum
-- If an ML prediction is provided, mention it naturally in your response
+- If an ML prediction is provided, mention it naturally
 - Ask one follow-up question to gather more symptom information
-- Never make definitive diagnoses — use phrases like "this could suggest" or "this may indicate"
-- If symptoms sound serious, always recommend seeing a doctor urgently
-- Use simple language that any patient can understand
+- Never make definitive diagnoses — use "this could suggest" or "this may indicate"
+- If symptoms sound serious, recommend seeing a doctor urgently
 
 Current patient name: ${userName}
-${mlPrediction
-    ? `ML Model Prediction: ${mlPrediction}`
-    : 'No ML prediction yet'}`;
+${mlPrediction ? `ML Model Prediction: ${mlPrediction}` : 'No ML prediction yet'}`;
+
+    const history = chatHistory.slice(-4).map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.text.substring(0, 300) }]
+    }));
+
+    const chat = model.startChat({
+      history: history.length > 0 ? history : [],
+      generationConfig: {
+        maxOutputTokens: 250,
+        temperature: 0.7,
+      },
+    });
+
+    const result = await chat.sendMessage(
+      `${systemContext}\n\nPatient message: ${userMessage}`
+    );
+    return result.response.text();
+
+  } catch (err) {
+    // If rate limited, wait and retry once
+    if (err.message && err.message.includes('429')) {
+      console.log('Gemini rate limited — retrying in 5 seconds...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      try {
+        const result = await model.generateContent(
+          `You are HealthBot. Patient ${userName} says: "${userMessage}". ${mlPrediction || ''} Give a brief empathetic response in 2-3 sentences and ask one follow-up question. Remind them you are an AI.`
+        );
+        return result.response.text();
+      } catch (retryErr) {
+        console.error('Gemini retry failed:', retryErr.message);
+        return null;
+      }
+    }
+    console.error('Gemini error:', err.message);
+    return null;
+  }
+}
 
     // Build conversation history for Gemini context (last 6 messages)
     const history = chatHistory.slice(-6).map(msg => ({
