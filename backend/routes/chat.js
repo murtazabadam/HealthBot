@@ -12,10 +12,17 @@ async function getMLPrediction(text, symptoms) {
       'https://murtazabadam-healthbot-ml.hf.space/predict';
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
+
+    // Send both text AND pre-extracted symptoms
+    // ML engine will use symptoms list if text extraction misses any
     const response = await fetch(mlUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, symptoms }),
+      body: JSON.stringify({
+        text,
+        symptoms,
+        use_provided_symptoms: true  // tell ML to trust our extraction
+      }),
       signal: controller.signal
     });
     clearTimeout(timeout);
