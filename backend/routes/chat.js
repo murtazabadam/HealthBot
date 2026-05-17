@@ -37,6 +37,9 @@ async function getMLPrediction(text, symptoms) {
 
 // ── Symptom Extraction ──────────────────────────────────────────────────────
 const NL_MAP = {
+  'i have fever': 'fever',
+'have fever': 'fever',
+'fever cough': 'fever',
   'fever': 'fever', 'high fever': 'high_fever', 'mild fever': 'mild_fever',
   'feverish': 'fever', 'feel hot': 'fever', 'high temperature': 'high_fever',
   'cough': 'cough', 'coughing': 'cough', 'dry cough': 'cough',
@@ -184,6 +187,8 @@ router.post('/message', auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     const userName = user ? user.name : 'there';
     const intent = detectIntent(text);
+    const debugSymptoms = extractSymptoms(text);
+console.log('Detected symptoms:', debugSymptoms, '| Intent:', intent);
     let botReply = '';
     let mlResult = null;
 
