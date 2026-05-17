@@ -43,9 +43,8 @@ app.use('/api/chat', require('./routes/chat'));
 
 /* Test Route */
 app.get('/', (req, res) => {
-  res.json({ message: 'HealthBot API is running!' });
+  res.json({ message: 'HealthBot API is running!', status: 'ok' });
 });
-
 /* MongoDB */
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
@@ -59,4 +58,14 @@ io.on('connection', (socket) => {
 
 /* Start Server */
 const PORT = process.env.PORT || 5000;
+// Keep-alive ping to prevent Render free tier from sleeping
+const https = require('https');
+const BACKEND_URL = process.env.RENDER_EXTERNAL_URL || '';
+if (BACKEND_URL) {
+  setInterval(() => {
+    https.get(`${BACKEND_URL}/`, (res) => {
+      console.log(`Keep-alive ping: ${res.statusCode}`);
+    }).on('error', () => {});
+  }, 14 * 60 * 1000); // ping every 14 minutes
+}
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

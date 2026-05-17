@@ -315,7 +315,7 @@ export function ChatDashboard() {
     setSavingProfile(true);
     try {
       const res = await fetch(
-        `https://healthbot-production-3c7d.up.railway.app/api/auth/profile`,
+        `https://healthbot-backend-ezxv.onrender.com/api/auth/profile`,
         {
           method: "PUT",
           headers: {
@@ -358,7 +358,7 @@ export function ChatDashboard() {
     setSavingPassword(true);
     try {
       const res = await fetch(
-        `https://healthbot-production-3c7d.up.railway.app/api/auth/change-password`,
+        `https://healthbot-backend-ezxv.onrender.com/api/auth/change-password`,
         {
           method: "PUT",
           headers: {
@@ -484,7 +484,7 @@ export function ChatDashboard() {
 
     try {
       const res = await axios.post(
-        "https://healthbot-production-3c7d.up.railway.app/api/chat/message",
+        "https://healthbot-backend-ezxv.onrender.com/api/chat/message",
         { text: textToSend, image: currentImg },
         { headers: { Authorization: `Bearer ${token}` } },
       );

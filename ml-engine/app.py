@@ -29,10 +29,12 @@ except ImportError:
 LIGHTGBM_AVAILABLE = False  # Disabled — not compatible with Railway
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(BASE, 'data')
+# Check data/ subfolder first, fall back to root directory
+DATA = os.path.join(BASE, 'data') if os.path.exists(os.path.join(BASE, 'data', 'dataset.csv')) else BASE
+print(f"Using data directory: {DATA}")
 MODELS_DIR = os.path.join(BASE, 'saved_models')
 os.makedirs(MODELS_DIR, exist_ok=True)
 
@@ -458,4 +460,5 @@ def disease_info(name):
     })
 
 if __name__ == '__main__':
-    app.run(port=5001, debug=True)
+    port = int(os.environ.get('PORT', 7860))
+    app.run(host='0.0.0.0', port=port, debug=False)
