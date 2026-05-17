@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
-import { useNavigate, Link, MemoryRouter } from "react-router-dom";
+import { useNavigate, MemoryRouter } from "react-router-dom";
 import {
   Activity,
   MessageSquare,
@@ -47,6 +47,8 @@ import {
 export function ChatDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [page, setPage] = useState("chat");
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
 
   // Real-time Chat & Settings States
   const [activeSessionId, setActiveSessionId] = useState(Date.now());
@@ -64,7 +66,7 @@ export function ChatDashboard() {
     JSON.parse(localStorage.getItem("user") || "{}"),
   );
 
-  // Profile Editing States
+  // Profile Editing States (DO NOT REMOVE - Needed for Profile Tab)
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: user.name || "",
@@ -97,7 +99,47 @@ export function ChatDashboard() {
     document.body.style.backgroundColor = isDark ? "#020617" : "#ffffff";
   }, [isDark]);
 
-  // --- Real-time password requirements logic (Matched to Profile.js) ---
+  // --- NEW: Auto-Sync Profile Data from Backend on Load ---
+  useEffect(() => {
+    const fetchLatestProfile = async () => {
+      if (!token) return;
+      try {
+        const res = await fetch(
+          "https://healthbot-production-3c7d.up.railway.app/api/auth/profile",
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          const userData = data.user || data;
+
+          // Instantly update the Nav Bar and Profile states
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+
+          // Pre-fill the edit form with the synced data
+          setProfileForm({
+            name: userData.name || "",
+            age: userData.age || "",
+            gender: userData.gender || "",
+            bloodGroup: userData.bloodGroup || "",
+            address: userData.address || "",
+            phoneNumber: userData.phoneNumber || "",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to sync profile data from server.", err);
+      }
+    };
+
+    fetchLatestProfile();
+  }, [token]);
+  // ---------------------------------------------------------
+
+  // --- Real-time password requirements logic ---
   const passwordRequirements = useMemo(
     () => [
       {
@@ -148,9 +190,6 @@ export function ChatDashboard() {
 
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
-  const navigate = useNavigate();
-
-  const token = localStorage.getItem("token");
 
   const formatName = (str) => {
     if (!str) return "";
@@ -162,7 +201,6 @@ export function ChatDashboard() {
 
   const rawFullName = user.name || "User";
   const rawFirstName = rawFullName.trim().split(" ")[0];
-
   const firstName = formatName(rawFirstName);
 
   // Initialize Welcome Message
@@ -640,22 +678,21 @@ export function ChatDashboard() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex flex-col items-end text-right">
-              <Link
-                to="/profile"
-                className={`text-sm font-bold transition-colors ${isDark ? "text-slate-400 hover:text-teal-400" : "text-slate-600 hover:text-teal-500"}`}
+              <span
+                className={`text-sm font-bold transition-colors ${isDark ? "text-slate-400" : "text-slate-600"}`}
               >
-                {user.name}
-              </Link>
+                {user.name || "User"}
+              </span>
               <span className="text-[8px] text-slate-500 font-bold uppercase opacity-60">
                 Verified User
               </span>
             </div>
-            <Link
-              to="/profile"
+            <button
+              onClick={() => handleNavClick("profile")}
               className={`w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-full border flex items-center justify-center transition-colors duration-300 shadow-md ${isDark ? "bg-slate-800/80 border-slate-700 hover:border-teal-500/50" : "bg-slate-100 border-slate-200 hover:border-teal-500/50"}`}
             >
               <UserCircle className="text-slate-400" size={24} />
-            </Link>
+            </button>
           </div>
         </header>
 
@@ -1694,7 +1731,7 @@ const SettingToggle = ({ label, desc, checked, onChange, isDark }) => {
   );
 };
 
-// --- Profile Shared Components (Matched to Profile.js) ---
+// --- Profile Shared Components ---
 const ProfileField = ({
   label,
   icon: Icon,
