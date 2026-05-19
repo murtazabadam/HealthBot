@@ -8,6 +8,23 @@ const { sendOTPEmail } = require('../config/emailService');
 const passport = require('passport');
 require('../config/passport');
 
+//temporarysection
+// Temporary Gemini test — remove after testing
+router.get('/test-gemini', async (req, res) => {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) return res.json({ error: 'GEMINI_API_KEY not set on server' });
+  try {
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(key);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await model.generateContent('Say hello in one sentence.');
+    const text = result.response.text();
+    res.json({ success: true, reply: text, keyPrefix: key.substring(0, 8) });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+//end of temporary section
 //temporary section
 router.get('/test-email', async (req, res) => {
   try {
@@ -24,7 +41,17 @@ router.get('/test-email', async (req, res) => {
   }
 });
 //end of temporary section
-
+//gemini temporary test route
+router.get('/test-gemini', async (req, res) => {
+  try {
+    const { getGeminiResponse } = require('../config/gemini');
+    const reply = await getGeminiResponse('Hello, how are you?', null, 'Test');
+    res.json({ success: true, reply });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+//end of gemini temporary test route
 // Generate 6-digit OTP
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -123,23 +150,22 @@ router.post('/verify-registration-otp', async (req, res) => {
 router.post('/register', async (req, res) => {
   try {
     const {
-  name, password, otp,
-  age, gender, bloodGroup, address, phoneNumber
-} = req.body;
-const email = req.body.email?.trim().toLowerCase();
+      name, email, password, otp,
+      age, gender, bloodGroup, address, phoneNumber
+    } = req.body;
 
-    if (!name || !email || !password || !otp) {
+    const safeEmail = email?.trim().toLowerCase();
+
+    if (!name || !safeEmail || !password || !otp) {
       return res.status(400).json({ message: 'Name, email, password and OTP are required' });
     }
 
-    // Find user with matching OTP
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: safeEmail });
     if (!user) {
       return res.status(400).json({ message: 'Please request an OTP first' });
     }
 
-    // Verify OTP
-    if (user.verificationOTP !== otp) {
+    if (user.verificationOTP !== otp.trim()) {
       return res.status(400).json({ message: 'Invalid OTP. Please check and try again.' });
     }
 
@@ -147,27 +173,37 @@ const email = req.body.email?.trim().toLowerCase();
       return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Update user with full details
+    // Save all profile fields from registration form
     user.name = name;
     user.password = hashedPassword;
-    user.age = age || null;
-    user.gender = gender || null;
-    user.bloodGroup = bloodGroup || null;
-    user.address = address || null;
-    user.phoneNumber = phoneNumber || null;
+    user.age = age || "";
+    user.gender = gender || "";
+    user.bloodGroup = bloodGroup || "";
+    user.address = address || "";
+    user.phoneNumber = phoneNumber || "";
     user.isVerified = true;
     user.verificationOTP = null;
     user.verificationExpires = null;
     await user.save();
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
     res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar }
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        age: user.age,
+        gender: user.gender,
+        bloodGroup: user.bloodGroup,
+        address: user.address,
+        phoneNumber: user.phoneNumber
+      }
     });
 
   } catch (err) {
@@ -342,14 +378,30 @@ const authMiddleware = require('../middleware/auth');
 // ── GET PROFILE ────────────────────────────────────────────────────────────────
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password -verificationOTP -resetOTP');
+    const user = await User.findById(req.user.id).select(
+      '-password -verificationOTP -verificationExpires -resetOTP -resetOTPExpires'
+    );
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
+
+    // Return full profile including all registration fields
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      authType: user.authType,
+      age: user.age || "",
+      gender: user.gender || "",
+      bloodGroup: user.bloodGroup || "",
+      address: user.address || "",
+      phoneNumber: user.phoneNumber || "",
+      isVerified: user.isVerified,
+      createdAt: user.createdAt
+    });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
 // ── UPDATE PROFILE ─────────────────────────────────────────────────────────────
 router.put('/profile', authMiddleware, async (req, res) => {
   try {
@@ -358,32 +410,30 @@ router.put('/profile', authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     if (name) user.name = name;
-    if (age !== undefined) user.age = age;
-    if (gender) user.gender = gender;
-    if (bloodGroup !== undefined) user.bloodGroup = bloodGroup;
-    if (address !== undefined) user.address = address;
-    if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
+    user.age = age !== undefined ? age : user.age;
+    user.gender = gender !== undefined ? gender : user.gender;
+    user.bloodGroup = bloodGroup !== undefined ? bloodGroup : user.bloodGroup;
+    user.address = address !== undefined ? address : user.address;
+    user.phoneNumber = phoneNumber !== undefined ? phoneNumber : user.phoneNumber;
 
     await user.save();
 
-    // Update localStorage user data
     const updatedUser = {
       id: user._id,
       name: user.name,
       email: user.email,
-      avatar: user.avatar
+      avatar: user.avatar,
+      age: user.age,
+      gender: user.gender,
+      bloodGroup: user.bloodGroup,
+      address: user.address,
+      phoneNumber: user.phoneNumber
     };
 
+    // Update localStorage data for frontend
     res.json({
       message: 'Profile updated successfully!',
-      user: updatedUser,
-      profile: {
-        name: user.name, email: user.email,
-        age: user.age, gender: user.gender,
-        bloodGroup: user.bloodGroup, address: user.address,
-        phoneNumber: user.phoneNumber, avatar: user.avatar,
-        createdAt: user.createdAt
-      }
+      user: updatedUser
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
