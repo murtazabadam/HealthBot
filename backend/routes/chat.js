@@ -127,6 +127,8 @@ const NL_MAP = {
   'feel cold': 'chills',
   'sweating': 'sweating',
   'night sweats': 'sweating',
+  'night sweats': 'night_sweat',
+'night sweat': 'night_sweat',
   // Urinary
   'frequent urination': 'frequent_urination',
   'burning urination': 'burning_micturition',
@@ -179,6 +181,11 @@ const NL_MAP = {
   'skin peeling': 'skin_peeling',
   'blisters': 'blister',
   'hair loss': 'brittle_nails',
+
+  'pain behind the eyes': 'pain_behind_the_eyes',
+'eye pain': 'pain_behind_the_eyes',
+'eyes hurt': 'pain_behind_the_eyes',
+'dengue': 'skin_rash',
 };
 
 function extractSymptoms(text) {
