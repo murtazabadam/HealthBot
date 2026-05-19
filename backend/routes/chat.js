@@ -250,22 +250,34 @@ function getFallbackReply(intent, userName) {
 function buildMLSection(mlResult, symptoms) {
   if (!mlResult || mlResult.error || !mlResult.predictions
     || mlResult.predictions.length === 0) return null;
+
+  // If only 1 symptom and low confidence — ask for more
+  if (mlResult.low_confidence && symptoms.length < 2) {
+    return {
+      summary: null,
+      block: `I detected: **${symptoms.map(s => s.replace(/_/g, ' ')).join(', ')}**.\n\n🔍 To give you an accurate analysis, could you describe more symptoms?\n\nFor example, do you also have:\n• Fever or chills\n• Headache or body ache\n• Nausea or vomiting\n• Skin rash or itching\n\nThe more symptoms you describe, the more accurate my prediction!`
+    };
+  }
+
   const top = mlResult.predictions[0];
   const others = mlResult.predictions.slice(1)
     .filter(p => p.confidence > 3)
     .map(p => `${p.disease} (${p.confidence}%)`).join(', ');
   const matched = (mlResult.matched_symptoms || symptoms)
     .map(s => s.replace(/_/g, ' '));
+  const description = top.description
+    ? `\n📖 ${top.description}` : '';
   const precautions = top.precautions && top.precautions.length > 0
     ? `\n\n💡 Precautions:\n${top.precautions.slice(0, 3)
-      .map(p => `• ${p}`).join('\n')}` : '';
+        .map(p => `• ${p}`).join('\n')}` : '';
   const tip = mlResult.low_confidence
     ? `\n\n⚡ Tip: Describe more symptoms for better accuracy.` : '';
   const followup = mlResult.followup_question
     ? `\n\n❓ ${mlResult.followup_question}` : '';
+
   return {
     summary: `Top prediction: ${top.disease} (${top.confidence}% confidence). Severity: ${mlResult.severity}.`,
-    block: `📊 ML Analysis (${matched.join(', ')}):\n📋 Most likely: ${top.disease} (${top.confidence}%)\n${others ? `📌 Also possible: ${others}\n` : ''}⚠️ Severity: ${mlResult.severity}\n💊 ${mlResult.recommendation}${precautions}${tip}${followup}\n\n⚕️ Not a substitute for professional medical advice.`
+    block: `🔍 Based on your symptoms (${matched.join(', ')}):\n\n📋 Most likely: ${top.disease} (${top.confidence}% confidence)\n${others ? `📌 Also possible: ${others}\n` : ''}⚠️ Severity: ${mlResult.severity}\n${description}\n💊 ${mlResult.recommendation}${precautions}${tip}${followup}\n\n⚕️ This is not a substitute for professional medical advice.`
   };
 }
 
