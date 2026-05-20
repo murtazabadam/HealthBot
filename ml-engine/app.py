@@ -349,12 +349,21 @@ def predict():
     data         = request.get_json()
     text_input   = data.get('text', '')
     symptom_list = data.get('symptoms', [])
+    use_provided = data.get('use_provided_symptoms', False)
 
+    # If backend already extracted symptoms, merge with ML extraction
     if text_input:
-        symptoms = extract_symptoms(text_input)
+        ml_symptoms = extract_symptoms(text_input)
     else:
-        symptoms = [s.strip().lower().replace(' ', '_') for s in symptom_list]
-        symptoms = [s for s in symptoms if s in ALL_SYMPTOMS]
+        ml_symptoms = []
+
+    # Merge both lists — backend NL_MAP + ML engine extraction
+    provided = [s.strip().lower().replace(' ', '_')
+                for s in symptom_list
+                if s.strip().lower().replace(' ', '_') in ALL_SYMPTOMS]
+
+    # Union of both extractions
+    symptoms = list(set(ml_symptoms + provided))
 
     if not symptoms:
         return jsonify({
