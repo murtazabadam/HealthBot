@@ -6,7 +6,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Controlled input states to prevent Chrome from auto-filling
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -103,7 +102,7 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="off"
+                  autoComplete="email"
                   className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
               </div>
@@ -130,7 +129,7 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
+                  autoComplete="current-password"
                   className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
                 />
                 <button
