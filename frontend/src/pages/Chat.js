@@ -105,7 +105,7 @@ export function ChatDashboard() {
       if (!token) return;
       try {
         const res = await fetch(
-          "https://healthbot-production-3c7d.up.railway.app/api/auth/profile",
+          "https://healthbot-backend-ezxv.onrender.com/api/auth/profile",
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },

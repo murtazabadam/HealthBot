@@ -78,7 +78,7 @@ export default function Register() {
       const safeEmail = formData.email.trim().toLowerCase();
 
       const res = await fetch(
-        "https://healthbot-production-3c7d.up.railway.app/api/auth/send-otp",
+        "https://healthbot-backend-ezxv.onrender.com/api/auth/send-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -127,7 +127,7 @@ export default function Register() {
     try {
       const safeEmail = formData.email.trim().toLowerCase();
       const res = await fetch(
-        "https://healthbot-production-3c7d.up.railway.app/api/auth/verify-registration-otp",
+        "https://healthbot-backend-ezxv.onrender.com/api/auth/verify-registration-otp",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -208,7 +208,7 @@ export default function Register() {
         otp: otp.join(""),
       };
       const res = await fetch(
-        "https://healthbot-production-3c7d.up.railway.app/api/auth/register",
+        "https://healthbot-backend-ezxv.onrender.com/api/auth/register",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -234,7 +234,7 @@ export default function Register() {
 
   const handleGoogleSignUp = () => {
     window.location.href =
-      "https://healthbot-production-3c7d.up.railway.app/api/auth/google";
+      "https://healthbot-backend-ezxv.onrender.com/api/auth/google";
   };
 
   return (
