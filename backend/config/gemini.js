@@ -1,35 +1,79 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+let model = null;
 
-async function getGeminiResponse(userMessage, mlPrediction, userName) {
-  const systemPrompt = `You are HealthBot, a compassionate and knowledgeable AI medical assistant. 
-You help users understand their symptoms and health conditions.
+function initGemini() {
+  if (!process.env.GEMINI_API_KEY) {
+    console.log('Gemini: No API key found — using fallback bot');
+    return false;
+  }
+  try {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash-lite';
+    model = genAI.getGenerativeModel({ model: modelName });
+    console.log(`Gemini AI ready! Model: ${modelName}`);
+    return true;
+  } catch (err) {
+    console.error('Gemini init error:', err.message);
+    return false;
+  }
+}
 
-IMPORTANT RULES:
-- Always remind users you are an AI and not a replacement for a real doctor
-- Be empathetic and understanding
-- Keep responses concise (max 3-4 sentences)
-- If ML prediction is provided, reference it naturally
-- Ask one follow-up question to gather more symptoms
-- Never make definitive diagnoses
-- Respond in the same language the user uses
+initGemini();
 
-Current user: ${userName}
-ML Model Prediction: ${mlPrediction ? JSON.stringify(mlPrediction) : 'No prediction yet'}`;
+async function getGeminiResponse(userMessage, mlPrediction, userName, chatHistory = []) {
+  if (!model) return null;
 
-  const chat = model.startChat({
-    history: [],
-    generationConfig: {
-      maxOutputTokens: 300,
-      temperature: 0.7,
-    },
-  });
+  const systemContext = `You are HealthBot, a compassionate AI medical assistant helping patients understand their symptoms.
 
-  const fullPrompt = `${systemPrompt}\n\nUser message: ${userMessage}`;
-  const result = await chat.sendMessage(fullPrompt);
-  return result.response.text();
+RULES:
+- Always remind users you are an AI and NOT a replacement for a real doctor
+- Be warm, empathetic and easy to understand
+- Keep responses to 3-4 sentences maximum
+- If an ML prediction is provided, mention it naturally
+- Ask one follow-up question to gather more symptom information
+- Never make definitive diagnoses — use phrases like "this could suggest" or "this may indicate"
+- If symptoms sound serious, recommend seeing a doctor urgently
+- Use simple language any patient can understand
+
+Current patient name: ${userName}
+${mlPrediction ? `ML Model Prediction: ${mlPrediction}` : 'No ML prediction yet'}`;
+
+  const history = chatHistory.slice(-4).map(msg => ({
+    role: msg.sender === 'user' ? 'user' : 'model',
+    parts: [{ text: msg.text.substring(0, 300) }]
+  }));
+
+  try {
+    const chat = model.startChat({
+      history: history.length > 0 ? history : [],
+      generationConfig: {
+        maxOutputTokens: 250,
+        temperature: 0.7,
+      },
+    });
+
+    const result = await chat.sendMessage(
+      `${systemContext}\n\nPatient message: ${userMessage}`
+    );
+    return result.response.text();
+
+  } catch (err) {
+    if (err.message && err.message.includes('429')) {
+      console.log('Gemini rate limited — trying simple request...');
+      try {
+        const result = await model.generateContent(
+          `You are HealthBot AI assistant. Patient ${userName} says: "${userMessage}". ${mlPrediction || ''} Respond warmly in 2-3 sentences, mention you are an AI, ask one follow-up question.`
+        );
+        return result.response.text();
+      } catch (retryErr) {
+        console.error('Gemini retry failed:', retryErr.message);
+        return null;
+      }
+    }
+    console.error('Gemini error:', err.message);
+    return null;
+  }
 }
 
 module.exports = { getGeminiResponse };
