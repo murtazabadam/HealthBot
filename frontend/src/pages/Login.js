@@ -51,18 +51,13 @@ export default function Login() {
         }}
       />
 
-      <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
+      {/* Cleaner Navbar matching the Register page */}
+      <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-6 lg:px-12 w-full bg-[#0B1120]/80 backdrop-blur-md border-b border-slate-800/50">
         <Link to="/" className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-7 w-7 text-teal-400" />
           <span className="text-2xl font-bold tracking-tight text-white">
             HealthBot
           </span>
-        </Link>
-        <Link
-          to="/register"
-          className="px-6 py-2.5 text-sm font-semibold text-white bg-transparent border border-teal-500 hover:bg-teal-500/10 rounded-md transition-all"
-        >
-          Sign Up
         </Link>
       </nav>
 
