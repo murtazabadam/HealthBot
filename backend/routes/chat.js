@@ -3,7 +3,6 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const Conversation = require('../models/Conversation');
 const User = require('../models/User');
-const { getGeminiResponse } = require('../config/gemini');
 
 // ── ML Engine Call ──────────────────────────────────────────
 async function getMLPrediction(text, symptoms) {
