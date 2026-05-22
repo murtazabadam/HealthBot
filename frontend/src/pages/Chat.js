@@ -44,7 +44,7 @@ import {
   Check,
 } from "lucide-react";
 
-// NEW: Import the Gemini frontend service you just created
+// Import the Gemini frontend service
 import { getGeminiReply, geminiReady } from "../services/gemini";
 
 export function ChatDashboard() {
@@ -458,7 +458,7 @@ export function ChatDashboard() {
     }
   };
 
-  // --- UPDATED SEND MESSAGE WITH FRONTEND GEMINI SUPPORT ---
+  // --- SEND MESSAGE WITH FRONTEND GEMINI SUPPORT ---
   const sendMessage = async (textOverride = null) => {
     const textToSend = textOverride || inputText;
     if ((!textToSend.trim() && !uploadedImage) || loading) return;
@@ -483,7 +483,6 @@ export function ChatDashboard() {
     setLoading(true);
 
     try {
-      // 1. Get raw prediction from backend
       const res = await axios.post(
         "https://healthbot-backend-ezxv.onrender.com/api/chat/message",
         { text: textToSend, image: currentImg },
@@ -494,33 +493,46 @@ export function ChatDashboard() {
       const mlResult = res.data.mlResult;
       const intent = res.data.intent;
 
-      // 2. If it's a symptom check and Gemini is ready, generate empathy text
-      if (
-        intent === "symptoms" &&
-        mlResult &&
-        mlResult.predictions &&
-        geminiReady
-      ) {
+      // Trigger Gemini even if the ML model is unsure!
+      if (intent === "symptoms" && geminiReady) {
         try {
-          const top = mlResult.predictions[0];
-          const mlSummary = `Most likely ${top.disease} at ${top.confidence}% confidence. Severity: ${mlResult.severity}`;
+          let mlSummary = "";
+          let hasPredictions = false;
+
+          // Check if the ML model actually guessed a disease
+          if (
+            mlResult &&
+            mlResult.predictions &&
+            mlResult.predictions.length > 0
+          ) {
+            const top = mlResult.predictions[0];
+            mlSummary = `Most likely ${top.disease} at ${top.confidence}% confidence. Severity: ${mlResult.severity}`;
+            hasPredictions = true;
+          }
+
           const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
           const userName = storedUser.name
             ? storedUser.name.split(" ")[0]
             : "there";
 
+          // Ask Gemini for a response
           const geminiText = await getGeminiReply(
             textToSend,
             mlSummary,
             userName,
           );
+
           if (geminiText) {
-            // Combine natural empathy text with the rigid ML table
-            botReply = geminiText + "\n\n" + botReply;
+            if (hasPredictions) {
+              // Combine Gemini empathy + ML table
+              botReply = geminiText + "\n\n" + botReply;
+            } else {
+              // ML failed, so let Gemini take over the conversation naturally!
+              botReply = geminiText;
+            }
           }
         } catch (geminiErr) {
           console.error("Frontend Gemini error:", geminiErr.message);
-          // Fails silently, will just show the standard backend reply
         }
       }
 
