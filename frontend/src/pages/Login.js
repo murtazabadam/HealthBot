@@ -5,6 +5,7 @@ import { Activity, Mail, Lock, Eye, EyeOff } from "lucide-react";
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,8 +18,15 @@ export default function Login() {
   };
 
   const handleLogin = async (e) => {
-    e.preventDefault();
+    // 100% guarantees the page will NOT refresh
+    if (e) e.preventDefault();
+
+    if (!email.trim() || !password.trim()) {
+      return setErrorMessage("Please enter both your email and password.");
+    }
+
     setErrorMessage("");
+    setLoading(true);
 
     try {
       const res = await fetch(
@@ -26,16 +34,38 @@ export default function Login() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email: email.trim(), password }),
         },
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Login failed");
+
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        throw new Error(
+          "Server is waking up. Please click Login again in 15 seconds!",
+        );
+      }
+
+      if (!res.ok)
+        throw new Error(
+          data.message || "Login failed. Please check your credentials.",
+        );
+
+      // Success! Save data and redirect
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/chat");
     } catch (err) {
-      setErrorMessage(err.message);
+      if (err.message === "Failed to fetch") {
+        setErrorMessage(
+          "Server is waking up. Please click Login again in 15 seconds!",
+        );
+      } else {
+        setErrorMessage(err.message);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,7 +81,6 @@ export default function Login() {
         }}
       />
 
-      {/* Cleaner Navbar matching the Register page */}
       <nav className="sticky top-0 z-50 flex items-center justify-between px-6 py-6 lg:px-12 w-full bg-[#0B1120]/80 backdrop-blur-md border-b border-slate-800/50">
         <Link to="/" className="flex items-center gap-2 cursor-pointer">
           <Activity className="h-7 w-7 text-teal-400" />
@@ -80,20 +109,20 @@ export default function Login() {
 
           <form className="flex flex-col gap-5" onSubmit={handleLogin}>
             {errorMessage && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center font-bold">
+              <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center font-bold animate-pulse">
                 {errorMessage}
               </div>
             )}
 
             <div className="flex flex-col gap-2">
               <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Email or Username
+                Email
               </label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
                 <input
-                  type="text"
-                  placeholder="Enter your email or username"
+                  type="email"
+                  placeholder="Enter your email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -108,13 +137,6 @@ export default function Login() {
                 <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                   Password
                 </label>
-                <Link
-                  to="/forgot-password"
-                  hidden
-                  className="text-[10px] text-teal-400 hover:underline uppercase tracking-tighter font-bold"
-                >
-                  Forgot?
-                </Link>
               </div>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-500 group-focus-within:text-teal-400 transition-colors" />
@@ -147,11 +169,14 @@ export default function Login() {
               </Link>
             </div>
 
+            {/* Replaced type="submit" with button type handling to block refresh completely */}
             <button
-              type="submit"
-              className="w-full mt-2 bg-gradient-to-r from-teal-400 to-cyan-500 hover:from-teal-300 hover:to-cyan-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              type="button"
+              onClick={handleLogin}
+              disabled={loading}
+              className="w-full mt-2 bg-gradient-to-r from-teal-400 to-cyan-500 hover:from-teal-300 hover:to-cyan-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              Log In
+              {loading ? "Logging In..." : "Log In"}
             </button>
 
             <div className="relative flex items-center gap-4 my-2">
