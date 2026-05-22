@@ -44,6 +44,9 @@ import {
   Check,
 } from "lucide-react";
 
+// NEW: Import the Gemini frontend service you just created
+import { getGeminiReply, geminiReady } from "../services/gemini";
+
 export function ChatDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [page, setPage] = useState("chat");
@@ -66,7 +69,7 @@ export function ChatDashboard() {
     JSON.parse(localStorage.getItem("user") || "{}"),
   );
 
-  // Profile Editing States (DO NOT REMOVE - Needed for Profile Tab)
+  // Profile Editing States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: user.name || "",
@@ -99,7 +102,7 @@ export function ChatDashboard() {
     document.body.style.backgroundColor = isDark ? "#020617" : "#ffffff";
   }, [isDark]);
 
-  // --- NEW: Auto-Sync Profile Data from Backend on Load ---
+  // --- Auto-Sync Profile Data from Backend on Load ---
   useEffect(() => {
     const fetchLatestProfile = async () => {
       if (!token) return;
@@ -116,11 +119,9 @@ export function ChatDashboard() {
           const data = await res.json();
           const userData = data.user || data;
 
-          // Instantly update the Nav Bar and Profile states
           setUser(userData);
           localStorage.setItem("user", JSON.stringify(userData));
 
-          // Pre-fill the edit form with the synced data
           setProfileForm({
             name: userData.name || "",
             age: userData.age || "",
@@ -137,7 +138,6 @@ export function ChatDashboard() {
 
     fetchLatestProfile();
   }, [token]);
-  // ---------------------------------------------------------
 
   // --- Real-time password requirements logic ---
   const passwordRequirements = useMemo(
@@ -348,7 +348,6 @@ export function ChatDashboard() {
       return;
     }
 
-    // Validate Requirements
     const allMet = passwordRequirements.every((req) => req.met);
     if (!allMet) {
       showToast("Please fulfill all password requirements.");
@@ -459,6 +458,7 @@ export function ChatDashboard() {
     }
   };
 
+  // --- UPDATED SEND MESSAGE WITH FRONTEND GEMINI SUPPORT ---
   const sendMessage = async (textOverride = null) => {
     const textToSend = textOverride || inputText;
     if ((!textToSend.trim() && !uploadedImage) || loading) return;
@@ -483,18 +483,53 @@ export function ChatDashboard() {
     setLoading(true);
 
     try {
+      // 1. Get raw prediction from backend
       const res = await axios.post(
         "https://healthbot-backend-ezxv.onrender.com/api/chat/message",
         { text: textToSend, image: currentImg },
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
+      let botReply = res.data.reply;
+      const mlResult = res.data.mlResult;
+      const intent = res.data.intent;
+
+      // 2. If it's a symptom check and Gemini is ready, generate empathy text
+      if (
+        intent === "symptoms" &&
+        mlResult &&
+        mlResult.predictions &&
+        geminiReady
+      ) {
+        try {
+          const top = mlResult.predictions[0];
+          const mlSummary = `Most likely ${top.disease} at ${top.confidence}% confidence. Severity: ${mlResult.severity}`;
+          const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+          const userName = storedUser.name
+            ? storedUser.name.split(" ")[0]
+            : "there";
+
+          const geminiText = await getGeminiReply(
+            textToSend,
+            mlSummary,
+            userName,
+          );
+          if (geminiText) {
+            // Combine natural empathy text with the rigid ML table
+            botReply = geminiText + "\n\n" + botReply;
+          }
+        } catch (geminiErr) {
+          console.error("Frontend Gemini error:", geminiErr.message);
+          // Fails silently, will just show the standard backend reply
+        }
+      }
+
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: "bot",
-          text: res.data.reply,
+          text: botReply,
           time: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
