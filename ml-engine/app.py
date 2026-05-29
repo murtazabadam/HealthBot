@@ -3,7 +3,7 @@ from flask_cors import CORS
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.svm import SVC
+from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
@@ -20,11 +20,11 @@ print(f"Using data directory: {DATA}")
 
 # ── Load datasets ──────────────────────────────────────────────────────────────
 print("Loading datasets...")
-
 merged_path = os.path.join(DATA, 'merged_dataset.csv')
+
 if os.path.exists(merged_path):
     print("Using merged dataset...")
-    merged_df   = pd.read_csv(merged_path)
+    merged_df    = pd.read_csv(merged_path)
     ALL_SYMPTOMS = [c for c in merged_df.columns if c != 'Disease']
     X = merged_df[ALL_SYMPTOMS].values
     y = merged_df['Disease'].values
@@ -47,14 +47,13 @@ else:
         y.append(row['Disease'].strip())
     X, y = np.array(X), np.array(y)
 
-# ── Load description / precaution / severity maps ─────────────────────────────
+# ── Load maps ──────────────────────────────────────────────────────────────────
 desc_df = pd.read_csv(os.path.join(DATA, 'symptom_Description.csv'))
 prec_df = pd.read_csv(os.path.join(DATA, 'symptom_precaution.csv'))
 sev_df  = pd.read_csv(os.path.join(DATA, 'Symptom-severity.csv'))
 
-desc_df.columns = desc_df.columns.str.strip()
-prec_df.columns = prec_df.columns.str.strip()
-sev_df.columns  = sev_df.columns.str.strip()
+for df_ in [desc_df, prec_df, sev_df]:
+    df_.columns = df_.columns.str.strip()
 sev_df['Symptom'] = sev_df['Symptom'].str.strip().str.replace(' ', '_').str.lower()
 
 DESC_MAP, PREC_MAP = {}, {}
@@ -62,99 +61,114 @@ for _, row in desc_df.iterrows():
     DESC_MAP[row['Disease'].strip()] = row['Description'].strip()
 for _, row in prec_df.iterrows():
     disease = row['Disease'].strip()
-    precs = [str(row.get(f'Precaution_{i}', '')).strip()
-             for i in range(1, 5)
-             if str(row.get(f'Precaution_{i}', '')).strip()]
-    PREC_MAP[disease] = precs
+    PREC_MAP[disease] = [
+        str(row.get(f'Precaution_{i}', '')).strip()
+        for i in range(1, 5)
+        if str(row.get(f'Precaution_{i}', '')).strip()
+    ]
 SEVERITY_MAP = dict(zip(sev_df['Symptom'], sev_df['weight']))
 
-# ── Natural language mapping ───────────────────────────────────────────────────
+# ── NL Map ─────────────────────────────────────────────────────────────────────
 NL_MAP = {
-    'high fever': 'high_fever', 'mild fever': 'mild_fever',
-    'fever': 'high_fever', 'feverish': 'high_fever',
-    'feel hot': 'high_fever', 'high temperature': 'high_fever',
-    'cough': 'cough', 'coughing': 'cough', 'dry cough': 'cough',
-    'mucus': 'mucoid_sputum', 'phlegm': 'mucoid_sputum',
-    'fatigue': 'fatigue', 'tired': 'fatigue', 'exhausted': 'fatigue',
-    'weakness': 'fatigue', 'weak': 'fatigue', 'no energy': 'fatigue',
-    'lethargy': 'lethargy', 'lethargic': 'lethargy',
+    'high fever': 'high_fever',    'mild fever': 'mild_fever',
+    'fever': 'high_fever',          'feverish': 'high_fever',
+    'feel hot': 'high_fever',       'high temperature': 'high_fever',
+    'cough': 'cough',               'coughing': 'cough',
+    'dry cough': 'cough',           'mucus': 'mucoid_sputum',
+    'phlegm': 'mucoid_sputum',
+    'fatigue': 'fatigue',           'tired': 'fatigue',
+    'exhausted': 'fatigue',         'weakness': 'fatigue',
+    'weak': 'fatigue',              'no energy': 'fatigue',
+    'lethargy': 'lethargy',         'lethargic': 'lethargy',
     'severe headache': 'severe_headache',
-    'headache': 'headache', 'head pain': 'headache', 'head hurts': 'headache',
-    'migraine': 'headache',
-    'nausea': 'nausea', 'feel sick': 'nausea', 'nauseated': 'nausea',
-    'vomiting': 'vomiting', 'throwing up': 'vomiting', 'vomit': 'vomiting',
+    'headache': 'headache',         'head pain': 'headache',
+    'head hurts': 'headache',       'migraine': 'headache',
+    'nausea': 'nausea',             'feel sick': 'nausea',
+    'nauseated': 'nausea',          'vomiting': 'vomiting',
+    'throwing up': 'vomiting',      'vomit': 'vomiting',
     'stomach pain': 'stomach_pain', 'stomach ache': 'stomach_pain',
-    'belly pain': 'stomach_pain', 'tummy ache': 'stomach_pain',
-    'abdominal pain': 'abdominal_pain', 'stomach hurts': 'stomach_pain',
-    'diarrhoea': 'diarrhoea', 'diarrhea': 'diarrhoea',
-    'loose motion': 'diarrhoea', 'loose stool': 'diarrhoea',
+    'belly pain': 'stomach_pain',   'tummy ache': 'stomach_pain',
+    'abdominal pain': 'abdominal_pain',
+    'stomach hurts': 'stomach_pain',
+    'diarrhoea': 'diarrhoea',       'diarrhea': 'diarrhoea',
+    'loose motion': 'diarrhoea',    'loose stool': 'diarrhoea',
     'constipation': 'constipation', 'indigestion': 'indigestion',
-    'acidity': 'acidity', 'heartburn': 'acidity',
-    'bloating': 'distention_of_abdomen', 'bloated': 'distention_of_abdomen',
-    'breathlessness': 'breathlessness', 'cant breathe': 'breathlessness',
+    'acidity': 'acidity',           'heartburn': 'acidity',
+    'bloating': 'distention_of_abdomen',
+    'bloated': 'distention_of_abdomen',
+    'breathlessness': 'breathlessness',
+    'cant breathe': 'breathlessness',
     'hard to breathe': 'breathlessness',
     'shortness of breath': 'breathlessness',
     'short of breath': 'breathlessness',
     'wheezing': 'wheezing',
-    'chest pain': 'chest_pain', 'chest hurts': 'chest_pain',
+    'chest pain': 'chest_pain',     'chest hurts': 'chest_pain',
     'chest tightness': 'chest_pain',
-    'skin rash': 'skin_rash', 'rash': 'skin_rash', 'red spots': 'skin_rash',
-    'itching': 'itching', 'itchy': 'itching', 'itchy skin': 'itching',
-    'yellow skin': 'yellowing_of_skin', 'yellow eyes': 'yellowing_of_eyes',
+    'skin rash': 'skin_rash',       'rash': 'skin_rash',
+    'red spots': 'skin_rash',       'itching': 'itching',
+    'itchy': 'itching',             'itchy skin': 'itching',
+    'yellow skin': 'yellowing_of_skin',
+    'yellow eyes': 'yellowing_of_eyes',
     'jaundice': 'yellowing_of_skin', 'pale skin': 'pale_skin',
-    'joint pain': 'joint_pain', 'joints hurt': 'joint_pain',
-    'muscle pain': 'muscle_pain', 'body ache': 'muscle_pain',
-    'back pain': 'back_pain', 'lower back pain': 'back_pain',
-    'neck pain': 'neck_pain', 'knee pain': 'knee_pain',
+    'joint pain': 'joint_pain',     'joints hurt': 'joint_pain',
+    'muscle pain': 'muscle_pain',   'body ache': 'muscle_pain',
+    'back pain': 'back_pain',       'lower back pain': 'back_pain',
+    'neck pain': 'neck_pain',       'knee pain': 'knee_pain',
     'hip pain': 'hip_joint_pain',
-    'runny nose': 'runny_nose', 'blocked nose': 'continuous_sneezing',
-    'stuffy nose': 'continuous_sneezing', 'sneezing': 'continuous_sneezing',
-    'sore throat': 'throat_irritation', 'throat pain': 'throat_irritation',
+    'runny nose': 'runny_nose',
+    'blocked nose': 'continuous_sneezing',
+    'stuffy nose': 'continuous_sneezing',
+    'sneezing': 'continuous_sneezing',
+    'sore throat': 'throat_irritation',
+    'throat pain': 'throat_irritation',
     'throat hurts': 'throat_irritation',
-    'chills': 'chills', 'shivering': 'chills', 'feel cold': 'chills',
-    'night sweats': 'sweating', 'sweating': 'sweating',
+    'chills': 'chills',             'shivering': 'chills',
+    'feel cold': 'chills',          'night sweats': 'sweating',
+    'sweating': 'sweating',
     'frequent urination': 'frequent_urination',
     'burning urination': 'burning_micturition',
     'painful urination': 'burning_micturition',
-    'dark urine': 'dark_urine', 'yellow urine': 'yellow_urine',
+    'dark urine': 'dark_urine',     'yellow urine': 'yellow_urine',
     'blurry vision': 'blurred_and_distorted_vision',
-    'weight loss': 'weight_loss', 'losing weight': 'weight_loss',
+    'weight loss': 'weight_loss',   'losing weight': 'weight_loss',
     'no appetite': 'loss_of_appetite',
     'loss of appetite': 'loss_of_appetite',
     'not hungry': 'loss_of_appetite',
-    'dizziness': 'dizziness', 'dizzy': 'dizziness', 'vertigo': 'dizziness',
-    'anxiety': 'anxiety', 'anxious': 'anxiety',
-    'depression': 'depression', 'depressed': 'depression',
-    'palpitations': 'palpitations', 'heart racing': 'palpitations',
-    'swelling': 'swelling_joints', 'swollen': 'swelling_joints',
-    'loss of smell': 'loss_of_smell', 'cant smell': 'loss_of_smell',
-    'excessive thirst': 'polyuria', 'very thirsty': 'polyuria',
-    'thirst': 'polyuria', 'drinking a lot': 'polyuria',
-    'excessive hunger': 'excessive_hunger', 'always hungry': 'excessive_hunger',
+    'dizziness': 'dizziness',       'dizzy': 'dizziness',
+    'vertigo': 'dizziness',         'anxiety': 'anxiety',
+    'anxious': 'anxiety',           'depression': 'depression',
+    'depressed': 'depression',      'palpitations': 'palpitations',
+    'heart racing': 'palpitations', 'swelling': 'swelling_joints',
+    'swollen': 'swelling_joints',   'loss of smell': 'loss_of_smell',
+    'cant smell': 'loss_of_smell',  'excessive thirst': 'polyuria',
+    'very thirsty': 'polyuria',     'thirst': 'polyuria',
+    'drinking a lot': 'polyuria',   'excessive hunger': 'excessive_hunger',
+    'always hungry': 'excessive_hunger',
     'pain behind the eyes': 'pain_behind_the_eyes',
     'pain behind eyes': 'pain_behind_the_eyes',
-    'eye pain': 'pain_in_eyes', 'red eyes': 'redness_of_eyes',
+    'eye pain': 'pain_in_eyes',     'red eyes': 'redness_of_eyes',
     'watery eyes': 'watering_from_eyes',
     'bloody stool': 'bloody_stool', 'blood in stool': 'bloody_stool',
-    'insomnia': 'restlessness', 'cant sleep': 'restlessness',
-    'mood swings': 'mood_swings', 'irritable': 'irritability',
+    'insomnia': 'restlessness',     'cant sleep': 'restlessness',
+    'mood swings': 'mood_swings',   'irritable': 'irritability',
     'skin peeling': 'skin_peeling', 'blisters': 'blister',
-    'pus': 'pus_filled_pimples', 'pimples': 'pus_filled_pimples',
-    'hair loss': 'brittle_nails', 'brittle nails': 'brittle_nails',
+    'pus': 'pus_filled_pimples',    'pimples': 'pus_filled_pimples',
+    'hair loss': 'brittle_nails',   'brittle nails': 'brittle_nails',
 }
+
+# Pre-sort phrases by length descending for correct matching
+_SORTED_PHRASES = sorted(NL_MAP.keys(), key=len, reverse=True)
 
 def extract_symptoms(text):
     text_lower = text.lower()
     found = set()
-    sorted_phrases = sorted(NL_MAP.keys(), key=len, reverse=True)
-    for phrase in sorted_phrases:
+    for phrase in _SORTED_PHRASES:
         if phrase in text_lower:
             sym = NL_MAP[phrase]
             if sym in ALL_SYMPTOMS:
                 found.add(sym)
     for symptom in ALL_SYMPTOMS:
-        readable = symptom.replace('_', ' ')
-        if readable in text_lower or symptom in text_lower:
+        if symptom.replace('_', ' ') in text_lower or symptom in text_lower:
             found.add(symptom)
     return list(found)
 
@@ -162,31 +176,31 @@ def extract_symptoms(text):
 le = LabelEncoder()
 y_encoded = le.fit_transform(y)
 
-# ── Add noise to get realistic accuracy ───────────────────────────────────────
+# ── Add noise for realistic accuracy ──────────────────────────────────────────
 print("Adding realistic noise to training data...")
 
 def add_noise(X, y, noise_level=0.15, augment_factor=2):
     """
-    Flip symptom bits randomly to simulate real-world variation.
-    noise_level = probability of flipping each bit (0.15 = 15%)
-    augment_factor = extra noisy copies per original sample
+    Flip symptom bits randomly to simulate real patient variation.
+    noise_level  = probability of flipping each bit
+    augment_factor = noisy copies per original sample
     """
     X_aug = list(X)
     y_aug = list(y)
+    rng = random.Random(42)          # fixed seed for reproducibility
     for i in range(len(X)):
         for _ in range(augment_factor):
             noisy = X[i].copy()
             for j in range(len(noisy)):
-                if random.random() < noise_level:
+                if rng.random() < noise_level:
                     noisy[j] = 1 - noisy[j]
             X_aug.append(noisy)
             y_aug.append(y[i])
     return np.array(X_aug), np.array(y_aug)
 
 X_noisy, y_noisy = add_noise(X, y_encoded, noise_level=0.15, augment_factor=2)
-print(f"Original: {len(X)} samples | After augmentation: {len(X_noisy)} samples")
+print(f"Original: {len(X)} | After augmentation: {len(X_noisy)}")
 
-# ── Train / test split on noisy data ──────────────────────────────────────────
 X_train, X_test, y_train, y_test = train_test_split(
     X_noisy, y_noisy, test_size=0.2, random_state=42, stratify=y_noisy
 )
@@ -196,57 +210,50 @@ print(f"Training: {len(X_train)} | Testing: {len(X_test)}")
 print("\nTraining models...")
 
 rf_model = RandomForestClassifier(
-    n_estimators=200,
-    max_depth=20,
-    min_samples_split=5,
-    min_samples_leaf=2,
-    random_state=42,
-    n_jobs=1
+    n_estimators=200, max_depth=20,
+    min_samples_split=5, min_samples_leaf=2,
+    random_state=42, n_jobs=1
 )
-
 gb_model = GradientBoostingClassifier(
-    n_estimators=100,
-    learning_rate=0.1,
-    max_depth=5,
-    min_samples_split=5,
+    n_estimators=100, learning_rate=0.1,
+    max_depth=5, min_samples_split=5,
     random_state=42
 )
+nb_model = GaussianNB()
 
-svm_model = SVC(
-    kernel='rbf',
-    C=5,
-    probability=True,
-    random_state=42
-)
-
-print("Training Random Forest...  ", end='', flush=True)
+print("Training Random Forest...   ", end='', flush=True)
 rf_model.fit(X_train, y_train)
 rf_acc = accuracy_score(y_test, rf_model.predict(X_test))
-print(f"{rf_acc * 100:.1f}%")
+print(f"{rf_acc*100:.1f}%")
 
-print("Training Gradient Boosting...", end='', flush=True)
+print("Training Gradient Boosting..", end='', flush=True)
 gb_model.fit(X_train, y_train)
 gb_acc = accuracy_score(y_test, gb_model.predict(X_test))
-print(f"{gb_acc * 100:.1f}%")
+print(f"{gb_acc*100:.1f}%")
 
-print("Training SVM...            ", end='', flush=True)
-svm_model.fit(X_train, y_train)
-svm_acc = accuracy_score(y_test, svm_model.predict(X_test))
-print(f"{svm_acc * 100:.1f}%")
+print("Training Naive Bayes...     ", end='', flush=True)
+nb_model.fit(X_train, y_train)
+nb_acc = accuracy_score(y_test, nb_model.predict(X_test))
+print(f"{nb_acc*100:.1f}%")
 
-# ── 5-fold cross-validation on Random Forest ──────────────────────────────────
+# ── 5-fold cross-validation ────────────────────────────────────────────────────
 print("Running cross-validation...")
 cv        = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 cv_scores = cross_val_score(rf_model, X_noisy, y_noisy,
                              cv=cv, scoring='accuracy', n_jobs=1)
-print(f"CV: {cv_scores.mean()*100:.1f}% ± {cv_scores.std()*100:.1f}%")
 
 print(f"\nRandom Forest:     {rf_acc*100:.1f}%")
 print(f"Gradient Boosting: {gb_acc*100:.1f}%")
-print(f"SVM:               {svm_acc*100:.1f}%")
+print(f"Naive Bayes:       {nb_acc*100:.1f}%")
 print(f"Cross-validation:  {cv_scores.mean()*100:.1f}% ± {cv_scores.std()*100:.1f}%")
 print(f"Diseases: {len(set(y))} | Symptoms: {len(ALL_SYMPTOMS)}")
 print("ML Engine ready!")
+
+# ── Pre-compute ensemble weights ───────────────────────────────────────────────
+_TOTAL_W = rf_acc + gb_acc + nb_acc
+_W_RF    = rf_acc / _TOTAL_W
+_W_GB    = gb_acc / _TOTAL_W
+_W_NB    = nb_acc / _TOTAL_W
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 def severity_score(symptoms):
@@ -287,16 +294,16 @@ def get_followup(symptoms, top_disease):
 @app.route('/')
 def home():
     return jsonify({
-        "status":            "HealthBot ML Engine running!",
-        "models":            3,
-        "diseases":          len(set(y)),
-        "symptoms":          len(ALL_SYMPTOMS),
-        "training_samples":  len(X_train),
-        "rf_accuracy":       f"{rf_acc*100:.1f}%",
-        "gb_accuracy":       f"{gb_acc*100:.1f}%",
-        "svm_accuracy":      f"{svm_acc*100:.1f}%",
-        "cv_score":          f"{cv_scores.mean()*100:.1f}% +/- {cv_scores.std()*100:.1f}%",
-        "note": "Evaluated on noise-augmented data for realistic accuracy"
+        "status":           "HealthBot ML Engine running!",
+        "models":           3,
+        "diseases":         len(set(y)),
+        "symptoms":         len(ALL_SYMPTOMS),
+        "training_samples": len(X_train),
+        "rf_accuracy":      f"{rf_acc*100:.1f}%",
+        "gb_accuracy":      f"{gb_acc*100:.1f}%",
+        "nb_accuracy":      f"{nb_acc*100:.1f}%",
+        "cv_score":         f"{cv_scores.mean()*100:.1f}% +/- {cv_scores.std()*100:.1f}%",
+        "note":             "Evaluated on noise-augmented data for realistic accuracy"
     })
 
 @app.route('/symptoms', methods=['GET'])
@@ -311,27 +318,27 @@ def get_diseases():
 def model_stats():
     return jsonify({
         "models": {
-            "RandomForest":      f"{rf_acc*100:.1f}%",
-            "GradientBoosting":  f"{gb_acc*100:.1f}%",
-            "SVM":               f"{svm_acc*100:.1f}%"
+            "RandomForest":     f"{rf_acc*100:.1f}%",
+            "GradientBoosting": f"{gb_acc*100:.1f}%",
+            "NaiveBayes":       f"{nb_acc*100:.1f}%"
         },
-        "cross_validation":  f"{cv_scores.mean()*100:.1f}% +/- {cv_scores.std()*100:.1f}%",
-        "total_diseases":    len(set(y)),
-        "total_symptoms":    len(ALL_SYMPTOMS),
-        "training_samples":  len(X_train),
-        "noise_level":       "15% bit-flip augmentation"
+        "cross_validation": f"{cv_scores.mean()*100:.1f}% +/- {cv_scores.std()*100:.1f}%",
+        "total_diseases":   len(set(y)),
+        "total_symptoms":   len(ALL_SYMPTOMS),
+        "training_samples": len(X_train),
+        "noise_level":      "15% bit-flip augmentation"
     })
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    data         = request.get_json()
-    text_input   = data.get('text', '')
+    data        = request.get_json()
+    text_input  = data.get('text', '')
     symptom_list = data.get('symptoms', [])
 
-    # Extract from text
+    # Extract symptoms from text
     ml_symptoms = extract_symptoms(text_input) if text_input else []
 
-    # Merge with any symptoms sent from backend
+    # Merge with backend-provided symptoms
     provided = [
         s.strip().lower().replace(' ', '_')
         for s in symptom_list
@@ -346,29 +353,26 @@ def predict():
             "hint":    "Example: 'I have fever, headache and joint pain'"
         }), 400
 
-    # Feature vector
-    vec = np.array([1 if s in symptoms else 0
-                    for s in ALL_SYMPTOMS]).reshape(1, -1)
+    # Build feature vector
+    vec = np.array(
+        [1 if s in symptoms else 0 for s in ALL_SYMPTOMS]
+    ).reshape(1, -1)
 
-    # Weighted ensemble of 3 models
+    # Weighted ensemble prediction
     rf_proba  = rf_model.predict_proba(vec)[0]
     gb_proba  = gb_model.predict_proba(vec)[0]
-    svm_proba = svm_model.predict_proba(vec)[0]
+    nb_proba  = nb_model.predict_proba(vec)[0]
+    avg_proba = _W_RF * rf_proba + _W_GB * gb_proba + _W_NB * nb_proba
 
-    # Weights proportional to test accuracy
-    total_w   = rf_acc + gb_acc + svm_acc
-    avg_proba = (rf_proba  * (rf_acc  / total_w) +
-                 gb_proba  * (gb_acc  / total_w) +
-                 svm_proba * (svm_acc / total_w))
-
+    # Top-5 classes
     classes = le.classes_
     top_idx = np.argsort(avg_proba)[::-1][:5]
 
-    # Model agreement
-    rf_pred  = le.inverse_transform([rf_model.predict(vec)[0]])[0]
-    gb_pred  = le.inverse_transform([gb_model.predict(vec)[0]])[0]
-    svm_pred = le.inverse_transform([svm_model.predict(vec)[0]])[0]
-    individual = [rf_pred, gb_pred, svm_pred]
+    # Individual model predictions for agreement count
+    rf_pred = le.inverse_transform([rf_model.predict(vec)[0]])[0]
+    gb_pred = le.inverse_transform([gb_model.predict(vec)[0]])[0]
+    nb_pred = le.inverse_transform([nb_model.predict(vec)[0]])[0]
+    individual = [rf_pred, gb_pred, nb_pred]
 
     predictions = []
     for idx in top_idx:
@@ -388,7 +392,7 @@ def predict():
     if not predictions:
         return jsonify({
             "error":   "no_predictions",
-            "message": "Please provide more symptoms."
+            "message": "Please provide more symptoms for accurate prediction."
         }), 400
 
     severity_label, severity_level = severity_score(symptoms)
@@ -409,7 +413,7 @@ def predict():
         "model_info": {
             "rf_accuracy":    f"{rf_acc*100:.1f}%",
             "gb_accuracy":    f"{gb_acc*100:.1f}%",
-            "svm_accuracy":   f"{svm_acc*100:.1f}%",
+            "nb_accuracy":    f"{nb_acc*100:.1f}%",
             "cv_score":       f"{cv_scores.mean()*100:.1f}%",
             "total_diseases": len(set(y)),
             "total_symptoms": len(ALL_SYMPTOMS)
