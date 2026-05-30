@@ -7,7 +7,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
-import os, random, warnings
+import os, warnings
 warnings.filterwarnings('ignore')
 
 app = Flask(__name__)
@@ -26,8 +26,17 @@ if os.path.exists(merged_path):
     print("Using merged dataset...")
     merged_df    = pd.read_csv(merged_path)
     ALL_SYMPTOMS = [c for c in merged_df.columns if c != 'Disease']
-    X = merged_df[ALL_SYMPTOMS].values
+    X = merged_df[ALL_SYMPTOMS].values.astype(np.float32)
     y = merged_df['Disease'].values
+    # Build disease→symptoms map
+    DISEASE_SYMPTOMS = {}
+    for _, row in merged_df.iterrows():
+        d = row['Disease']
+        if d not in DISEASE_SYMPTOMS:
+            DISEASE_SYMPTOMS[d] = set()
+        DISEASE_SYMPTOMS[d].update(
+            col for col in ALL_SYMPTOMS if row[col] == 1
+        )
     print(f"Merged: {len(X)} samples, {len(set(y))} diseases, {len(ALL_SYMPTOMS)} symptoms")
 else:
     print("Using original dataset...")
@@ -41,17 +50,21 @@ else:
         s for col in symptom_cols for s in df[col].unique() if s != ''
     ))
     X, y = [], []
+    DISEASE_SYMPTOMS = {}
     for _, row in df.iterrows():
         syms = set(row[col] for col in symptom_cols if row[col] != '')
+        d = row['Disease'].strip()
         X.append([1 if s in syms else 0 for s in ALL_SYMPTOMS])
-        y.append(row['Disease'].strip())
-    X, y = np.array(X), np.array(y)
+        y.append(d)
+        if d not in DISEASE_SYMPTOMS:
+            DISEASE_SYMPTOMS[d] = set()
+        DISEASE_SYMPTOMS[d].update(syms)
+    X, y = np.array(X, dtype=np.float32), np.array(y)
 
 # ── Load maps ──────────────────────────────────────────────────────────────────
 desc_df = pd.read_csv(os.path.join(DATA, 'symptom_Description.csv'))
 prec_df = pd.read_csv(os.path.join(DATA, 'symptom_precaution.csv'))
 sev_df  = pd.read_csv(os.path.join(DATA, 'Symptom-severity.csv'))
-
 for df_ in [desc_df, prec_df, sev_df]:
     df_.columns = df_.columns.str.strip()
 sev_df['Symptom'] = sev_df['Symptom'].str.strip().str.replace(' ', '_').str.lower()
@@ -60,8 +73,8 @@ DESC_MAP, PREC_MAP = {}, {}
 for _, row in desc_df.iterrows():
     DESC_MAP[row['Disease'].strip()] = row['Description'].strip()
 for _, row in prec_df.iterrows():
-    disease = row['Disease'].strip()
-    PREC_MAP[disease] = [
+    d = row['Disease'].strip()
+    PREC_MAP[d] = [
         str(row.get(f'Precaution_{i}', '')).strip()
         for i in range(1, 5)
         if str(row.get(f'Precaution_{i}', '')).strip()
@@ -115,7 +128,7 @@ NL_MAP = {
     'back pain': 'back_pain',       'lower back pain': 'back_pain',
     'neck pain': 'neck_pain',       'knee pain': 'knee_pain',
     'hip pain': 'hip_joint_pain',
-    'runny nose': 'runny_nose',
+    'runny nose': 'runny_nose',     'cold': 'runny_nose',
     'blocked nose': 'continuous_sneezing',
     'stuffy nose': 'continuous_sneezing',
     'sneezing': 'continuous_sneezing',
@@ -155,8 +168,6 @@ NL_MAP = {
     'pus': 'pus_filled_pimples',    'pimples': 'pus_filled_pimples',
     'hair loss': 'brittle_nails',   'brittle nails': 'brittle_nails',
 }
-
-# Pre-sort phrases by length descending for correct matching
 _SORTED_PHRASES = sorted(NL_MAP.keys(), key=len, reverse=True)
 
 def extract_symptoms(text):
@@ -176,33 +187,11 @@ def extract_symptoms(text):
 le = LabelEncoder()
 y_encoded = le.fit_transform(y)
 
-# ── Add noise for realistic accuracy ──────────────────────────────────────────
-print("Adding realistic noise to training data...")
-
-def add_noise(X, y, noise_level=0.15, augment_factor=2):
-    """
-    Flip symptom bits randomly to simulate real patient variation.
-    noise_level  = probability of flipping each bit
-    augment_factor = noisy copies per original sample
-    """
-    X_aug = list(X)
-    y_aug = list(y)
-    rng = random.Random(42)          # fixed seed for reproducibility
-    for i in range(len(X)):
-        for _ in range(augment_factor):
-            noisy = X[i].copy()
-            for j in range(len(noisy)):
-                if rng.random() < noise_level:
-                    noisy[j] = 1 - noisy[j]
-            X_aug.append(noisy)
-            y_aug.append(y[i])
-    return np.array(X_aug), np.array(y_aug)
-
-X_noisy, y_noisy = add_noise(X, y_encoded, noise_level=0.15, augment_factor=2)
-print(f"Original: {len(X)} | After augmentation: {len(X_noisy)}")
-
+# ── Train / test split ─────────────────────────────────────────────────────────
+# Clean training — no noise augmentation.
+# Noise at 15% corrupts symptom patterns and causes wrong predictions.
 X_train, X_test, y_train, y_test = train_test_split(
-    X_noisy, y_noisy, test_size=0.2, random_state=42, stratify=y_noisy
+    X, y_encoded, test_size=0.2, random_state=42, stratify=y_encoded
 )
 print(f"Training: {len(X_train)} | Testing: {len(X_test)}")
 
@@ -210,14 +199,13 @@ print(f"Training: {len(X_train)} | Testing: {len(X_test)}")
 print("\nTraining models...")
 
 rf_model = RandomForestClassifier(
-    n_estimators=200, max_depth=20,
-    min_samples_split=5, min_samples_leaf=2,
+    n_estimators=150, max_depth=None,
+    min_samples_split=2, min_samples_leaf=1,
     random_state=42, n_jobs=1
 )
 gb_model = GradientBoostingClassifier(
     n_estimators=100, learning_rate=0.1,
-    max_depth=5, min_samples_split=5,
-    random_state=42
+    max_depth=5, random_state=42
 )
 nb_model = GaussianNB()
 
@@ -239,9 +227,8 @@ print(f"{nb_acc*100:.1f}%")
 # ── 5-fold cross-validation ────────────────────────────────────────────────────
 print("Running cross-validation...")
 cv        = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-cv_scores = cross_val_score(rf_model, X_noisy, y_noisy,
+cv_scores = cross_val_score(rf_model, X, y_encoded,
                              cv=cv, scoring='accuracy', n_jobs=1)
-
 print(f"\nRandom Forest:     {rf_acc*100:.1f}%")
 print(f"Gradient Boosting: {gb_acc*100:.1f}%")
 print(f"Naive Bayes:       {nb_acc*100:.1f}%")
@@ -249,7 +236,6 @@ print(f"Cross-validation:  {cv_scores.mean()*100:.1f}% ± {cv_scores.std()*100:.
 print(f"Diseases: {len(set(y))} | Symptoms: {len(ALL_SYMPTOMS)}")
 print("ML Engine ready!")
 
-# ── Pre-compute ensemble weights ───────────────────────────────────────────────
 _TOTAL_W = rf_acc + gb_acc + nb_acc
 _W_RF    = rf_acc / _TOTAL_W
 _W_GB    = gb_acc / _TOTAL_W
@@ -302,8 +288,7 @@ def home():
         "rf_accuracy":      f"{rf_acc*100:.1f}%",
         "gb_accuracy":      f"{gb_acc*100:.1f}%",
         "nb_accuracy":      f"{nb_acc*100:.1f}%",
-        "cv_score":         f"{cv_scores.mean()*100:.1f}% +/- {cv_scores.std()*100:.1f}%",
-        "note":             "Evaluated on noise-augmented data for realistic accuracy"
+        "cv_score":         f"{cv_scores.mean()*100:.1f}% +/- {cv_scores.std()*100:.1f}%"
     })
 
 @app.route('/symptoms', methods=['GET'])
@@ -325,20 +310,16 @@ def model_stats():
         "cross_validation": f"{cv_scores.mean()*100:.1f}% +/- {cv_scores.std()*100:.1f}%",
         "total_diseases":   len(set(y)),
         "total_symptoms":   len(ALL_SYMPTOMS),
-        "training_samples": len(X_train),
-        "noise_level":      "15% bit-flip augmentation"
+        "training_samples": len(X_train)
     })
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    data        = request.get_json()
-    text_input  = data.get('text', '')
+    data         = request.get_json()
+    text_input   = data.get('text', '')
     symptom_list = data.get('symptoms', [])
 
-    # Extract symptoms from text
     ml_symptoms = extract_symptoms(text_input) if text_input else []
-
-    # Merge with backend-provided symptoms
     provided = [
         s.strip().lower().replace(' ', '_')
         for s in symptom_list
@@ -353,37 +334,49 @@ def predict():
             "hint":    "Example: 'I have fever, headache and joint pain'"
         }), 400
 
-    # Build feature vector
     vec = np.array(
-        [1 if s in symptoms else 0 for s in ALL_SYMPTOMS]
+        [1 if s in symptoms else 0 for s in ALL_SYMPTOMS],
+        dtype=np.float32
     ).reshape(1, -1)
 
-    # Weighted ensemble prediction
+    # Weighted ensemble
     rf_proba  = rf_model.predict_proba(vec)[0]
     gb_proba  = gb_model.predict_proba(vec)[0]
     nb_proba  = nb_model.predict_proba(vec)[0]
     avg_proba = _W_RF * rf_proba + _W_GB * gb_proba + _W_NB * nb_proba
 
-    # Top-5 classes
     classes = le.classes_
-    top_idx = np.argsort(avg_proba)[::-1][:5]
+    top_idx = np.argsort(avg_proba)[::-1][:10]  # get top 10 then filter
 
-    # Individual model predictions for agreement count
-    rf_pred = le.inverse_transform([rf_model.predict(vec)[0]])[0]
-    gb_pred = le.inverse_transform([gb_model.predict(vec)[0]])[0]
-    nb_pred = le.inverse_transform([nb_model.predict(vec)[0]])[0]
+    rf_pred    = le.inverse_transform([rf_model.predict(vec)[0]])[0]
+    gb_pred    = le.inverse_transform([gb_model.predict(vec)[0]])[0]
+    nb_pred    = le.inverse_transform([nb_model.predict(vec)[0]])[0]
     individual = [rf_pred, gb_pred, nb_pred]
 
+    user_symptom_set = set(symptoms)
     predictions = []
+
     for idx in top_idx:
+        if len(predictions) >= 5:
+            break
         disease    = classes[idx]
         confidence = round(float(avg_proba[idx]) * 100, 1)
         if confidence < 1.0:
             continue
+
+        # ── Symptom overlap filter ─────────────────────────────────────────
+        # Only include prediction if at least 1 user symptom
+        # actually belongs to this disease in the dataset
+        known_syms = DISEASE_SYMPTOMS.get(disease, set())
+        overlap    = len(user_symptom_set & known_syms)
+        if overlap == 0:
+            continue  # skip medically irrelevant predictions
+
         agreement = sum(1 for p in individual if p == disease)
         predictions.append({
             "disease":         disease,
             "confidence":      confidence,
+            "symptom_overlap": f"{overlap} symptom(s) match",
             "model_agreement": f"{agreement}/3 models agree",
             "description":     DESC_MAP.get(disease, ""),
             "precautions":     PREC_MAP.get(disease, [])
@@ -392,7 +385,7 @@ def predict():
     if not predictions:
         return jsonify({
             "error":   "no_predictions",
-            "message": "Please provide more symptoms for accurate prediction."
+            "message": "Could not find a matching disease. Please describe more symptoms."
         }), 400
 
     severity_label, severity_level = severity_score(symptoms)
