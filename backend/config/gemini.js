@@ -1,3 +1,16 @@
+// Simple in-memory cache — stores last 50 responses
+const responseCache = new Map();
+const CACHE_MAX = 50;
+
+async function getGeminiResponse(userMessage, mlPrediction, userName, chatHistory = []) {
+  if (!model) return null;
+
+  // Cache key based on message + ML prediction
+  const cacheKey = `${userMessage.toLowerCase().trim()}_${mlPrediction || ''}`;
+  if (responseCache.has(cacheKey)) {
+    console.log('Gemini: Using cached response');
+    return responseCache.get(cacheKey);
+  }
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 let model = null;
@@ -76,4 +89,14 @@ ${mlPrediction ? `ML Model Prediction: ${mlPrediction}` : 'No ML prediction yet'
   }
 }
 
+ // Store in cache
+  if (response) {
+    if (responseCache.size >= CACHE_MAX) {
+      const firstKey = responseCache.keys().next().value;
+      responseCache.delete(firstKey);
+    }
+    responseCache.set(cacheKey, response);
+  }
+  return response;
+}
 module.exports = { getGeminiResponse };

@@ -66,6 +66,6 @@ if (BACKEND_URL) {
     https.get(`${BACKEND_URL}/`, (res) => {
       console.log(`Keep-alive ping: ${res.statusCode}`);
     }).on('error', () => {});
-  }, 14 * 60 * 1000); // ping every 14 minutes
+  }, 10 * 60 * 1000); // every 10 minutes instead of 14
 }
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
