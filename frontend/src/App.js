@@ -13,22 +13,25 @@ import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 
 // --- GLOBAL AUTO-LOGOUT INTERCEPTOR ---
-// If the backend ever says the user's token is expired (401),
-// this instantly clears their data and kicks them to the login screen.
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
       localStorage.clear();
-      window.location.href = "/login";
+      window.location.href = '/login';
     }
     return Promise.reject(error);
-  },
+  }
 );
 
-function App() {
+// --- NEW: DYNAMIC ROUTE PROTECTOR ---
+// This safely checks for the token exactly when the user tries to open the page
+const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
+  return token ? children : <Navigate to="/login" replace />;
+};
 
+function App() {
   return (
     <BrowserRouter>
       <Routes>
@@ -42,13 +45,21 @@ function App() {
         {/* Protected Chat Route */}
         <Route
           path="/chat"
-          element={token ? <Chat /> : <Navigate to="/login" />}
+          element={
+            <ProtectedRoute>
+              <Chat />
+            </ProtectedRoute>
+          }
         />
 
         {/* Protected Profile Route */}
         <Route
           path="/profile"
-          element={token ? <Profile /> : <Navigate to="/login" />}
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
         />
 
         {/* Catch-all route to redirect unknown URLs back to Home */}
