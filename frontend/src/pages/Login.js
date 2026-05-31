@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Activity, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
@@ -10,15 +10,12 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const navigate = useNavigate();
-
   const handleGoogleLogin = () => {
     window.location.href =
       "https://healthbot-backend-ezxv.onrender.com/api/auth/google";
   };
 
   const handleLogin = async (e) => {
-    // 100% guarantees the page will NOT refresh
     if (e) e.preventDefault();
 
     if (!email.trim() || !password.trim()) {
@@ -52,10 +49,14 @@ export default function Login() {
           data.message || "Login failed. Please check your credentials.",
         );
 
-      // Success! Save data and redirect
+      // Success! Save data
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-      navigate("/chat");
+
+      // 🚀 BULLETPROOF REDIRECT:
+      // Instead of relying on React Router, this forces the browser to
+      // completely wipe its memory and reload the Chat page fresh.
+      window.location.href = "/chat";
     } catch (err) {
       if (err.message === "Failed to fetch") {
         setErrorMessage(
@@ -169,7 +170,6 @@ export default function Login() {
               </Link>
             </div>
 
-            {/* Replaced type="submit" with button type handling to block refresh completely */}
             <button
               type="button"
               onClick={handleLogin}
