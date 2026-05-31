@@ -1,5 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import axios from "axios";
 
 // Importing your actual pages!
 import Home from "./pages/Home";
@@ -10,6 +11,20 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
+
+// --- GLOBAL AUTO-LOGOUT INTERCEPTOR ---
+// If the backend ever says the user's token is expired (401),
+// this instantly clears their data and kicks them to the login screen.
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.clear();
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  },
+);
 
 function App() {
   const token = localStorage.getItem("token");
