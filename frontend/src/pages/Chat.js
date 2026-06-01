@@ -42,6 +42,7 @@ import {
   Calendar,
   Phone,
   Check,
+  CalendarDays,
 } from "lucide-react";
 
 // Import the Gemini frontend service
@@ -115,6 +116,12 @@ export function ChatDashboard() {
           },
         );
 
+        if (res.status === 401) {
+          localStorage.clear();
+          window.location.href = "/login";
+          return;
+        }
+
         if (res.ok) {
           const data = await res.json();
           const userData = data.user || data;
@@ -139,7 +146,6 @@ export function ChatDashboard() {
     fetchLatestProfile();
   }, [token]);
 
-  // --- Real-time password requirements logic ---
   const passwordRequirements = useMemo(
     () => [
       {
@@ -168,20 +174,94 @@ export function ChatDashboard() {
   const [isRecording, setIsRecording] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
 
+  // --- NEW REMINDER STATE ---
   const [reminders, setReminders] = useState([
-    { id: 1, name: "Drink Water", time: "Every 2 Hours", active: true },
-    { id: 2, name: "Vitamin C Supplement", time: "09:00 AM", active: true },
+    {
+      id: 1,
+      name: "Drink Water",
+      date: "Daily",
+      time: "Every 2 Hours",
+      active: true,
+    },
+    {
+      id: 2,
+      name: "Vitamin C Supplement",
+      date: "Daily",
+      time: "09:00 AM",
+      active: true,
+    },
   ]);
 
-  const handleAddReminder = () => {
-    const name = prompt("What is the reminder for? (e.g. Paracetamol)");
-    const time = prompt("What time? (e.g. 08:00 AM)");
-    if (name && time) {
+  // Modal State
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [editingReminderId, setEditingReminderId] = useState(null);
+  const [reminderForm, setReminderForm] = useState({
+    name: "",
+    date: "",
+    time: "",
+  });
+
+  // Open modal for NEW reminder
+  const openAddReminderModal = () => {
+    setEditingReminderId(null);
+    setReminderForm({ name: "", date: "", time: "" });
+    setIsReminderModalOpen(true);
+  };
+
+  // Open modal to EDIT existing reminder
+  const openEditReminderModal = (id) => {
+    const r = reminders.find((rem) => rem.id === id);
+    if (r) {
+      setEditingReminderId(id);
+      setReminderForm({
+        name: r.name,
+        date: r.date !== "Daily" ? r.date : "",
+        time: r.time,
+      });
+      setIsReminderModalOpen(true);
+    }
+  };
+
+  // Save the reminder (handles both Add and Edit)
+  const saveReminder = (e) => {
+    e.preventDefault();
+    if (!reminderForm.name.trim() || !reminderForm.time.trim()) {
+      showToast("Name and Time are required!");
+      return;
+    }
+
+    const formattedDate = reminderForm.date ? reminderForm.date : "Daily";
+
+    if (editingReminderId) {
+      // Edit existing
+      setReminders(
+        reminders.map((r) =>
+          r.id === editingReminderId
+            ? {
+                ...r,
+                name: reminderForm.name,
+                date: formattedDate,
+                time: reminderForm.time,
+              }
+            : r,
+        ),
+      );
+      showToast("Reminder updated!");
+    } else {
+      // Add new
       setReminders([
         ...reminders,
-        { id: Date.now(), name, time, active: true },
+        {
+          id: Date.now(),
+          name: reminderForm.name,
+          date: formattedDate,
+          time: reminderForm.time,
+          active: true,
+        },
       ]);
+      showToast("Reminder added!");
     }
+    setIsReminderModalOpen(false);
   };
 
   const handleDeleteReminder = (id) => {
@@ -203,7 +283,6 @@ export function ChatDashboard() {
   const rawFirstName = rawFullName.trim().split(" ")[0];
   const firstName = formatName(rawFirstName);
 
-  // Initialize Welcome Message
   useEffect(() => {
     const now = new Date().toLocaleTimeString([], {
       hour: "2-digit",
@@ -222,7 +301,6 @@ export function ChatDashboard() {
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
   }, [firstName, messages.length]);
 
-  // Auto-Save Chat History System
   useEffect(() => {
     if (appSettings.saveHistory && messages.length > 1) {
       const title =
@@ -306,7 +384,6 @@ export function ChatDashboard() {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  // Profile Interaction
   const handleProfileChange = (e) => {
     setProfileForm({ ...profileForm, [e.target.name]: e.target.value });
   };
@@ -325,6 +402,13 @@ export function ChatDashboard() {
           body: JSON.stringify(profileForm),
         },
       );
+
+      if (res.status === 401) {
+        localStorage.clear();
+        window.location.href = "/login";
+        return;
+      }
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
@@ -340,7 +424,6 @@ export function ChatDashboard() {
     }
   };
 
-  // Password Change Logic
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -370,6 +453,13 @@ export function ChatDashboard() {
           }),
         },
       );
+
+      if (res.status === 401) {
+        localStorage.clear();
+        window.location.href = "/login";
+        return;
+      }
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
 
@@ -387,7 +477,6 @@ export function ChatDashboard() {
     }
   };
 
-  // Settings Interaction
   const handleSettingChange = (key) => {
     const newSettings = { ...appSettings, [key]: !appSettings[key] };
     setAppSettings(newSettings);
@@ -458,7 +547,6 @@ export function ChatDashboard() {
     }
   };
 
-  // --- SEND MESSAGE WITH FRONTEND GEMINI SUPPORT ---
   const sendMessage = async (textOverride = null) => {
     const textToSend = textOverride || inputText;
     if ((!textToSend.trim() && !uploadedImage) || loading) return;
@@ -493,13 +581,11 @@ export function ChatDashboard() {
       const mlResult = res.data.mlResult;
       const intent = res.data.intent;
 
-      // Trigger Gemini even if the ML model is unsure!
       if (intent === "symptoms" && geminiReady) {
         try {
           let mlSummary = "";
           let hasPredictions = false;
 
-          // Check if the ML model actually guessed a disease
           if (
             mlResult &&
             mlResult.predictions &&
@@ -515,7 +601,6 @@ export function ChatDashboard() {
             ? storedUser.name.split(" ")[0]
             : "there";
 
-          // Ask Gemini for a response
           const geminiText = await getGeminiReply(
             textToSend,
             mlSummary,
@@ -524,10 +609,8 @@ export function ChatDashboard() {
 
           if (geminiText) {
             if (hasPredictions) {
-              // Combine Gemini empathy + ML table
               botReply = geminiText + "\n\n" + botReply;
             } else {
-              // ML failed, so let Gemini take over the conversation naturally!
               botReply = geminiText;
             }
           }
@@ -549,6 +632,12 @@ export function ChatDashboard() {
         },
       ]);
     } catch (err) {
+      if (err.response && err.response.status === 401) {
+        localStorage.clear();
+        window.location.href = "/login";
+        return;
+      }
+
       setMessages((prev) => [
         ...prev,
         {
@@ -674,6 +763,85 @@ export function ChatDashboard() {
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-teal-500 text-slate-900 px-5 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-3 z-[200] animate-in slide-in-from-bottom-5">
           <CheckCircle2 size={20} /> {toastMessage}
+        </div>
+      )}
+
+      {/* Custom Reminder Modal */}
+      {isReminderModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div
+            className={`w-full max-w-md p-6 rounded-3xl shadow-2xl ${isDark ? "bg-[#111827] border border-slate-700/50" : "bg-white border border-slate-200"}`}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3
+                className={`text-xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
+              >
+                {editingReminderId ? "Edit Reminder" : "New Reminder"}
+              </h3>
+              <button
+                onClick={() => setIsReminderModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-rose-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={saveReminder} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Reminder Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Medicine, Water, etc."
+                  value={reminderForm.name}
+                  onChange={(e) =>
+                    setReminderForm({ ...reminderForm, name: e.target.value })
+                  }
+                  className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={reminderForm.date}
+                    onChange={(e) =>
+                      setReminderForm({ ...reminderForm, date: e.target.value })
+                    }
+                    className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Time
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={reminderForm.time}
+                    onChange={(e) =>
+                      setReminderForm({ ...reminderForm, time: e.target.value })
+                    }
+                    className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full mt-4 bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <Save size={18} />{" "}
+                {editingReminderId ? "Save Changes" : "Add Reminder"}
+              </button>
+            </form>
+          </div>
         </div>
       )}
 
@@ -815,7 +983,7 @@ export function ChatDashboard() {
           {/* VIEW: FIRST AID */}
           {page === "first-aid" && <FirstAidView isDark={isDark} />}
 
-          {/* VIEW: PROFILE (SYNCED WITH PROFILE.JS) */}
+          {/* VIEW: PROFILE */}
           {page === "profile" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div
@@ -1078,7 +1246,6 @@ export function ChatDashboard() {
                         }
                       />
 
-                      {/* REAL-TIME PASSWORD RULES CHECKLIST */}
                       <div
                         className={`p-4 rounded-xl border mt-2 ${isDark ? "bg-slate-900/50 border-slate-800" : "bg-slate-50 border-slate-200"}`}
                       >
@@ -1221,7 +1388,7 @@ export function ChatDashboard() {
             </div>
           )}
 
-          {/* VIEW: REMINDERS */}
+          {/* VIEW: REMINDERS (UPDATED TO SHOW DATE) */}
           {page === "reminders" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div className="flex justify-between items-center mb-8">
@@ -1231,7 +1398,7 @@ export function ChatDashboard() {
                   Reminders
                 </h2>
                 <button
-                  onClick={handleAddReminder}
+                  onClick={openAddReminderModal}
                   className="bg-teal-500 text-slate-900 px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:brightness-110 transition-all text-sm"
                 >
                   <Plus size={16} /> Add New
@@ -1241,7 +1408,7 @@ export function ChatDashboard() {
                 {reminders.map((r) => (
                   <div
                     key={r.id}
-                    className={`border p-6 rounded-2xl flex items-center justify-between backdrop-blur-md transition-all ${isDark ? "bg-[#111827]/80 border-slate-700/50 hover:border-teal-500/30" : "bg-slate-50 border-slate-200 hover:border-teal-500/50 shadow-sm"}`}
+                    className={`border p-4 sm:p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 backdrop-blur-md transition-all ${isDark ? "bg-[#111827]/80 border-slate-700/50 hover:border-teal-500/30" : "bg-slate-50 border-slate-200 hover:border-teal-500/50 shadow-sm"}`}
                   >
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-teal-500/10 rounded-xl">
@@ -1253,15 +1420,30 @@ export function ChatDashboard() {
                         >
                           {r.name}
                         </h4>
-                        <p className="text-slate-500 text-sm">{r.time}</p>
+                        <div className="flex gap-3 text-slate-500 text-sm mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <CalendarDays size={14} /> {r.date}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock size={14} /> {r.time}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDeleteReminder(r.id)}
-                      className="p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <div className="flex gap-1 sm:gap-2 self-end sm:self-auto">
+                      <button
+                        onClick={() => openEditReminderModal(r.id)}
+                        className="p-2 text-slate-400 hover:bg-teal-500/10 hover:text-teal-500 rounded-lg transition-colors"
+                      >
+                        <Edit3 size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteReminder(r.id)}
+                        className="p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
