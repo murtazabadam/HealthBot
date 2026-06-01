@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
 
@@ -18,20 +18,27 @@ axios.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       localStorage.clear();
-      window.location.href = '/login';
+      window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 
-// --- NEW: DYNAMIC ROUTE PROTECTOR ---
-// This safely checks for the token exactly when the user tries to open the page
+// --- DYNAMIC ROUTE PROTECTOR ---
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/login" replace />;
 };
 
 function App() {
+  // WAKE UP BACKEND ON APP LOAD
+  useEffect(() => {
+    // Ping backend on app load to wake it up before user tries to login
+    fetch("https://healthbot-backend-ezxv.onrender.com/")
+      .then(() => console.log("Backend is awake"))
+      .catch(() => console.log("Backend waking up..."));
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
