@@ -179,15 +179,15 @@ export function ChatDashboard() {
     {
       id: 1,
       name: "Drink Water",
-      date: "Daily",
-      time: "Every 2 Hours",
+      date: "2026-06-01",
+      time: "08:00",
       active: true,
     },
     {
       id: 2,
       name: "Vitamin C Supplement",
-      date: "Daily",
-      time: "09:00 AM",
+      date: "2026-06-02",
+      time: "09:00",
       active: true,
     },
   ]);
@@ -213,11 +213,7 @@ export function ChatDashboard() {
     const r = reminders.find((rem) => rem.id === id);
     if (r) {
       setEditingReminderId(id);
-      setReminderForm({
-        name: r.name,
-        date: r.date !== "Daily" ? r.date : "",
-        time: r.time,
-      });
+      setReminderForm({ name: r.name, date: r.date, time: r.time });
       setIsReminderModalOpen(true);
     }
   };
@@ -225,12 +221,14 @@ export function ChatDashboard() {
   // Save the reminder (handles both Add and Edit)
   const saveReminder = (e) => {
     e.preventDefault();
-    if (!reminderForm.name.trim() || !reminderForm.time.trim()) {
-      showToast("Name and Time are required!");
+    if (
+      !reminderForm.name.trim() ||
+      !reminderForm.date.trim() ||
+      !reminderForm.time.trim()
+    ) {
+      showToast("Name, Date, and Time are required!");
       return;
     }
-
-    const formattedDate = reminderForm.date ? reminderForm.date : "Daily";
 
     if (editingReminderId) {
       // Edit existing
@@ -240,7 +238,7 @@ export function ChatDashboard() {
             ? {
                 ...r,
                 name: reminderForm.name,
-                date: formattedDate,
+                date: reminderForm.date,
                 time: reminderForm.time,
               }
             : r,
@@ -254,7 +252,7 @@ export function ChatDashboard() {
         {
           id: Date.now(),
           name: reminderForm.name,
-          date: formattedDate,
+          date: reminderForm.date,
           time: reminderForm.time,
           active: true,
         },
@@ -806,10 +804,11 @@ export function ChatDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Date (Optional)
+                    Date
                   </label>
                   <input
                     type="date"
+                    required
                     value={reminderForm.date}
                     onChange={(e) =>
                       setReminderForm({ ...reminderForm, date: e.target.value })
