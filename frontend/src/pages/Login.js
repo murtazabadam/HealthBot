@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Activity, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Activity, Mail, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -9,6 +9,10 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // New Verification States
+  const [showVerificationBanner, setShowVerificationBanner] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   const handleGoogleLogin = () => {
     window.location.href =
@@ -23,44 +27,48 @@ export default function Login() {
     }
 
     setErrorMessage("");
+    setShowVerificationBanner(false);
     setLoading(true);
 
     try {
+      const controller = new AbortController();
+      // Increase timeout to 60 seconds for Render cold start
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+
       const res = await fetch(
         "https://healthbot-backend-ezxv.onrender.com/api/auth/login",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: email.trim(), password }),
+          signal: controller.signal,
         },
       );
 
-      let data;
-      try {
-        data = await res.json();
-      } catch (parseErr) {
-        throw new Error(
-          "Server is waking up. Please click Login again in 15 seconds!",
-        );
-      }
+      clearTimeout(timeoutId);
+      const data = await res.json();
 
-      if (!res.ok)
+      if (!res.ok) {
+        if (data.requiresVerification) {
+          setUnverifiedEmail(data.email || email);
+          setShowVerificationBanner(true);
+          return;
+        }
         throw new Error(
           data.message || "Login failed. Please check your credentials.",
         );
+      }
 
       // Success! Save data
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      // 🚀 BULLETPROOF REDIRECT:
-      // Instead of relying on React Router, this forces the browser to
-      // completely wipe its memory and reload the Chat page fresh.
+      // Hard redirect to bypass browser cache
       window.location.href = "/chat";
     } catch (err) {
-      if (err.message === "Failed to fetch") {
+      if (err.name === "AbortError" || err.message === "Failed to fetch") {
         setErrorMessage(
-          "Server is waking up. Please click Login again in 15 seconds!",
+          "Server is waking up. Please try again in a few seconds.",
         );
       } else {
         setErrorMessage(err.message);
@@ -109,7 +117,19 @@ export default function Login() {
           </div>
 
           <form className="flex flex-col gap-5" onSubmit={handleLogin}>
-            {errorMessage && (
+            {showVerificationBanner && (
+              <div className="bg-amber-500/10 border border-amber-500/50 text-amber-400 text-sm p-4 rounded-xl flex flex-col gap-1 items-center text-center animate-in fade-in">
+                <AlertTriangle size={24} className="text-amber-500 mb-1" />
+                <p className="font-bold text-base">Please verify your email!</p>
+                <p className="text-xs opacity-90">
+                  We sent a link to{" "}
+                  <span className="font-bold">{unverifiedEmail}</span>. Check
+                  your inbox or spam folder.
+                </p>
+              </div>
+            )}
+
+            {errorMessage && !showVerificationBanner && (
               <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-sm p-3 rounded-lg text-center font-bold animate-pulse">
                 {errorMessage}
               </div>
@@ -176,7 +196,7 @@ export default function Login() {
               disabled={loading}
               className="w-full mt-2 bg-gradient-to-r from-teal-400 to-cyan-500 hover:from-teal-300 hover:to-cyan-400 text-slate-900 font-bold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {loading ? "Logging In..." : "Log In"}
+              {loading ? "Waking Server (Takes ~50s)..." : "Log In"}
             </button>
 
             <div className="relative flex items-center gap-4 my-2">
