@@ -25,6 +25,26 @@ router.get('/test-gemini', async (req, res) => {
   }
 });
 //end of temporary section
+//gemini test
+router.get('/test-gemini', async (req, res) => {
+  try {
+    const { getGeminiResponse } = require('../config/gemini');
+    const reply = await getGeminiResponse(
+      'I have fever and headache',
+      'Top prediction: Common Cold (45% confidence)',
+      'TestUser',
+      []
+    );
+    if (reply) {
+      res.json({ working: true, response: reply });
+    } else {
+      res.json({ working: false, reason: 'Gemini returned null — check API key or quota' });
+    }
+  } catch (err) {
+    res.json({ working: false, error: err.message });
+  }
+});
+//end of gemini test
 //temporary section
 router.get('/test-email', async (req, res) => {
   try {
