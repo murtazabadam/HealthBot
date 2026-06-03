@@ -13,7 +13,7 @@ function initGroq() {
   try {
     const key = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY;
     groq = new Groq({ apiKey: key });
-    console.log('Groq AI ready! Model: llama3-8b-8192');
+    console.log('Groq AI ready! Model: llama-3.1-8b-instant');
     return true;
   } catch (err) {
     console.error('Groq init error:', err.message);
@@ -57,7 +57,7 @@ ${mlPrediction ? `ML Model says: ${mlPrediction}` : 'No ML prediction yet'}`;
     ];
 
     const completion = await groq.chat.completions.create({
-      model: 'llama3-8b-8192',
+      model: 'llama-3.1-8b-instant',
       messages,
       max_tokens: 200,
       temperature: 0.7,
