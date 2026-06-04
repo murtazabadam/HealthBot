@@ -237,46 +237,66 @@ router.post('/message', auth, async (req, res) => {
     let mlResult = null;
     let emergency = false;
 
+    // Always load recent history for context
+    let recentHistory = [];
+    const existingConv = await Conversation.findOne({ userId: req.user.id });
+    if (existingConv) recentHistory = existingConv.messages.slice(-10);
+
+    // Check if last bot message had an ML prediction
+    // This means current message is likely a follow-up answer
+    const lastBotMsg = recentHistory.filter(m => m.sender === 'bot').pop();
+    const hasRecentPrediction = lastBotMsg && lastBotMsg.text.includes('ML Analysis');
+
     if (intent === 'symptoms') {
       const symptoms = extractSymptoms(text);
-
-      // Check emergency
       emergency = checkEmergency(symptoms);
-
-      // Call ML engine
       mlResult = await getMLPrediction(text, symptoms);
       const ml = buildMLSection(mlResult, symptoms);
 
-      // Load recent history for AI context
-      let recentHistory = [];
-      const existingConv = await Conversation.findOne({ userId: req.user.id });
-      if (existingConv) recentHistory = existingConv.messages.slice(-6);
-
-      // Call Groq AI if key exists and ML got a result
       if (process.env.GROQ_API_KEY && ml && ml.summary) {
         try {
+          console.log('Calling Groq AI...');
           const aiText = await getGeminiResponse(
             text, ml.summary, userName, recentHistory
           );
+          console.log('Groq:', aiText ? 'SUCCESS' : 'NULL response');
           botReply = aiText
             ? `${aiText}\n\n${ml.block}`
             : ml.block;
         } catch (err) {
           console.error('AI call failed:', err.message);
-          botReply = ml ? ml.block : getFallbackReply('possible_symptoms', userName);
+          botReply = ml.block;
         }
       } else {
         botReply = ml ? ml.block : getFallbackReply('possible_symptoms', userName);
       }
 
+    } else if (
+      (intent === 'unknown' || intent === 'possible_symptoms' ||
+       intent === 'yes' || intent === 'no') &&
+      hasRecentPrediction &&
+      process.env.GROQ_API_KEY
+    ) {
+      // ── Follow-up answer — pass to Groq with full history ──────────────────
+      // User is answering a follow-up question from HealthBot
+      try {
+        console.log('Calling Groq AI for follow-up...');
+        const aiText = await getGeminiResponse(
+          text, null, userName, recentHistory
+        );
+        console.log('Groq follow-up:', aiText ? 'SUCCESS' : 'NULL');
+        botReply = aiText || getFallbackReply(intent, userName);
+      } catch (err) {
+        botReply = getFallbackReply(intent, userName);
+      }
+
     } else {
-      // Non-symptom messages use fallback — saves Groq quota
+      // Greetings, thanks, bye — use fallback to save Groq quota
       botReply = getFallbackReply(intent, userName);
     }
 
     // Save to database
-    let conv = await Conversation.findOne({ userId: req.user.id });
-    if (!conv) conv = new Conversation({ userId: req.user.id, messages: [] });
+    let conv = existingConv || new Conversation({ userId: req.user.id, messages: [] });
     conv.messages.push({ sender: 'user', text });
     conv.messages.push({ sender: 'bot', text: botReply });
     await conv.save();
