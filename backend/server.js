@@ -7,20 +7,24 @@ const { Server } = require('socket.io');
 
 dotenv.config();
 
-const session = require('express-session');
-const passport = require('./config/passport');
-
-const app = express(); // MUST COME BEFORE app.use()
+// Trust Render's proxy — required for OAuth to work correctly
+app.set('trust proxy', 1);
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io     = new Server(server, { cors: { origin: '*' } });
 
-/* Session + Passport */
 app.use(session({
   secret: process.env.SESSION_SECRET || 'healthbot_secret',
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 10 * 60 * 1000,  // 10 minutes
+    secure: false,             // keep false for Render free tier
+    httpOnly: true
+  }
 }));
+
+
 
 app.use(passport.initialize());
 app.use(passport.session());

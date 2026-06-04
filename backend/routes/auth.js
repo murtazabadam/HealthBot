@@ -292,11 +292,25 @@ router.get('/google',
 );
 
 router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: '/login', session: false }),
+  (req, res, next) => {
+    passport.authenticate('google', {
+      session: false,
+      failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_failed`
+    })(req, res, next);
+  },
   (req, res) => {
-    const token       = generateToken(req.user._id);
-    const frontendUrl = process.env.FRONTEND_URL || 'https://healthbotsc.vercel.app';
-    res.redirect(`${frontendUrl}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify(userResponse(req.user)))}`);
+    try {
+      if (!req.user) {
+        return res.redirect(`${process.env.FRONTEND_URL}/login?error=no_user`);
+      }
+      const token       = generateToken(req.user._id);
+      const frontendUrl = process.env.FRONTEND_URL || 'https://healthbotsc.vercel.app';
+      const userData    = encodeURIComponent(JSON.stringify(userResponse(req.user)));
+      res.redirect(`${frontendUrl}/auth/callback?token=${token}&user=${userData}`);
+    } catch (err) {
+      console.error('OAuth callback error:', err);
+      res.redirect(`${process.env.FRONTEND_URL}/login?error=server_error`);
+    }
   }
 );
 
