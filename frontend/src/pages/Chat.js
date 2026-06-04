@@ -1603,7 +1603,7 @@ export function ChatDashboard() {
                   <Paperclip size={18} />
                 </button>
 
-                {/* NEW LISTENING UI TEXTAREA */}
+                {/* UPDATED LISTENING UI TEXTAREA */}
                 <textarea
                   rows={1}
                   value={inputText}
@@ -1613,28 +1613,24 @@ export function ChatDashboard() {
                     !e.shiftKey &&
                     (e.preventDefault(), sendMessage())
                   }
-                  placeholder={
-                    isRecording
-                      ? "Listening to your voice..."
-                      : "Describe symptoms..."
-                  }
-                  className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar outline-none transition-all ${isRecording ? "placeholder-rose-400" : "placeholder-slate-400"} ${isDark ? "text-white" : "text-slate-900"}`}
+                  placeholder="Describe symptoms..."
+                  className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar placeholder-slate-400 outline-none transition-all ${isDark ? "text-white" : "text-slate-900"}`}
                 />
 
-                {/* NEW LISTENING UI MIC BUTTON */}
+                {/* UPDATED LISTENING UI MIC BUTTON (TEAL COLOR) */}
                 <button
                   onClick={toggleRecording}
                   className={`transition-all flex items-center justify-center gap-2 rounded-xl ${
                     isRecording
-                      ? "bg-rose-500/10 text-rose-500 px-3 py-1.5"
+                      ? "bg-teal-500/10 text-teal-500 px-3 py-1.5"
                       : "p-2 text-slate-400 hover:text-teal-500"
                   }`}
                 >
                   {isRecording ? (
                     <>
                       <span className="relative flex h-2.5 w-2.5 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-500"></span>
                       </span>
                       <span className="text-xs font-bold animate-pulse">
                         Listening...
