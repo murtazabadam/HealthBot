@@ -24,11 +24,6 @@ app.use(session({
   }
 }));
 
-
-
-app.use(passport.initialize());
-app.use(passport.session());
-
 /* Middleware */
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
