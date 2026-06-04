@@ -16,23 +16,13 @@ app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io     = new Server(server, { cors: { origin: '*' } });
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'healthbot_secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 10 * 60 * 1000,  // 10 minutes
-    secure: false,             // keep false for Render free tier
-    httpOnly: true
-  }
-}));
 
 // ── Session ────────────────────────────────────────────────────────────────────
 app.use(session({
   secret: process.env.SESSION_SECRET || 'healthbot_secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 10 * 60 * 1000, secure: false }
+  cookie: { maxAge: 10 * 60 * 1000, secure: false, httpOnly: true }
 }));
 
 app.use(passport.initialize());
