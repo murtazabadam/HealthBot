@@ -10,19 +10,16 @@ const passport   = require('./config/passport');
 
 dotenv.config();
 
-// Trust Render's proxy — required for OAuth to work correctly
-app.set('trust proxy', 1);
-
+const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, { cors: { origin: '*' } });
-
 
 // ── Session ────────────────────────────────────────────────────────────────────
 app.use(session({
   secret: process.env.SESSION_SECRET || 'healthbot_secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 10 * 60 * 1000, secure: false, httpOnly: true }
+  cookie: { maxAge: 10 * 60 * 1000, secure: false }
 }));
 
 app.use(passport.initialize());
