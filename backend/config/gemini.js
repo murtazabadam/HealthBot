@@ -6,12 +6,12 @@ const CACHE_MAX = 50;
 let groq = null;
 
 function initGroq() {
-  if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
-    console.log('AI: No API key found — using fallback bot');
+  const key = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY;
+  if (!key) {
+    console.log('AI: No API key found — ML-only mode');
     return false;
   }
   try {
-    const key = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY;
     groq = new Groq({ apiKey: key });
     console.log('Groq AI ready! Model: llama-3.1-8b-instant');
     return true;
@@ -28,34 +28,36 @@ async function getGeminiResponse(userMessage, mlPrediction, userName, chatHistor
 
   const cacheKey = `${userMessage.toLowerCase().trim()}_${mlPrediction || ''}`;
   if (responseCache.has(cacheKey)) {
-    console.log('AI: Using cached response');
+    console.log('AI: Cached response used');
     return responseCache.get(cacheKey);
   }
 
-  try {
-    const systemPrompt = `You are HealthBot, a compassionate AI medical assistant.
+  const systemPrompt = `You are HealthBot, a compassionate AI medical assistant.
 
 RULES:
-- You are an AI, NOT a real doctor — always remind the patient
+- You are an AI NOT a real doctor — always remind the patient of this
 - Be warm, empathetic and easy to understand
 - Keep response to 3 sentences maximum
-- If ML prediction is provided, mention it naturally
-- Ask one follow-up question about symptoms
-- Never make definitive diagnoses — use "this may suggest" or "this could indicate"
+- If ML prediction is provided, mention it naturally in your response
+- Ask exactly one follow-up question about symptoms
+- Never make definitive diagnoses — use phrases like "this may suggest" or "this could indicate"
 - If symptoms sound serious, recommend seeing a doctor urgently
+- Use simple language any patient can understand
 
 Patient name: ${userName}
-${mlPrediction ? `ML Model says: ${mlPrediction}` : 'No ML prediction yet'}`;
+${mlPrediction ? `ML Model Prediction: ${mlPrediction}` : 'No ML prediction available yet'}`;
 
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...chatHistory.slice(-4).map(msg => ({
-        role: msg.sender === 'user' ? 'user' : 'assistant',
-        content: msg.text.substring(0, 300)
-      })),
-      { role: 'user', content: userMessage }
-    ];
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...chatHistory.slice(-4).map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.text.substring(0, 300)
+    })),
+    { role: 'user', content: userMessage }
+  ];
 
+  try {
+    console.log('Calling Groq AI...');
     const completion = await groq.chat.completions.create({
       model: 'llama-3.1-8b-instant',
       messages,
@@ -64,6 +66,7 @@ ${mlPrediction ? `ML Model says: ${mlPrediction}` : 'No ML prediction yet'}`;
     });
 
     const response = completion.choices[0]?.message?.content || null;
+    console.log('Groq:', response ? 'SUCCESS' : 'NULL response');
 
     if (response) {
       if (responseCache.size >= CACHE_MAX) {
@@ -71,7 +74,6 @@ ${mlPrediction ? `ML Model says: ${mlPrediction}` : 'No ML prediction yet'}`;
       }
       responseCache.set(cacheKey, response);
     }
-
     return response;
 
   } catch (err) {
