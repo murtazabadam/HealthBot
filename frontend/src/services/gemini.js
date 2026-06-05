@@ -1,31 +1,20 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// We are keeping the function names as "Gemini" so we don't break Chat.js,
+// but this is now 100% powered by Grok!
 
-const API_KEY = process.env.REACT_APP_GEMINI_KEY;
+const API_KEY = process.env.REACT_APP_GROK_KEY;
 
-let model = null;
+export const geminiReady = !!API_KEY && API_KEY !== "DISABLED";
 
-function initGemini() {
-  if (!API_KEY || API_KEY === "DISABLED") {
-    console.log("Gemini: No API key in frontend");
-    return false;
-  }
-  try {
-    const genAI = new GoogleGenerativeAI(API_KEY);
-    model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    console.log("Gemini ready in frontend!");
-    return true;
-  } catch (err) {
-    console.error("Gemini init error:", err.message);
-    return false;
-  }
+if (!geminiReady) {
+  console.log("Grok: No API key found in frontend");
+} else {
+  console.log("Grok ready in frontend!");
 }
 
-export const geminiReady = initGemini();
-
 export async function getGeminiReply(userMessage, mlSummary, userName) {
-  if (!model) return null;
+  if (!geminiReady) return null;
 
-  const prompt = `You are HealthBot, a compassionate AI medical assistant.
+  const systemPrompt = `You are HealthBot, a compassionate AI medical assistant.
 
 Patient name: ${userName}
 ${mlSummary ? `ML Prediction: ${mlSummary}` : "No ML prediction available yet"}
@@ -36,17 +25,35 @@ RULES:
 - If ML prediction is available, mention it naturally
 - Ask one follow-up question about symptoms
 - Always say you are an AI not a real doctor
-- Never make definitive diagnoses
-
-Patient says: "${userMessage}"
-
-Respond naturally as HealthBot:`;
+- Never make definitive diagnoses`;
 
   try {
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    const response = await fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${API_KEY}`,
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        model: "grok-beta",
+        temperature: 0.5,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Grok API Error:", errorData);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
   } catch (err) {
-    console.error("Gemini error:", err.message);
+    console.error("Grok fetch error:", err.message);
     return null;
   }
 }
