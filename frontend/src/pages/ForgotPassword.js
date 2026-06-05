@@ -247,7 +247,7 @@ export default function ForgotPassword() {
                   <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                     Enter OTP
                   </label>
-                  <div className="flex justify-between w-full gap-2 sm:gap-3">
+                  <div className="flex justify-center w-full gap-1.5 sm:gap-3 max-w-full px-1">
                     {otp.map((digit, index) => (
                       <input
                         key={index}
@@ -257,7 +257,7 @@ export default function ForgotPassword() {
                         value={digit}
                         onChange={(e) => handleOtpChange(index, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                        className="w-12 h-14 sm:w-14 sm:h-16 bg-[#0B1120] border border-slate-700 rounded-xl text-center text-2xl text-white font-bold focus:outline-none focus:border-teal-400 transition-all"
+                        className="w-10 h-12 sm:w-14 sm:h-16 bg-[#0B1120] border border-slate-700 rounded-xl text-center text-xl sm:text-2xl text-white font-bold focus:outline-none focus:border-teal-400 transition-all shrink-0"
                       />
                     ))}
                   </div>
