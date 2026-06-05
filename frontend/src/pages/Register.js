@@ -627,7 +627,7 @@ export default function Register() {
                   </div>
                 )}
 
-                <div className="flex gap-2 sm:gap-3 justify-center w-full my-4">
+                <div className="flex justify-center gap-2 sm:gap-4 w-full max-w-full my-4 px-1">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -637,7 +637,7 @@ export default function Register() {
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                      className="w-12 h-14 sm:w-14 sm:h-16 bg-[#0B1120] border border-slate-700 rounded-lg text-center text-2xl text-white font-bold focus:outline-none focus:border-teal-400 transition-all"
+                      className="w-10 h-12 sm:w-14 sm:h-16 bg-[#0B1120] border border-slate-700 rounded-lg text-center text-xl sm:text-2xl text-white font-bold focus:outline-none focus:border-teal-400 transition-all shrink-0"
                     />
                   ))}
                 </div>
