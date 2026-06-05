@@ -611,17 +611,24 @@ export function ChatDashboard() {
     const textToSend = textOverride || inputText;
     if ((!textToSend.trim() && !uploadedImage) || loading) return;
 
-    // --- EMERGENCY DETECTION SCANNER ---
+    // --- SMARTER EMERGENCY SCANNER ---
+    // Removed "chest pain" so it doesn't trigger instantly.
+    // Added escalating phrases so it triggers if the condition worsens.
     const emergencyKeywords = [
       "heart attack",
-      "chest pain",
       "stroke",
       "bleeding heavily",
-      "emergency",
       "suicide",
-      "accident",
+      "unconscious",
       "can't breathe",
       "shortness of breath",
+      "getting worse",
+      "condition is worsening",
+      "severe pain",
+      "unbearable",
+      "fainting",
+      "losing consciousness",
+      "massive accident",
     ];
     const isEmergency = emergencyKeywords.some((keyword) =>
       textToSend.toLowerCase().includes(keyword),
@@ -630,7 +637,7 @@ export function ChatDashboard() {
     if (isEmergency) {
       setEmergencyAlert(true);
       speakText(
-        "Emergency detected. Please select an option on the screen to get help.",
+        "Emergency alert. Please select an option to get immediate help.",
       );
     }
 
