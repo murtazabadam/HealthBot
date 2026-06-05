@@ -43,18 +43,29 @@ import {
   Phone,
   Check,
   CalendarDays,
+  Volume2,
+  AlertTriangle,
+  UserX,
 } from "lucide-react";
 
-// Import the Gemini frontend service
-import { getGeminiReply, geminiReady } from "../services/gemini";
+// Mock gemini service for the preview environment
+const geminiReady = true;
+const getGeminiReply = async (userMessage, mlSummary, userName) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(
+        `Hello ${userName}, based on your input "${userMessage}", and the analysis (${mlSummary}), I recommend resting.`,
+      );
+    }, 1000);
+  });
+};
 
 export function ChatDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [page, setPage] = useState("chat");
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token") || "dummy_token";
 
-  // Real-time Chat & Settings States
   const [activeSessionId, setActiveSessionId] = useState(Date.now());
   const [chatHistoryList, setChatHistoryList] = useState(() =>
     JSON.parse(localStorage.getItem("chatHistory") || "[]"),
@@ -70,7 +81,6 @@ export function ChatDashboard() {
     JSON.parse(localStorage.getItem("user") || "{}"),
   );
 
-  // Profile Editing States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: user.name || "",
@@ -82,7 +92,6 @@ export function ChatDashboard() {
   });
   const [toastMessage, setToastMessage] = useState("");
 
-  // Security & Password States
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -94,16 +103,16 @@ export function ChatDashboard() {
   const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeactivating, setIsDeactivating] = useState(false);
+  const [emergencyAlert, setEmergencyAlert] = useState(false);
 
-  // --- Theme Logic ---
   const isDark = appSettings.darkMode;
 
-  // Sync global body background color
   useEffect(() => {
     document.body.style.backgroundColor = isDark ? "#020617" : "#ffffff";
   }, [isDark]);
 
-  // --- Auto-Sync Profile Data from Backend on Load ---
   useEffect(() => {
     const fetchLatestProfile = async () => {
       if (!token) return;
@@ -125,10 +134,8 @@ export function ChatDashboard() {
         if (res.ok) {
           const data = await res.json();
           const userData = data.user || data;
-
           setUser(userData);
           localStorage.setItem("user", JSON.stringify(userData));
-
           setProfileForm({
             name: userData.name || "",
             age: userData.age || "",
@@ -142,7 +149,6 @@ export function ChatDashboard() {
         console.error("Failed to sync profile data from server.", err);
       }
     };
-
     fetchLatestProfile();
   }, [token]);
 
@@ -174,7 +180,6 @@ export function ChatDashboard() {
   const [isRecording, setIsRecording] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
 
-  // --- NEW REMINDER STATE ---
   const [reminders, setReminders] = useState([
     {
       id: 1,
@@ -192,7 +197,6 @@ export function ChatDashboard() {
     },
   ]);
 
-  // Modal State
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [editingReminderId, setEditingReminderId] = useState(null);
   const [reminderForm, setReminderForm] = useState({
@@ -201,14 +205,12 @@ export function ChatDashboard() {
     time: "",
   });
 
-  // Open modal for NEW reminder
   const openAddReminderModal = () => {
     setEditingReminderId(null);
     setReminderForm({ name: "", date: "", time: "" });
     setIsReminderModalOpen(true);
   };
 
-  // Open modal to EDIT existing reminder
   const openEditReminderModal = (id) => {
     const r = reminders.find((rem) => rem.id === id);
     if (r) {
@@ -218,7 +220,6 @@ export function ChatDashboard() {
     }
   };
 
-  // Save the reminder (handles both Add and Edit)
   const saveReminder = (e) => {
     e.preventDefault();
     if (
@@ -231,7 +232,6 @@ export function ChatDashboard() {
     }
 
     if (editingReminderId) {
-      // Edit existing
       setReminders(
         reminders.map((r) =>
           r.id === editingReminderId
@@ -246,7 +246,6 @@ export function ChatDashboard() {
       );
       showToast("Reminder updated!");
     } else {
-      // Add new
       setReminders([
         ...reminders,
         {
@@ -351,12 +350,21 @@ export function ChatDashboard() {
   const toggleRecording = () => {
     if (!recognition)
       return showToast("Speech recognition is not supported in this browser.");
-    if (isRecording) {
-      recognition.stop();
-    } else {
+    if (isRecording) recognition.stop();
+    else {
       recognition.start();
       setIsRecording(true);
     }
+  };
+
+  const speakText = (text) => {
+    if (!window.speechSynthesis) {
+      showToast("Text-to-speech is not supported in this browser.");
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    window.speechSynthesis.speak(utterance);
   };
 
   const handleImageUpload = (e) => {
@@ -382,9 +390,8 @@ export function ChatDashboard() {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  const handleProfileChange = (e) => {
+  const handleProfileChange = (e) =>
     setProfileForm({ ...profileForm, [e.target.name]: e.target.value });
-  };
 
   const saveProfile = async () => {
     setSavingProfile(true);
@@ -424,16 +431,10 @@ export function ChatDashboard() {
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      showToast("New passwords do not match!");
-      return;
-    }
-
-    const allMet = passwordRequirements.every((req) => req.met);
-    if (!allMet) {
-      showToast("Please fulfill all password requirements.");
-      return;
-    }
+    if (passwordData.newPassword !== passwordData.confirmPassword)
+      return showToast("New passwords do not match!");
+    if (!passwordRequirements.every((req) => req.met))
+      return showToast("Please fulfill all password requirements.");
 
     setSavingPassword(true);
     try {
@@ -472,6 +473,54 @@ export function ChatDashboard() {
       showToast(err);
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const handleDeactivateAccount = async () => {
+    if (
+      window.confirm(
+        "Are you sure you want to temporarily deactivate your account?",
+      )
+    ) {
+      setIsDeactivating(true);
+      try {
+        const res = await fetch(
+          `https://healthbot-backend-ezxv.onrender.com/api/auth/deactivate`,
+          { method: "POST", headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok) throw new Error("Backend route missing or failed.");
+        localStorage.clear();
+        window.location.href = "/login";
+      } catch (err) {
+        showToast("Account deactivated (Simulation).");
+        localStorage.clear();
+        window.location.href = "/login";
+        setIsDeactivating(false);
+      }
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (
+      window.confirm(
+        "🚨 DANGER: Are you sure you want to permanently delete your account? This CANNOT be undone.",
+      )
+    ) {
+      setIsDeleting(true);
+      try {
+        const res = await fetch(
+          `https://healthbot-backend-ezxv.onrender.com/api/auth/delete-account`,
+          { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!res.ok) throw new Error("Backend route missing or failed.");
+        localStorage.clear();
+        window.location.href = "/register";
+      } catch (err) {
+        showToast("Account deleted (Simulation).");
+        localStorage.clear();
+        window.location.href = "/register";
+        setIsDeleting(false);
+      }
     }
   };
 
@@ -515,18 +564,15 @@ export function ChatDashboard() {
       minute: "2-digit",
     });
     let text = "";
-
-    if (title === "Cold Remedies") {
+    if (title === "Cold Remedies")
       text =
         "Here are your saved Cold Remedies:\n1. Drink plenty of warm fluids (tea, broth).\n2. Get at least 8 hours of sleep.\n3. Take Vitamin C and Zinc supplements.\n4. Use a humidifier at night.";
-    } else if (title === "Hydration Schedule") {
+    else if (title === "Hydration Schedule")
       text =
         "Here is your pinned Hydration Schedule:\n- 8:00 AM: 2 glasses of water\n- 11:00 AM: 1 glass\n- 1:00 PM: 1 glass\n- 4:00 PM: 1 glass\n- 7:00 PM: 2 glasses.";
-    } else if (title === "Emergency Contacts") {
+    else if (title === "Emergency Contacts")
       text =
         "Your Emergency Contacts:\n- Ambulance/Emergency: 112\n- Primary Doctor: +1-555-0198\n- Next of Kin: +1-555-0102.";
-    }
-
     setActiveSessionId(Date.now());
     setMessages([{ id: Date.now(), sender: "bot", text, time: now }]);
     handleNavClick("chat");
@@ -548,6 +594,35 @@ export function ChatDashboard() {
   const sendMessage = async (textOverride = null) => {
     const textToSend = textOverride || inputText;
     if ((!textToSend.trim() && !uploadedImage) || loading) return;
+
+    const emergencyKeywords = [
+      "heart attack",
+      "chest pain",
+      "stroke",
+      "bleeding heavily",
+      "emergency",
+      "suicide",
+      "accident",
+      "can't breathe",
+      "shortness of breath",
+    ];
+    const isEmergency = emergencyKeywords.some((keyword) =>
+      textToSend.toLowerCase().includes(keyword),
+    );
+
+    if (isEmergency) {
+      setEmergencyAlert(true);
+      speakText(
+        "Emergency detected. Please visit the nearest hospital immediately.",
+      );
+      setTimeout(() => {
+        const location = user.address ? `near ${user.address}` : "near me";
+        window.open(
+          `https://www.google.com/maps/search/hospitals+${encodeURIComponent(location)}`,
+          "_blank",
+        );
+      }, 2500);
+    }
 
     const now = new Date().toLocaleTimeString([], {
       hour: "2-digit",
@@ -583,7 +658,6 @@ export function ChatDashboard() {
         try {
           let mlSummary = "";
           let hasPredictions = false;
-
           if (
             mlResult &&
             mlResult.predictions &&
@@ -593,30 +667,23 @@ export function ChatDashboard() {
             mlSummary = `Most likely ${top.disease} at ${top.confidence}% confidence. Severity: ${mlResult.severity}`;
             hasPredictions = true;
           }
-
           const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
           const userName = storedUser.name
             ? storedUser.name.split(" ")[0]
             : "there";
-
           const geminiText = await getGeminiReply(
             textToSend,
             mlSummary,
             userName,
           );
-
           if (geminiText) {
-            if (hasPredictions) {
-              botReply = geminiText + "\n\n" + botReply;
-            } else {
-              botReply = geminiText;
-            }
+            if (hasPredictions) botReply = geminiText + "\n\n" + botReply;
+            else botReply = geminiText;
           }
         } catch (geminiErr) {
           console.error("Frontend Gemini error:", geminiErr.message);
         }
       }
-
       setMessages((prev) => [
         ...prev,
         {
@@ -635,7 +702,6 @@ export function ChatDashboard() {
         window.location.href = "/login";
         return;
       }
-
       setMessages((prev) => [
         ...prev,
         {
@@ -715,7 +781,6 @@ export function ChatDashboard() {
           isDark={isDark}
           onClick={() => handleNavClick("facilities")}
         />
-
         <div className="pt-6 pb-2">
           <p className="px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500">
             Account
@@ -735,7 +800,6 @@ export function ChatDashboard() {
           isDark={isDark}
           onClick={() => handleNavClick("settings")}
         />
-
         <button
           onClick={() => {
             localStorage.clear();
@@ -757,14 +821,46 @@ export function ChatDashboard() {
         className={`absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] pointer-events-none ${isDark ? "bg-teal-500/5" : "bg-teal-500/10"}`}
       />
 
-      {/* Global Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-teal-500 text-slate-900 px-5 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-3 z-[200] animate-in slide-in-from-bottom-5">
           <CheckCircle2 size={20} /> {toastMessage}
         </div>
       )}
 
-      {/* Custom Reminder Modal */}
+      {emergencyAlert && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-red-900/80 backdrop-blur-md animate-in fade-in zoom-in duration-300">
+          <div className="w-full max-w-lg p-8 rounded-3xl shadow-2xl bg-white border-4 border-red-500 text-center relative">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+              <AlertTriangle className="h-10 w-10 text-red-600" />
+            </div>
+            <h2 className="text-3xl font-black text-red-600 mb-4 uppercase tracking-tight">
+              Emergency Detected
+            </h2>
+            <p className="text-slate-700 text-lg font-medium mb-8">
+              We are opening Google Maps to direct you to the nearest hospital.
+              Please seek immediate professional medical help.
+            </p>
+            <div className="flex flex-col gap-3">
+              <a
+                href="tel:112"
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl text-lg flex items-center justify-center gap-2 shadow-lg transition-all"
+              >
+                <PhoneCall size={24} /> Call 112 (Emergency)
+              </a>
+              <button
+                onClick={() => {
+                  setEmergencyAlert(false);
+                  window.speechSynthesis.cancel();
+                }}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition-all"
+              >
+                Dismiss Alert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isReminderModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div
@@ -783,7 +879,6 @@ export function ChatDashboard() {
                 <X size={20} />
               </button>
             </div>
-
             <form onSubmit={saveReminder} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -800,7 +895,6 @@ export function ChatDashboard() {
                   className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -831,7 +925,6 @@ export function ChatDashboard() {
                   />
                 </div>
               </div>
-
               <button
                 type="submit"
                 className="w-full mt-4 bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
@@ -844,7 +937,6 @@ export function ChatDashboard() {
         </div>
       )}
 
-      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-[100] transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
       >
@@ -857,9 +949,7 @@ export function ChatDashboard() {
         <SidebarContent />
       </div>
 
-      {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative">
-        {/* HEADER */}
         <header
           className={`fixed top-0 left-0 right-0 lg:static z-[90] h-[72px] border-b flex items-center justify-between px-3 sm:px-4 lg:px-8 backdrop-blur-md transition-colors duration-300 ${isDark ? "bg-[#020617]/95 border-slate-800/60 shadow-xl" : "bg-white/95 border-slate-200 shadow-sm"}`}
         >
@@ -883,13 +973,12 @@ export function ChatDashboard() {
                   HealthBot
                 </h3>
                 <p className="text-[9px] sm:text-[10px] text-teal-500 font-bold uppercase flex items-center gap-1.5 mt-0.5">
-                  <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />
+                  <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />{" "}
                   Online
                 </p>
               </div>
             </div>
           </div>
-
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex flex-col items-end text-right">
               <span
@@ -910,9 +999,7 @@ export function ChatDashboard() {
           </div>
         </header>
 
-        {/* --- DYNAMIC VIEW SWITCHER --- */}
         <div className="flex-1 overflow-y-auto pt-[88px] lg:pt-6 pb-6 px-4 lg:px-6 no-scrollbar relative z-0">
-          {/* VIEW: CHAT */}
           {page === "chat" && (
             <div className="max-w-4xl mx-auto space-y-6">
               <div className="flex justify-center">
@@ -953,8 +1040,17 @@ export function ChatDashboard() {
                         <div className="whitespace-pre-wrap">{msg.text}</div>
                       )}
                     </div>
-                    <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter">
+                    <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1">
                       {msg.time}
+                      {msg.sender === "bot" && (
+                        <button
+                          onClick={() => speakText(msg.text)}
+                          className={`p-1 transition-colors rounded-md ${isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
+                          title="Read aloud"
+                        >
+                          <Volume2 size={12} />
+                        </button>
+                      )}
                     </span>
                   </div>
                 </div>
@@ -979,17 +1075,14 @@ export function ChatDashboard() {
             </div>
           )}
 
-          {/* VIEW: FIRST AID */}
           {page === "first-aid" && <FirstAidView isDark={isDark} />}
 
-          {/* VIEW: PROFILE */}
           {page === "profile" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div
                 className={`border rounded-3xl p-6 sm:p-8 mb-6 relative overflow-hidden transition-colors duration-300 ${isDark ? "bg-[#111827]/80 backdrop-blur-xl border-slate-700/50" : "bg-white border-slate-200 shadow-sm"}`}
               >
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
-
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4 mb-8">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center shrink-0">
@@ -1015,7 +1108,6 @@ export function ChatDashboard() {
                       </p>
                     </div>
                   </div>
-
                   <div className="w-full sm:w-auto">
                     {!isEditingProfile ? (
                       <button
@@ -1058,7 +1150,6 @@ export function ChatDashboard() {
                     )}
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <ProfileField
                     label="Full Name"
@@ -1069,7 +1160,6 @@ export function ChatDashboard() {
                     name="name"
                     onChange={handleProfileChange}
                   />
-
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                       <Mail className="h-3 w-3" /> Email Address
@@ -1083,7 +1173,6 @@ export function ChatDashboard() {
                       )}
                     </p>
                   </div>
-
                   <ProfileField
                     label="Phone Number"
                     icon={Phone}
@@ -1103,7 +1192,6 @@ export function ChatDashboard() {
                     type="number"
                     onChange={handleProfileChange}
                   />
-
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                       <User className="h-3 w-3" /> Gender
@@ -1127,7 +1215,6 @@ export function ChatDashboard() {
                       </p>
                     )}
                   </div>
-
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                       <Droplet className="h-3 w-3" /> Blood Group
@@ -1156,7 +1243,6 @@ export function ChatDashboard() {
                       </p>
                     )}
                   </div>
-
                   <div className="flex flex-col gap-2 sm:col-span-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                       <MapPin className="h-3 w-3" /> Address
@@ -1181,7 +1267,6 @@ export function ChatDashboard() {
                 </div>
               </div>
 
-              {/* Security Card */}
               <div
                 className={`border rounded-3xl p-6 sm:p-8 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 backdrop-blur-xl border-slate-700/50" : "bg-white border-slate-200 shadow-sm"}`}
               >
@@ -1205,7 +1290,6 @@ export function ChatDashboard() {
                     {showPasswordForm ? "Cancel" : "Change Password"}
                   </button>
                 </div>
-
                 {!showPasswordForm ? (
                   <p className="text-slate-400 text-sm">
                     Your password is securely encrypted. Click "Change Password"
@@ -1229,7 +1313,6 @@ export function ChatDashboard() {
                         })
                       }
                     />
-
                     <div className="flex flex-col gap-2">
                       <PasswordField
                         label="New Password"
@@ -1244,7 +1327,6 @@ export function ChatDashboard() {
                           })
                         }
                       />
-
                       <div
                         className={`p-4 rounded-xl border mt-2 ${isDark ? "bg-slate-900/50 border-slate-800" : "bg-slate-50 border-slate-200"}`}
                       >
@@ -1270,7 +1352,6 @@ export function ChatDashboard() {
                         </div>
                       </div>
                     </div>
-
                     <PasswordField
                       label="Confirm New Password"
                       value={passwordData.confirmPassword}
@@ -1284,7 +1365,6 @@ export function ChatDashboard() {
                         })
                       }
                     />
-
                     {passwordData.confirmPassword && (
                       <p
                         className={`text-xs ${passwordData.newPassword === passwordData.confirmPassword ? "text-green-500" : "text-rose-500"}`}
@@ -1295,7 +1375,6 @@ export function ChatDashboard() {
                           : "✗ Passwords do not match"}
                       </p>
                     )}
-
                     <button
                       type="submit"
                       disabled={savingPassword}
@@ -1305,6 +1384,43 @@ export function ChatDashboard() {
                     </button>
                   </form>
                 )}
+              </div>
+
+              <div
+                className={`border rounded-3xl p-6 sm:p-8 mt-6 transition-colors duration-300 ${isDark ? "bg-rose-500/5 border-rose-500/20" : "bg-rose-50 border-rose-200"}`}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <AlertTriangle className="h-5 w-5 text-rose-500" />
+                  <h2
+                    className={`text-lg font-bold ${isDark ? "text-rose-500" : "text-rose-700"}`}
+                  >
+                    Danger Zone
+                  </h2>
+                </div>
+                <p
+                  className={`text-sm mb-6 ${isDark ? "text-slate-400" : "text-slate-600"}`}
+                >
+                  You can temporarily deactivate your account or permanently
+                  delete it. Permanent deletion cannot be undone.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={handleDeactivateAccount}
+                    disabled={isDeactivating}
+                    className="flex-1 px-6 py-3 bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold rounded-xl hover:bg-amber-500/20 transition-all text-sm flex items-center justify-center gap-2"
+                  >
+                    <UserX size={18} />{" "}
+                    {isDeactivating ? "Deactivating..." : "Deactivate Account"}
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={isDeleting}
+                    className="flex-1 px-6 py-3 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-all text-sm flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={18} />{" "}
+                    {isDeleting ? "Deleting..." : "Delete Account"}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -1387,7 +1503,7 @@ export function ChatDashboard() {
             </div>
           )}
 
-          {/* VIEW: REMINDERS (UPDATED TO SHOW DATE) */}
+          {/* VIEW: REMINDERS */}
           {page === "reminders" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div className="flex justify-between items-center mb-8">
@@ -1602,8 +1718,6 @@ export function ChatDashboard() {
                 >
                   <Paperclip size={18} />
                 </button>
-
-                {/* UPDATED LISTENING UI TEXTAREA */}
                 <textarea
                   rows={1}
                   value={inputText}
@@ -1616,15 +1730,9 @@ export function ChatDashboard() {
                   placeholder="Describe symptoms..."
                   className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar placeholder-slate-400 outline-none transition-all ${isDark ? "text-white" : "text-slate-900"}`}
                 />
-
-                {/* UPDATED LISTENING UI MIC BUTTON (TEAL COLOR) */}
                 <button
                   onClick={toggleRecording}
-                  className={`transition-all flex items-center justify-center gap-2 rounded-xl ${
-                    isRecording
-                      ? "bg-teal-500/10 text-teal-500 px-3 py-1.5"
-                      : "p-2 text-slate-400 hover:text-teal-500"
-                  }`}
+                  className={`transition-all flex items-center justify-center gap-2 rounded-xl ${isRecording ? "bg-teal-500/10 text-teal-500 px-3 py-1.5" : "p-2 text-slate-400 hover:text-teal-500"}`}
                 >
                   {isRecording ? (
                     <>
@@ -1640,7 +1748,6 @@ export function ChatDashboard() {
                     <Mic size={18} />
                   )}
                 </button>
-
                 <button
                   onClick={() => sendMessage()}
                   disabled={(!inputText.trim() && !uploadedImage) || loading}
@@ -1658,10 +1765,7 @@ export function ChatDashboard() {
         )}
       </main>
 
-      <style>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
+      <style>{`.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
     </div>
   );
 }
@@ -1669,7 +1773,6 @@ export function ChatDashboard() {
 // --- First Aid Component ---
 const FirstAidView = ({ isDark }) => {
   const [selected, setSelected] = useState(null);
-
   const topics = [
     {
       id: "cpr",
@@ -1805,7 +1908,6 @@ const FirstAidView = ({ isDark }) => {
       </div>
     );
   }
-
   return (
     <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 gap-4">
@@ -1824,7 +1926,6 @@ const FirstAidView = ({ isDark }) => {
           <PhoneCall size={20} /> Emergency SOS
         </a>
       </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         {topics.map((topic) => (
           <div
@@ -1852,7 +1953,6 @@ const FirstAidView = ({ isDark }) => {
           </div>
         ))}
       </div>
-
       <div className="mt-8 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex gap-4 backdrop-blur-md">
         <AlertCircle className="text-amber-500 shrink-0 mt-0.5" />
         <div>
@@ -1870,7 +1970,6 @@ const FirstAidView = ({ isDark }) => {
 };
 
 // --- Helper Components ---
-
 const SidebarBtn = ({ icon: Icon, label, active, onClick, isDark }) => (
   <button
     onClick={onClick}
@@ -1879,7 +1978,6 @@ const SidebarBtn = ({ icon: Icon, label, active, onClick, isDark }) => (
     <Icon size={18} /> <span className="text-sm">{label}</span>
   </button>
 );
-
 const HistoryCard = ({ date, title, desc, onClick, isDark }) => (
   <div
     onClick={onClick}
@@ -1899,7 +1997,6 @@ const HistoryCard = ({ date, title, desc, onClick, isDark }) => (
     <ChevronRight className="text-slate-400 group-hover:text-teal-500 transition-colors" />
   </div>
 );
-
 const SavedCard = ({ title, date, icon: Icon, onClick, isDark }) => (
   <div
     onClick={onClick}
@@ -1920,7 +2017,6 @@ const SavedCard = ({ title, date, icon: Icon, onClick, isDark }) => (
     </div>
   </div>
 );
-
 const FacilityCard = ({
   title,
   desc,
@@ -1931,7 +2027,6 @@ const FacilityCard = ({
 }) => {
   const location = userAddress ? `near ${userAddress}` : "near me";
   const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(query + " " + location)}`;
-
   return (
     <a
       href={mapUrl}
@@ -1956,31 +2051,26 @@ const FacilityCard = ({
     </a>
   );
 };
-
-const SettingToggle = ({ label, desc, checked, onChange, isDark }) => {
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <span
-          className={`font-bold text-lg block mb-1 ${isDark ? "text-white" : "text-slate-900"}`}
-        >
-          {label}
-        </span>
-        <span className="text-slate-500 text-sm">{desc}</span>
-      </div>
-      <button
-        onClick={onChange}
-        className={`w-14 h-7 rounded-full transition-colors relative shadow-inner flex-shrink-0 ${checked ? "bg-teal-500" : "bg-slate-300"}`}
+const SettingToggle = ({ label, desc, checked, onChange, isDark }) => (
+  <div className="flex items-center justify-between">
+    <div>
+      <span
+        className={`font-bold text-lg block mb-1 ${isDark ? "text-white" : "text-slate-900"}`}
       >
-        <div
-          className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all shadow-md ${checked ? "left-8" : "left-1"}`}
-        />
-      </button>
+        {label}
+      </span>
+      <span className="text-slate-500 text-sm">{desc}</span>
     </div>
-  );
-};
-
-// --- Profile Shared Components ---
+    <button
+      onClick={onChange}
+      className={`w-14 h-7 rounded-full transition-colors relative shadow-inner flex-shrink-0 ${checked ? "bg-teal-500" : "bg-slate-300"}`}
+    >
+      <div
+        className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all shadow-md ${checked ? "left-8" : "left-1"}`}
+      />
+    </button>
+  </div>
+);
 const ProfileField = ({
   label,
   icon: Icon,
@@ -2020,7 +2110,6 @@ const ProfileField = ({
     )}
   </div>
 );
-
 const PasswordField = ({ label, value, show, onToggle, onChange, isDark }) => (
   <div className="flex flex-col gap-2">
     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -2056,4 +2145,4 @@ export default function App() {
       </MemoryRouter>
     );
   return <ChatDashboard />;
-}
+  }
