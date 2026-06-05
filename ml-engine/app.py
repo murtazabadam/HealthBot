@@ -369,7 +369,10 @@ def predict():
         # actually belongs to this disease in the dataset
         known_syms = DISEASE_SYMPTOMS.get(disease, set())
         overlap    = len(user_symptom_set & known_syms)
-        if overlap == 0:
+        # Require at least 2 matching symptoms to prevent wrong predictions
+        # e.g. headache alone should not predict Brain Hemorrhage or AIDS
+        min_overlap = 2 if len(user_symptom_set) >= 3 else 1
+        if overlap < min_overlap:
             continue  # skip medically irrelevant predictions
 
         agreement = sum(1 for p in individual if p == disease)

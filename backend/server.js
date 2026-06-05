@@ -10,16 +10,18 @@ const passport   = require('./config/passport');
 
 dotenv.config();
 
-const app    = express();
+const app = express();
+app.set('trust proxy', 1);
+
 const server = http.createServer(app);
 const io     = new Server(server, { cors: { origin: '*' } });
 
 // ── Session ────────────────────────────────────────────────────────────────────
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'healthbot_secret',
-  resave: false,
+  secret:            process.env.SESSION_SECRET || 'healthbot_secret',
+  resave:            false,
   saveUninitialized: false,
-  cookie: { maxAge: 10 * 60 * 1000, secure: false }
+  cookie:            { maxAge: 10 * 60 * 1000, secure: false, httpOnly: true }
 }));
 
 app.use(passport.initialize());
@@ -51,11 +53,9 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(err => console.log('DB Error:', err));
 
 // ── Socket.IO ──────────────────────────────────────────────────────────────────
-io.on('connection', socket => {
-  socket.on('disconnect', () => {});
-});
+io.on('connection', () => {});
 
-// ── Keep-alive ping (prevents Render free tier from sleeping) ──────────────────
+// ── Keep-alive ping ────────────────────────────────────────────────────────────
 const BACKEND_URL = process.env.RENDER_EXTERNAL_URL || '';
 if (BACKEND_URL) {
   setInterval(() => {
