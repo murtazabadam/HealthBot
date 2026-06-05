@@ -627,7 +627,7 @@ export default function Register() {
                   </div>
                 )}
 
-                <div className="flex justify-center gap-2 sm:gap-4 w-full max-w-full my-4 px-1">
+                <div className="flex justify-center gap-1.5 sm:gap-3 w-full my-4 px-1">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -641,7 +641,6 @@ export default function Register() {
                     />
                   ))}
                 </div>
-
                 <button
                   type="submit"
                   disabled={loading || otp.join("").length < 6}
