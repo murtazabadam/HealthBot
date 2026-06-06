@@ -17,14 +17,18 @@ const UserSchema = new mongoose.Schema({
 
   // Verification
   isVerified:          { type: Boolean, default: false },
-  verificationOTP:     { type: String, default: null },
-  verificationExpires: { type: Date,   default: null },
+  verificationOTP:     { type: String,  default: null },
+  verificationExpires: { type: Date,    default: null },
 
   // Password reset
-  resetOTP:            { type: String, default: null },
-  resetOTPExpires:     { type: Date,   default: null },
+  resetOTP:            { type: String,  default: null },
+  resetOTPExpires:     { type: Date,    default: null },
 
-  createdAt:           { type: Date,   default: Date.now }
+  // Account status
+  isActive:            { type: Boolean, default: true },
+  deactivatedAt:       { type: Date,    default: null },
+
+  createdAt:           { type: Date,    default: Date.now }
 });
 
 module.exports = mongoose.model('User', UserSchema);
