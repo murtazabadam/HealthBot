@@ -367,16 +367,46 @@ export function ChatDashboard() {
   };
 
   // --- TEXT TO SPEECH ---
+  // --- NEW: TEXT TO SPEECH (CLEAR MALE VOICE) ---
   const speakText = (text) => {
     if (!window.speechSynthesis) {
       showToast("Text-to-speech is not supported in this browser.");
       return;
     }
-    window.speechSynthesis.cancel();
+
+    window.speechSynthesis.cancel(); // stop anything currently playing
     const utterance = new SpeechSynthesisUtterance(text);
+
+    // 1. Get all available voices on the user's device
+    const voices = window.speechSynthesis.getVoices();
+
+    // 2. Search for the clearest Male English voices across Android, Apple, and Windows
+    let preferredVoice = voices.find(
+      (voice) =>
+        voice.name.includes("Google UK English Male") || // Best for Android/Chrome
+        voice.name.includes("Microsoft Guy") || // Best for Windows
+        voice.name.includes("Daniel") || // Best for macOS/iOS
+        voice.name.includes("Arthur") || // Alternative Apple
+        (voice.name.includes("Male") && voice.lang.startsWith("en")), // Generic fallback
+    );
+
+    /* 
+      NOTE: If you ever want to change back to a premium Female voice, 
+      replace the names above with:
+      "Google US English", "Microsoft Zira", or "Samantha"
+    */
+
+    // 3. Apply the selected voice if the device has it
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
+    // 4. Tweak settings for maximum clarity
+    utterance.pitch = 0.9; // Slightly deeper tone (1.0 is default)
+    utterance.rate = 0.95; // Slightly slower for perfect pronunciation (1.0 is default)
+
     window.speechSynthesis.speak(utterance);
   };
-
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
