@@ -73,7 +73,6 @@ export function ChatDashboard() {
     JSON.parse(localStorage.getItem("user") || "{}"),
   );
 
-  // 👇 ADD YOUR NEW VOICE HOOK RIGHT HERE 👇
   const [voicePreference, setVoicePreference] = useState(
     () => localStorage.getItem("voicePreference") || "male",
   );
@@ -371,7 +370,7 @@ export function ChatDashboard() {
     }
   };
 
-  // --- TEXT TO SPEECH (WITH MALE/FEMALE TOGGLE) ---
+  // --- TEXT TO SPEECH (SMART DEVICE MATCHING) ---
   const speakText = (text) => {
     if (!window.speechSynthesis) {
       showToast("Text-to-speech is not supported in this browser.");
@@ -380,36 +379,45 @@ export function ChatDashboard() {
 
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
+
+    // Sometimes browsers need a millisecond to load the voices array
+    let voices = window.speechSynthesis.getVoices();
 
     let preferredVoice;
 
-    // Uses the voicePreference variable here!
     if (voicePreference === "male") {
+      // Aggressive search for Apple, Windows, and Android MALE voices
       preferredVoice = voices.find(
         (voice) =>
-          voice.name.includes("Google UK English Male") ||
-          voice.name.includes("Microsoft Guy") ||
-          voice.name.includes("Daniel") ||
-          voice.name.includes("Arthur") ||
-          (voice.name.includes("Male") && voice.lang.startsWith("en")),
+          voice.name.includes("Male") ||
+          voice.name.includes("Alex") || // Default Mac Male
+          voice.name.includes("Fred") || // Mac Male 2
+          voice.name.includes("Daniel") || // Mac UK Male
+          voice.name.includes("Rishi") || // Mac Indian Male
+          voice.name.includes("Guy") || // Windows Male
+          voice.name.includes("Arthur"),
       );
-      utterance.pitch = 0.9;
+      utterance.pitch = 0.8; // Force a much deeper tone
     } else {
+      // Aggressive search for Apple, Windows, and Android FEMALE voices
       preferredVoice = voices.find(
         (voice) =>
-          voice.name.includes("Google US English") ||
-          voice.name.includes("Microsoft Zira") ||
-          voice.name.includes("Samantha") ||
-          voice.name.includes("Karen") ||
-          (voice.name.includes("Female") && voice.lang.startsWith("en")),
+          voice.name.includes("Female") ||
+          voice.name.includes("Samantha") || // Default Mac Female
+          voice.name.includes("Victoria") || // Mac Female 2
+          voice.name.includes("Veena") || // Mac Indian Female
+          voice.name.includes("Zira") || // Windows Female
+          voice.name.includes("Google US English"),
       );
-      utterance.pitch = 1.1;
+      utterance.pitch = 1.1; // Force a higher tone
     }
 
-    if (preferredVoice) utterance.voice = preferredVoice;
+    // Apply the voice if the computer has it installed
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
 
-    utterance.rate = 0.95;
+    utterance.rate = 0.95; // Clear, steady speed
     window.speechSynthesis.speak(utterance);
   };
 
@@ -1159,14 +1167,14 @@ export function ChatDashboard() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Voice Toggle Button */}
+            {/* Voice Toggle Button - Now perfectly visible on mobile screens! */}
             <button
               onClick={() => {
                 const newVoice = voicePreference === "male" ? "female" : "male";
                 setVoicePreference(newVoice);
                 localStorage.setItem("voicePreference", newVoice);
               }}
-              className={`hidden sm:flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-bold transition-all ${isDark ? "bg-slate-800/80 border-slate-700 text-slate-300 hover:text-teal-400" : "bg-slate-100 border-slate-200 text-slate-600 hover:text-teal-600"}`}
+              className={`flex items-center gap-2 px-2 py-1.5 border rounded-lg text-xs font-bold transition-all ${isDark ? "bg-slate-800/80 border-slate-700 text-slate-300 hover:text-teal-400" : "bg-slate-100 border-slate-200 text-slate-600 hover:text-teal-600"}`}
             >
               {voicePreference === "male" ? "🗣️ Male Voice" : "🗣️ Female Voice"}
             </button>
