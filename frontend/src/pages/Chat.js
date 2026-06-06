@@ -48,9 +48,8 @@ import {
   UserX,
 } from "lucide-react";
 
-// Mocking the external Gemini service for standalone compilation
-const geminiReady = false;
-const getGeminiReply = async () => "";
+// Import the Gemini frontend service
+import { getGeminiReply, geminiReady } from "../services/gemini";
 
 export function ChatDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -367,7 +366,7 @@ export function ChatDashboard() {
     }
   };
 
-  // --- TEXT TO SPEECH (LOCKED TO MALE VOICE) ---
+  // --- LOCKED CLEAR MALE VOICE ---
   const speakText = (text) => {
     if (!window.speechSynthesis) {
       showToast("Text-to-speech is not supported in this browser.");
@@ -377,28 +376,43 @@ export function ChatDashboard() {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
 
-    let voices = window.speechSynthesis.getVoices();
+    // Pitch 0.8 to sound deep but still very clear
+    utterance.pitch = 0.8;
+    utterance.rate = 0.95; // Slightly slower for perfect pronunciation
 
-    // Aggressively search for Apple, Windows, and Android MALE voices
-    const preferredVoice = voices.find(
-      (voice) =>
-        voice.name.toLowerCase().includes("male") ||
-        voice.name.includes("Alex") || // Default Mac Male
-        voice.name.includes("Fred") || // Mac Male 2
-        voice.name.includes("Daniel") || // Mac UK Male
-        voice.name.includes("Rishi") || // Mac Indian Male
-        voice.name.includes("Guy") || // Windows Male
-        voice.name.includes("Arthur"),
-    );
+    const voices = window.speechSynthesis.getVoices();
 
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
+    // Aggressive list of the clearest Male voices across all devices
+    const maleVoiceNames = [
+      "Google UK English Male", // Android / Chrome
+      "Alex", // Apple Mac (Very clear)
+      "Daniel", // Apple iOS/Mac (UK Male)
+      "Fred", // Apple Mac
+      "Guy", // Windows
+      "David", // Windows
+      "Mark", // Windows
+      "Aaron", // Apple iOS fallback
+      "Arthur", // Apple iOS fallback
+      "Rishi", // Indian Male (Good fallback)
+    ];
+
+    let maleVoice = null;
+
+    // 1. Try to find a premium clear male voice first
+    for (const name of maleVoiceNames) {
+      maleVoice = voices.find((v) => v.name.includes(name));
+      if (maleVoice) break;
     }
 
-    // Force a deep tone so fallback voices sound masculine
-    utterance.pitch = 0.6;
-    // Clear, steady speed
-    utterance.rate = 0.95;
+    // 2. Absolute fallback: look for the word "male" anywhere
+    if (!maleVoice) {
+      maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
+    }
+
+    // 3. Apply the voice
+    if (maleVoice) {
+      utterance.voice = maleVoice;
+    }
 
     window.speechSynthesis.speak(utterance);
   };
