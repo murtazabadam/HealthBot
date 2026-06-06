@@ -73,6 +73,11 @@ export function ChatDashboard() {
     JSON.parse(localStorage.getItem("user") || "{}"),
   );
 
+  // 👇 ADD YOUR NEW VOICE HOOK RIGHT HERE 👇
+  const [voicePreference, setVoicePreference] = useState(
+    () => localStorage.getItem("voicePreference") || "male",
+  );
+
   // Profile Editing States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
@@ -366,47 +371,48 @@ export function ChatDashboard() {
     }
   };
 
-  // --- TEXT TO SPEECH ---
-  // --- NEW: TEXT TO SPEECH (CLEAR MALE VOICE) ---
+  // --- TEXT TO SPEECH (WITH MALE/FEMALE TOGGLE) ---
   const speakText = (text) => {
     if (!window.speechSynthesis) {
       showToast("Text-to-speech is not supported in this browser.");
       return;
     }
 
-    window.speechSynthesis.cancel(); // stop anything currently playing
+    window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-
-    // 1. Get all available voices on the user's device
     const voices = window.speechSynthesis.getVoices();
 
-    // 2. Search for the clearest Male English voices across Android, Apple, and Windows
-    let preferredVoice = voices.find(
-      (voice) =>
-        voice.name.includes("Google UK English Male") || // Best for Android/Chrome
-        voice.name.includes("Microsoft Guy") || // Best for Windows
-        voice.name.includes("Daniel") || // Best for macOS/iOS
-        voice.name.includes("Arthur") || // Alternative Apple
-        (voice.name.includes("Male") && voice.lang.startsWith("en")), // Generic fallback
-    );
+    let preferredVoice;
 
-    /* 
-      NOTE: If you ever want to change back to a premium Female voice, 
-      replace the names above with:
-      "Google US English", "Microsoft Zira", or "Samantha"
-    */
-
-    // 3. Apply the selected voice if the device has it
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
+    // Uses the voicePreference variable here!
+    if (voicePreference === "male") {
+      preferredVoice = voices.find(
+        (voice) =>
+          voice.name.includes("Google UK English Male") ||
+          voice.name.includes("Microsoft Guy") ||
+          voice.name.includes("Daniel") ||
+          voice.name.includes("Arthur") ||
+          (voice.name.includes("Male") && voice.lang.startsWith("en")),
+      );
+      utterance.pitch = 0.9;
+    } else {
+      preferredVoice = voices.find(
+        (voice) =>
+          voice.name.includes("Google US English") ||
+          voice.name.includes("Microsoft Zira") ||
+          voice.name.includes("Samantha") ||
+          voice.name.includes("Karen") ||
+          (voice.name.includes("Female") && voice.lang.startsWith("en")),
+      );
+      utterance.pitch = 1.1;
     }
 
-    // 4. Tweak settings for maximum clarity
-    utterance.pitch = 0.9; // Slightly deeper tone (1.0 is default)
-    utterance.rate = 0.95; // Slightly slower for perfect pronunciation (1.0 is default)
+    if (preferredVoice) utterance.voice = preferredVoice;
 
+    utterance.rate = 0.95;
     window.speechSynthesis.speak(utterance);
   };
+
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -1153,6 +1159,18 @@ export function ChatDashboard() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Voice Toggle Button */}
+            <button
+              onClick={() => {
+                const newVoice = voicePreference === "male" ? "female" : "male";
+                setVoicePreference(newVoice);
+                localStorage.setItem("voicePreference", newVoice);
+              }}
+              className={`hidden sm:flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-bold transition-all ${isDark ? "bg-slate-800/80 border-slate-700 text-slate-300 hover:text-teal-400" : "bg-slate-100 border-slate-200 text-slate-600 hover:text-teal-600"}`}
+            >
+              {voicePreference === "male" ? "🗣️ Male Voice" : "🗣️ Female Voice"}
+            </button>
+
             <div className="flex flex-col items-end text-right">
               <span
                 className={`text-sm font-bold transition-colors ${isDark ? "text-slate-400" : "text-slate-600"}`}
