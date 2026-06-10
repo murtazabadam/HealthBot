@@ -4,9 +4,11 @@ const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const passport = require('passport');
 const User     = require('../models/User');
+const Conversation = require('../models/Conversation');
 const auth     = require('../middleware/auth');
 const { sendOTPEmail } = require('../config/emailService');
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -15,12 +17,19 @@ function generateToken(userId) {
 }
 function userResponse(user) {
   return {
-    id: user._id, name: user.name, email: user.email,
-    avatar: user.avatar, authType: user.authType,
-    age: user.age || '', gender: user.gender || '',
-    bloodGroup: user.bloodGroup || '', address: user.address || '',
-    phoneNumber: user.phoneNumber || '', isVerified: user.isVerified,
-    createdAt: user.createdAt
+    id:          user._id,
+    name:        user.name,
+    email:       user.email,
+    avatar:      user.avatar,
+    authType:    user.authType,
+    age:         user.age         || '',
+    gender:      user.gender      || '',
+    bloodGroup:  user.bloodGroup  || '',
+    address:     user.address     || '',
+    phoneNumber: user.phoneNumber || '',
+    isVerified:  user.isVerified,
+    isActive:    user.isActive,
+    createdAt:   user.createdAt
   };
 }
 
@@ -32,11 +41,11 @@ router.post('/send-otp', async (req, res) => {
     if (!email) return res.status(400).json({ message: 'Email is required' });
 
     const existing = await User.findOne({ email, isVerified: true });
-    if (existing) return res.status(400).json({ message: 'Email already registered. Please login.' });
+    if (existing)
+      return res.status(400).json({ message: 'Email already registered. Please login.' });
 
     const otp     = generateOTP();
     const expires = new Date(Date.now() + 10 * 60 * 1000);
-
     let user = await User.findOne({ email });
     if (!user) user = new User({ name, email });
     user.verificationOTP     = otp;
@@ -45,7 +54,6 @@ router.post('/send-otp', async (req, res) => {
 
     const sent = await sendOTPEmail(email, name, otp, 'verification');
     if (!sent) return res.status(500).json({ message: 'Failed to send OTP. Please try again.' });
-
     res.json({ message: 'OTP sent successfully. Check your email.' });
   } catch (err) {
     console.error('Send OTP error:', err);
@@ -58,7 +66,8 @@ router.post('/verify-registration-otp', async (req, res) => {
   try {
     const email = req.body.email?.trim().toLowerCase();
     const otp   = req.body.otp?.trim();
-    if (!email || !otp) return res.status(400).json({ message: 'Email and OTP required' });
+    if (!email || !otp)
+      return res.status(400).json({ message: 'Email and OTP required' });
 
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Please request an OTP first' });
@@ -76,8 +85,10 @@ router.post('/verify-registration-otp', async (req, res) => {
 // ── Register ───────────────────────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
   try {
-    const { name, email: rawEmail, password, otp,
-            age, gender, bloodGroup, address, phoneNumber } = req.body;
+    const {
+      name, email: rawEmail, password, otp,
+      age, gender, bloodGroup, address, phoneNumber
+    } = req.body;
     const email = rawEmail?.trim().toLowerCase();
 
     if (!name || !email || !password || !otp)
@@ -93,12 +104,13 @@ router.post('/register', async (req, res) => {
     const salt           = await bcrypt.genSalt(10);
     user.name            = name;
     user.password        = await bcrypt.hash(password, salt);
-    user.age             = age || '';
-    user.gender          = gender || '';
-    user.bloodGroup      = bloodGroup || '';
-    user.address         = address || '';
+    user.age             = age         || '';
+    user.gender          = gender      || '';
+    user.bloodGroup      = bloodGroup  || '';
+    user.address         = address     || '';
     user.phoneNumber     = phoneNumber || '';
     user.isVerified      = true;
+    user.isActive        = true;
     user.verificationOTP = null;
     user.verificationExpires = null;
     await user.save();
@@ -130,8 +142,20 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    if (user.authType === 'google')
-      return res.status(400).json({ message: 'Please use Google login for this account.' });
+    if (user.isActive === false) {
+      return res.status(403).json({
+        message: 'This account has been deactivated. Please contact support.',
+        deactivated: true
+      });
+    }
+
+    // Google OAuth user trying to login with password
+    if (user.authType === 'google' && !user.password) {
+      return res.status(400).json({
+        message: 'This account uses Google Sign-In. Please click "Continue with Google" to login.',
+        isGoogleAccount: true
+      });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid email or password' });
@@ -151,7 +175,16 @@ router.post('/forgot-password', async (req, res) => {
     if (!email) return res.status(400).json({ message: 'Email is required' });
 
     const user = await User.findOne({ email, isVerified: true });
-    if (!user) return res.status(400).json({ message: 'No verified account found with this email' });
+    if (!user)
+      return res.status(400).json({ message: 'No verified account found with this email' });
+
+    // Google OAuth users have no password — direct them to Google login
+    if (user.authType === 'google' && !user.password) {
+      return res.status(400).json({
+        message: 'This account uses Google Sign-In. Please click "Continue with Google" to login. No password is needed.',
+        isGoogleAccount: true
+      });
+    }
 
     const otp = generateOTP();
     user.resetOTP        = otp;
@@ -160,7 +193,6 @@ router.post('/forgot-password', async (req, res) => {
 
     const sent = await sendOTPEmail(email, user.name, otp, 'reset');
     if (!sent) return res.status(500).json({ message: 'Failed to send OTP. Please try again.' });
-
     res.json({ message: 'Reset OTP sent to your email.' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -172,7 +204,8 @@ router.post('/verify-otp', async (req, res) => {
   try {
     const email = req.body.email?.trim().toLowerCase();
     const otp   = req.body.otp?.trim();
-    if (!email || !otp) return res.status(400).json({ message: 'Email and OTP required' });
+    if (!email || !otp)
+      return res.status(400).json({ message: 'Email and OTP required' });
 
     const user = await User.findOne({ email });
     if (!user || user.resetOTP !== otp)
@@ -180,23 +213,54 @@ router.post('/verify-otp', async (req, res) => {
     if (user.resetOTPExpires < new Date())
       return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
 
-    const resetToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
-    res.json({ message: 'OTP verified', resetToken });
+    const resetToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+    res.json({ message: 'OTP verified', resetToken, email });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
 
 // ── Reset Password ─────────────────────────────────────────────────────────────
+// Supports two flows:
+// Flow 1 (standard): { resetToken, newPassword }
+// Flow 2 (simple):   { email, otp, newPassword }
 router.post('/reset-password', async (req, res) => {
   try {
-    const { resetToken, newPassword } = req.body;
-    if (!resetToken || !newPassword)
-      return res.status(400).json({ message: 'Reset token and new password required' });
+    const { resetToken, newPassword, email, otp } = req.body;
 
-    const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
-    const user    = await User.findById(decoded.id);
-    if (!user) return res.status(400).json({ message: 'Invalid reset token' });
+    if (!newPassword)
+      return res.status(400).json({ message: 'New password is required' });
+    if (newPassword.length < 6)
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+
+    let user = null;
+
+    if (resetToken) {
+      // Flow 1 — token from /verify-otp
+      try {
+        const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+        user = await User.findById(decoded.id);
+        if (!user) return res.status(400).json({ message: 'User not found' });
+      } catch {
+        return res.status(400).json({ message: 'Reset token expired. Please request a new OTP.' });
+      }
+    } else if (email && otp) {
+      // Flow 2 — email + OTP directly (simpler, no token needed)
+      const cleanEmail = email.trim().toLowerCase();
+      user = await User.findOne({ email: cleanEmail });
+      if (!user || user.resetOTP !== otp.trim())
+        return res.status(400).json({ message: 'Invalid OTP or email' });
+      if (user.resetOTPExpires < new Date())
+        return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    } else {
+      return res.status(400).json({
+        message: 'Provide either resetToken or email+OTP along with newPassword'
+      });
+    }
 
     const salt    = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
@@ -204,10 +268,9 @@ router.post('/reset-password', async (req, res) => {
     user.resetOTPExpires = null;
     await user.save();
 
-    res.json({ message: 'Password reset successfully. Please login.' });
+    res.json({ message: 'Password reset successfully. Please login with your new password.' });
   } catch (err) {
-    if (err.name === 'JsonWebTokenError')
-      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    console.error('Reset password error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -232,11 +295,11 @@ router.put('/profile', auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (name) user.name = name;
-    if (age        !== undefined) user.age        = age;
-    if (gender     !== undefined) user.gender     = gender;
-    if (bloodGroup !== undefined) user.bloodGroup = bloodGroup;
-    if (address    !== undefined) user.address    = address;
+    if (name)           user.name        = name;
+    if (age         !== undefined) user.age         = age;
+    if (gender      !== undefined) user.gender      = gender;
+    if (bloodGroup  !== undefined) user.bloodGroup  = bloodGroup;
+    if (address     !== undefined) user.address     = address;
     if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
     await user.save();
 
@@ -253,6 +316,13 @@ router.put('/change-password', auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    if (user.authType === 'google' && !user.password) {
+      return res.status(400).json({
+        message: 'Google account has no password. Use "Set Password" instead.',
+        isGoogleAccount: true
+      });
+    }
+
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Current password is incorrect' });
 
@@ -260,6 +330,27 @@ router.put('/change-password', auth, async (req, res) => {
     user.password = await bcrypt.hash(newPassword, salt);
     await user.save();
     res.json({ message: 'Password changed successfully!' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── Set Password (for Google OAuth users) ─────────────────────────────────────
+router.post('/set-password', auth, async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6)
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const salt    = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    // Keep authType as google but now they can also use email+password
+    await user.save();
+
+    res.json({ message: 'Password set! You can now login with email and password too.' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -286,6 +377,48 @@ router.post('/resend-verification', async (req, res) => {
   }
 });
 
+// ── Delete Account ─────────────────────────────────────────────────────────────
+router.delete('/delete-account', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    await Conversation.findOneAndDelete({ userId });
+    await User.findByIdAndDelete(userId);
+    res.json({ message: 'Account and all chat history deleted successfully.' });
+  } catch (err) {
+    console.error('Delete account error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── Deactivate Account ─────────────────────────────────────────────────────────
+router.put('/deactivate-account', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    user.isActive      = false;
+    user.deactivatedAt = new Date();
+    await user.save();
+    res.json({ message: 'Account deactivated successfully.' });
+  } catch (err) {
+    console.error('Deactivate error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── Reactivate Account ─────────────────────────────────────────────────────────
+router.put('/reactivate-account', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    user.isActive      = true;
+    user.deactivatedAt = null;
+    await user.save();
+    res.json({ message: 'Account reactivated successfully.' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ── Google OAuth ───────────────────────────────────────────────────────────────
 router.get('/google',
   passport.authenticate('google', { scope: ['profile', 'email'] })
@@ -294,15 +427,14 @@ router.get('/google',
 router.get('/google/callback',
   (req, res, next) => {
     passport.authenticate('google', {
-      session: false,
+      session:         false,
       failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_failed`
     })(req, res, next);
   },
   (req, res) => {
     try {
-      if (!req.user) {
+      if (!req.user)
         return res.redirect(`${process.env.FRONTEND_URL}/login?error=no_user`);
-      }
       const token       = generateToken(req.user._id);
       const frontendUrl = process.env.FRONTEND_URL || 'https://healthbotsc.vercel.app';
       const userData    = encodeURIComponent(JSON.stringify(userResponse(req.user)));
@@ -314,24 +446,25 @@ router.get('/google/callback',
   }
 );
 
-// ── Gemini Test Route (temporary — remove before final submission) ─────────────
+// ── Test Routes (remove before final submission) ───────────────────────────────
 router.get('/test-groq', async (req, res) => {
   try {
     const { getGeminiResponse } = require('../config/gemini');
     const reply = await getGeminiResponse(
       'I have fever and headache',
-      'Top prediction: Common Cold (45% confidence). Severity: Mild.',
-      'TestUser',
-      []
+      'Top prediction: Common Cold (45%). Severity: Mild.',
+      'TestUser', []
     );
-    if (reply) {
-      res.json({ working: true, model: 'llama-3.1-8b-instant', response: reply });
-    } else {
-      res.json({ working: false, reason: 'Groq returned null — check GROQ_API_KEY in Render env' });
-    }
+    res.json({ working: !!reply, response: reply || 'null — check GROQ_API_KEY' });
   } catch (err) {
     res.json({ working: false, error: err.message });
   }
+});
+
+router.get('/test-email', async (req, res) => {
+  const { sendOTPEmail } = require('../config/emailService');
+  const sent = await sendOTPEmail(process.env.EMAIL_FROM, 'Test', '123456', 'verification');
+  res.json({ sent, emailFrom: process.env.EMAIL_FROM || 'NOT SET' });
 });
 
 module.exports = router;
