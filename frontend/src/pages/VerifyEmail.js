@@ -1,150 +1,137 @@
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Activity, CheckCircle2, XCircle } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Activity, ShieldCheck, ArrowLeft } from "lucide-react";
 
 export default function VerifyEmail() {
-  const [status, setStatus] = useState("loading");
-  const [message, setMessage] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [loading, setLoading] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(57);
+  const inputRefs = useRef([]);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const email = location.state?.email || "your email";
+
+  const maskEmail = (email) => {
+    if (!email || email === "your email") return email;
+    const [name, domain] = email.split("@");
+    if (name.length <= 2) return `**@${domain}`;
+    return `${name.substring(0, 2)}******${name.substring(name.length - 2)}@${domain}`;
+  };
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-
-    if (!token) {
-      setStatus("error");
-      setMessage("No verification token found. Please check your email link.");
-      return;
+    if (timeLeft > 0) {
+      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      return () => clearTimeout(timer);
     }
+  }, [timeLeft]);
 
-    const verifyEmail = async () => {
-      try {
-        const res = await fetch(
-          `https://healthbot-backend-ezxv.onrender.com/api/auth/verify-email?token=${token}`
-        );
-        const data = await res.json();
-        if (!res.ok) {
-          setStatus("error");
-          setMessage(data.message || "Verification failed.");
-          return;
-        }
-        if (data.token) {
-          localStorage.setItem("token", data.token);
-          localStorage.setItem("user", JSON.stringify(data.user));
-        }
-        setStatus("success");
-        setMessage(data.message || "Email verified successfully!");
-        setTimeout(() => navigate("/chat"), 3000);
-      } catch (err) {
-        setStatus("error");
-        setMessage("Something went wrong. Please try again.");
-      }
-    };
+  const handleChange = (index, value) => {
+    // Only allow numbers
+    if (value && !/^\d+$/.test(value)) return;
 
-    verifyEmail();
-  }, [navigate]);
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    // Move to next input
+    if (value !== "" && index < 5) inputRefs.current[index + 1].focus();
+  };
+
+  const handleBackspace = (index, e) => {
+    if (e.key === "Backspace" && otp[index] === "" && index > 0) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handleVerify = async () => {
+    setLoading(true);
+    // TODO: Connect your API
+    setTimeout(() => {
+      setLoading(false);
+      navigate("/chat");
+    }, 1500);
+  };
 
   return (
-    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 relative flex flex-col items-center overflow-x-hidden">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none" />
-      <div
-        className="absolute inset-0 pointer-events-none opacity-20"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)",
-          backgroundSize: "40px 40px",
-        }}
-      />
-
-      <nav className="flex items-center justify-between px-6 py-6 lg:px-12 w-full z-50">
-        <Link to="/" className="flex items-center gap-2 cursor-pointer">
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 flex flex-col items-center">
+      <nav className="w-full p-6">
+        <Link to="/" className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" />
-          <span className="text-2xl font-bold tracking-tight text-white">
-            HealthBot
-          </span>
+          <span className="text-2xl font-bold text-white">HealthBot</span>
         </Link>
       </nav>
 
-      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10">
-        <div className="bg-[#111827]/80 backdrop-blur-xl border border-slate-700/50 rounded-3xl p-10 w-full max-w-[480px] shadow-[0_0_40px_rgba(13,148,136,0.1)] relative text-center">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-teal-500/50 to-transparent" />
+      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 max-w-[480px]">
+        <div className="bg-[#111827]/80 border border-slate-700/50 rounded-3xl p-8 w-full shadow-2xl relative">
+          <Link
+            to="/login"
+            className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-8 transition"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to details
+          </Link>
 
-          {/* Loading */}
-          {status === "loading" && (
-            <>
-              <div className="w-20 h-20 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center mx-auto mb-6">
-                <Activity className="h-10 w-10 text-teal-400 animate-pulse" />
-              </div>
-              <h1 className="text-2xl font-bold text-white mb-3">
-                Verifying your email...
-              </h1>
-              <p className="text-slate-400 text-sm">
-                Please wait while we verify your account.
-              </p>
-            </>
-          )}
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 rounded-full border border-teal-500/30 bg-teal-500/10 flex items-center justify-center">
+              <ShieldCheck className="h-10 w-10 text-teal-400" />
+            </div>
+          </div>
 
-          {/* Success */}
-          {status === "success" && (
-            <>
-              <div className="w-20 h-20 rounded-full border border-green-500/30 bg-green-500/10 flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="h-10 w-10 text-green-400" />
-              </div>
-              <h1 className="text-2xl font-bold text-white mb-3">
-                Email Verified!
-              </h1>
-              <p className="text-slate-400 text-sm mb-6">{message}</p>
-              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-6">
-                <p className="text-green-400 text-sm">
-                  Redirecting you to chat in 3 seconds...
-                </p>
-              </div>
-              <Link
-                to="/chat"
-                className="inline-block bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-900 font-bold py-3 px-8 rounded-lg transition-all"
-              >
-                Go to Chat Now
-              </Link>
-            </>
-          )}
+          <h1 className="text-3xl font-bold text-center text-white mb-3">
+            Verify your Email
+          </h1>
+          <p className="text-slate-400 text-sm text-center mb-8">
+            We sent a 6-digit code to
+            <br />
+            <span className="font-semibold text-white">{maskEmail(email)}</span>
+          </p>
 
-          {/* Error */}
-          {status === "error" && (
-            <>
-              <div className="w-20 h-20 rounded-full border border-red-500/30 bg-red-500/10 flex items-center justify-center mx-auto mb-6">
-                <XCircle className="h-10 w-10 text-red-400" />
-              </div>
-              <h1 className="text-2xl font-bold text-white mb-3">
-                Verification Failed
-              </h1>
-              <p className="text-slate-400 text-sm mb-6">{message}</p>
-              <div className="flex flex-col gap-3">
-                <Link
-                  to="/login"
-                  className="inline-block bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-900 font-bold py-3 px-8 rounded-lg transition-all"
-                >
-                  Back to Login
-                </Link>
-                <p className="text-slate-500 text-xs">
-                  Need a new link?{" "}
-                  <Link
-                    to="/login"
-                    className="text-teal-400 hover:text-teal-300"
-                  >
-                    Login to resend
-                  </Link>
-                </p>
-              </div>
-            </>
-          )}
+          <div className="flex justify-between gap-2 mb-8">
+            {otp.map((digit, index) => (
+              <input
+                key={index}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={1}
+                value={digit}
+                ref={(el) => (inputRefs.current[index] = el)}
+                onChange={(e) => handleChange(index, e.target.value)}
+                onKeyDown={(e) => handleBackspace(index, e)}
+                className="w-12 h-16 bg-[#1F2937] border border-slate-600 rounded-xl text-center text-2xl font-bold text-white focus:border-teal-500 focus:outline-none"
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={handleVerify}
+            disabled={loading || otp.includes("")}
+            className="w-full bg-gradient-to-r from-teal-500 to-blue-600 text-white font-bold py-4 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+          >
+            {loading ? "Verifying..." : "VERIFY & CREATE ACCOUNT"}
+          </button>
+
+          <p className="text-center text-sm mt-6 text-slate-400">
+            Didn't receive the code?{" "}
+            <button
+              className={`font-semibold ${timeLeft > 0 ? "text-slate-600" : "text-teal-400"}`}
+              disabled={timeLeft > 0}
+            >
+              {timeLeft > 0 ? `Resend in ${timeLeft}s` : "Resend"}
+            </button>
+          </p>
+        </div>
+
+        <div className="mt-8 text-center text-xs text-slate-500">
+          <p>© 2026 HealthBot. All rights reserved.</p>
+          <div className="mt-2 flex justify-center gap-4">
+            <span>Privacy Policy</span>
+            <span>|</span>
+            <span>Terms of Service</span>
+          </div>
         </div>
       </main>
-
-      <footer className="w-full pb-8 pt-4 flex flex-col items-center gap-3 z-10">
-        <p className="text-slate-400 text-xs font-medium">
-          © 2026 HealthBot. All rights reserved.
-        </p>
-      </footer>
     </div>
   );
 }
