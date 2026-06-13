@@ -27,14 +27,10 @@ export default function VerifyEmail() {
   }, [timeLeft]);
 
   const handleChange = (index, value) => {
-    // Only allow numbers
     if (value && !/^\d+$/.test(value)) return;
-
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-
-    // Move to next input
     if (value !== "" && index < 5) inputRefs.current[index + 1].focus();
   };
 
@@ -54,15 +50,18 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 flex flex-col items-center">
-      <nav className="w-full p-6">
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 flex flex-col">
+      {/* Logo positioned at Top Left */}
+      <div className="w-full p-6 flex justify-start">
         <Link to="/" className="flex items-center gap-2">
           <Activity className="h-7 w-7 text-teal-400" />
-          <span className="text-2xl font-bold text-white">HealthBot</span>
+          <span className="text-2xl font-bold text-white tracking-tight">
+            HealthBot
+          </span>
         </Link>
-      </nav>
+      </div>
 
-      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 max-w-[480px]">
+      <main className="flex-1 flex flex-col justify-center items-center w-full px-4 max-w-[480px] mx-auto">
         <div className="bg-[#111827]/80 border border-slate-700/50 rounded-3xl p-8 w-full shadow-2xl relative">
           <Link
             to="/login"
@@ -123,7 +122,7 @@ export default function VerifyEmail() {
           </p>
         </div>
 
-        <div className="mt-8 text-center text-xs text-slate-500">
+        <div className="mt-8 text-center text-xs text-slate-500 pb-8">
           <p>© 2026 HealthBot. All rights reserved.</p>
           <div className="mt-2 flex justify-center gap-4">
             <span>Privacy Policy</span>
