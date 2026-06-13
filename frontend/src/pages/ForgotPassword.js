@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Activity, Mail, RefreshCw } from "lucide-react";
+import { Activity } from "lucide-react";
 
 export default function ForgotPassword() {
   const [step, setStep] = useState(1);
@@ -17,9 +17,6 @@ export default function ForgotPassword() {
     }
     return () => clearInterval(interval);
   }, [timeLeft]);
-
-  const formatTime = (s) =>
-    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   const handleOtpChange = (index, value) => {
     if (isNaN(value)) return;
@@ -44,13 +41,12 @@ export default function ForgotPassword() {
     setLoading(true);
     setError("");
     try {
-      // Add your API call here
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setStep(2);
-      setTimeLeft(60);
+      setTimeLeft(45); // Set to 45s as per your reference image
       setOtp(["", "", "", "", "", ""]);
     } catch (err) {
-      setError("Failed to send OTP. Please try again.");
+      setError("Failed to send OTP.");
     } finally {
       setLoading(false);
     }
@@ -60,9 +56,8 @@ export default function ForgotPassword() {
     setLoading(true);
     setError("");
     try {
-      // Add your Resend API call here
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      setTimeLeft(60);
+      setTimeLeft(45);
       setOtp(["", "", "", "", "", ""]);
     } catch (err) {
       setError("Failed to resend OTP.");
@@ -80,7 +75,6 @@ export default function ForgotPassword() {
 
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 my-10">
         <div className="bg-[#111827]/80 border border-slate-700/50 rounded-3xl p-8 w-full max-w-[480px] shadow-2xl">
-          {/* Error Display to resolve ESLint warning */}
           {error && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-xl text-center font-bold mb-6">
               {error}
@@ -89,9 +83,8 @@ export default function ForgotPassword() {
 
           {step === 1 && (
             <div className="flex flex-col items-center">
-              <Mail className="h-12 w-12 text-teal-400 mb-6" />
-              <h1 className="text-2xl font-bold mb-2">Forgot Password</h1>
-              <form onSubmit={handleSendEmail} className="w-full mt-6">
+              <h1 className="text-2xl font-bold mb-6">Forgot Password</h1>
+              <form onSubmit={handleSendEmail} className="w-full">
                 <input
                   type="email"
                   required
@@ -113,7 +106,7 @@ export default function ForgotPassword() {
 
           {step === 2 && (
             <div className="flex flex-col items-center">
-              <h1 className="text-2xl font-bold mb-4">Verify OTP</h1>
+              <h1 className="text-2xl font-bold mb-6">Verify OTP</h1>
               <div className="flex gap-2">
                 {otp.map((digit, index) => (
                   <input
@@ -128,44 +121,43 @@ export default function ForgotPassword() {
                   />
                 ))}
               </div>
-              <p className="mt-4 text-sm text-slate-400">
-                Expires in {formatTime(timeLeft)}
-              </p>
 
-              {/* Resend Code and Privacy Policy logic */}
-              <div className="mt-6 flex flex-col items-center gap-4 text-xs text-slate-400">
+              {/* Matching the UI from IMG-20260613-WA0004.jpg */}
+              <div className="mt-4 text-sm text-slate-400">
+                Didn't receive the code?{" "}
                 <button
                   onClick={handleResendOtp}
                   disabled={timeLeft > 0 || loading}
-                  className={`flex items-center gap-2 ${
+                  className={`font-bold ${
                     timeLeft > 0
                       ? "text-slate-600 cursor-not-allowed"
                       : "text-teal-400 hover:text-teal-300"
                   }`}
                 >
-                  <RefreshCw
-                    size={14}
-                    className={loading ? "animate-spin" : ""}
-                  />
-                  {timeLeft > 0
-                    ? `Resend in ${formatTime(timeLeft)}`
-                    : "Resend Code"}
+                  {timeLeft > 0 ? `Resend in ${timeLeft}s` : "Resend"}
                 </button>
-
-                <p>
-                  By verifying, you agree to our{" "}
-                  <a href="/privacy" className="text-teal-400 hover:underline">
-                    Privacy Policy
-                  </a>
-                </p>
               </div>
 
               <button
                 onClick={() => setStep(3)}
                 className="w-full mt-6 bg-teal-500 text-slate-900 font-bold py-3 rounded-xl"
               >
-                Verify OTP
+                VERIFY & CREATE ACCOUNT
               </button>
+
+              {/* Footer from IMG-20260613-WA0004.jpg */}
+              <div className="mt-8 text-center text-xs text-slate-500">
+                <p>© 2026 HealthBot. All rights reserved.</p>
+                <div className="mt-2 flex justify-center gap-4">
+                  <a href="/privacy" className="hover:text-teal-400">
+                    Privacy Policy
+                  </a>
+                  <span>|</span>
+                  <a href="/terms" className="hover:text-teal-400">
+                    Terms of Service
+                  </a>
+                </div>
+              </div>
             </div>
           )}
         </div>
