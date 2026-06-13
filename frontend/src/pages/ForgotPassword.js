@@ -14,11 +14,11 @@ const ForgotPassword = () => {
     }
   }, [timeLeft]);
 
-  // 1. Logic to Send OTP
   const handleSendOtp = async () => {
     setLoading(true);
     try {
-      // REPLACE with your actual backend endpoint
+      // IMPORTANT: Replace this URL with your ACTUAL live backend URL
+      // If your backend is also on Vercel, use: /api/send-otp
       const response = await fetch("YOUR_BACKEND_URL/api/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -29,25 +29,24 @@ const ForgotPassword = () => {
         setStep(2);
         setTimeLeft(45);
       } else {
-        alert("Failed to send OTP. Please check the email.");
+        // This log will appear in your browser's "Console" tab
+        const errorData = await response.text();
+        console.error("Server Error Details:", errorData);
+        alert(
+          `Failed to send OTP. Error: ${errorData || "Please check the email."}`,
+        );
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Network Error:", error);
+      alert("Network error: Could not reach the server.");
     } finally {
       setLoading(false);
     }
   };
 
-  // 2. Logic to Resend OTP
-  const handleResendOtp = async () => {
-    handleSendOtp();
-  };
-
-  // 3. Logic to Verify OTP
   const handleVerifyOtp = async () => {
     setLoading(true);
     try {
-      // REPLACE with your actual backend endpoint
       const response = await fetch("YOUR_BACKEND_URL/api/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -55,9 +54,9 @@ const ForgotPassword = () => {
       });
 
       if (response.ok) {
-        setStep(3); // Navigate to Password Reset step
+        setStep(3);
       } else {
-        alert("Invalid OTP. Please try again.");
+        alert("Invalid OTP.");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -104,7 +103,7 @@ const ForgotPassword = () => {
               <div className="mt-2 text-sm text-slate-400">
                 Didn't receive the code?{" "}
                 <button
-                  onClick={handleResendOtp}
+                  onClick={handleSendOtp}
                   disabled={timeLeft > 0 || loading}
                   className={`font-bold ${timeLeft > 0 ? "text-slate-600" : "text-teal-400 hover:text-teal-300"}`}
                 >
@@ -122,16 +121,13 @@ const ForgotPassword = () => {
             </div>
           )}
 
+          {/* Footer - NOW NON-CLICKABLE */}
           <div className="mt-8 text-center text-xs text-slate-500">
             <p>© 2026 HealthBot. All rights reserved.</p>
             <div className="mt-2 flex justify-center gap-4">
-              <a href="/privacy" className="hover:text-teal-400">
-                Privacy Policy
-              </a>
+              <span>Privacy Policy</span>
               <span>|</span>
-              <a href="/terms" className="hover:text-terms">
-                Terms of Service
-              </a>
+              <span>Terms of Service</span>
             </div>
           </div>
         </div>
