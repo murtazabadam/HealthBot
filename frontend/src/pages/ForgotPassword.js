@@ -1,11 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Activity, Mail } from "lucide-react";
+import { Activity, Mail, RefreshCw } from "lucide-react";
 
-/**
- * Cleaned ForgotPassword Component
- * All unused imports and variables have been removed to resolve linting errors.
- */
-export default function App() {
+export default function ForgotPassword() {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -48,12 +44,30 @@ export default function App() {
     setLoading(true);
     setError("");
     try {
+      // API call to send OTP
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setStep(2);
       setTimeLeft(60);
       setOtp(["", "", "", "", "", ""]);
     } catch (err) {
       setError("Failed to send OTP. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- NEW: Resend OTP Logic ---
+  const handleResendOtp = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      // Add your API endpoint call here
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setTimeLeft(60);
+      setOtp(["", "", "", "", "", ""]);
+      alert("A new OTP has been sent to your email.");
+    } catch (err) {
+      setError("Failed to resend OTP.");
     } finally {
       setLoading(false);
     }
@@ -111,13 +125,26 @@ export default function App() {
                     value={digit}
                     onChange={(e) => handleOtpChange(index, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                    className="w-10 h-12 bg-[#0B1120] border border-slate-700 rounded-lg text-center text-white"
+                    className="w-10 h-12 bg-[#0B1120] border border-slate-700 rounded-lg text-center text-white focus:border-teal-400 outline-none"
                   />
                 ))}
               </div>
               <p className="mt-4 text-sm text-slate-400">
                 Expires in {formatTime(timeLeft)}
               </p>
+              
+              {/* --- NEW: Resend OTP UI --- */}
+              <button
+                onClick={handleResendOtp}
+                disabled={timeLeft > 0 || loading}
+                className={`mt-4 text-xs font-bold flex items-center gap-2 ${
+                  timeLeft > 0 ? "text-slate-600 cursor-not-allowed" : "text-teal-400 hover:text-teal-300"
+                }`}
+              >
+                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                {timeLeft > 0 ? `Resend in ${formatTime(timeLeft)}` : "Resend OTP"}
+              </button>
+
               <button
                 onClick={() => setStep(3)}
                 className="w-full mt-6 bg-teal-500 text-slate-900 font-bold py-3 rounded-xl"
