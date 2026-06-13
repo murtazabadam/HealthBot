@@ -44,7 +44,7 @@ export default function ForgotPassword() {
     setLoading(true);
     setError("");
     try {
-      // API call to send OTP
+      // Add your API call here
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setStep(2);
       setTimeLeft(60);
@@ -56,16 +56,14 @@ export default function ForgotPassword() {
     }
   };
 
-  // --- NEW: Resend OTP Logic ---
   const handleResendOtp = async () => {
     setLoading(true);
     setError("");
     try {
-      // Add your API endpoint call here
+      // Add your Resend API call here
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setTimeLeft(60);
       setOtp(["", "", "", "", "", ""]);
-      alert("A new OTP has been sent to your email.");
     } catch (err) {
       setError("Failed to resend OTP.");
     } finally {
@@ -82,6 +80,7 @@ export default function ForgotPassword() {
 
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 my-10">
         <div className="bg-[#111827]/80 border border-slate-700/50 rounded-3xl p-8 w-full max-w-[480px] shadow-2xl">
+          {/* Error Display to resolve ESLint warning */}
           {error && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-xl text-center font-bold mb-6">
               {error}
@@ -132,18 +131,34 @@ export default function ForgotPassword() {
               <p className="mt-4 text-sm text-slate-400">
                 Expires in {formatTime(timeLeft)}
               </p>
-              
-              {/* --- NEW: Resend OTP UI --- */}
-              <button
-                onClick={handleResendOtp}
-                disabled={timeLeft > 0 || loading}
-                className={`mt-4 text-xs font-bold flex items-center gap-2 ${
-                  timeLeft > 0 ? "text-slate-600 cursor-not-allowed" : "text-teal-400 hover:text-teal-300"
-                }`}
-              >
-                <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-                {timeLeft > 0 ? `Resend in ${formatTime(timeLeft)}` : "Resend OTP"}
-              </button>
+
+              {/* Resend Code and Privacy Policy logic */}
+              <div className="mt-6 flex flex-col items-center gap-4 text-xs text-slate-400">
+                <button
+                  onClick={handleResendOtp}
+                  disabled={timeLeft > 0 || loading}
+                  className={`flex items-center gap-2 ${
+                    timeLeft > 0
+                      ? "text-slate-600 cursor-not-allowed"
+                      : "text-teal-400 hover:text-teal-300"
+                  }`}
+                >
+                  <RefreshCw
+                    size={14}
+                    className={loading ? "animate-spin" : ""}
+                  />
+                  {timeLeft > 0
+                    ? `Resend in ${formatTime(timeLeft)}`
+                    : "Resend Code"}
+                </button>
+
+                <p>
+                  By verifying, you agree to our{" "}
+                  <a href="/privacy" className="text-teal-400 hover:underline">
+                    Privacy Policy
+                  </a>
+                </p>
+              </div>
 
               <button
                 onClick={() => setStep(3)}
