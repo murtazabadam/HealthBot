@@ -51,11 +51,8 @@ import {
   Pause,
 } from "lucide-react";
 
-// Mocked Gemini frontend service to fix resolution errors
-const geminiReady = false;
-const getGeminiReply = async (text, summary, userName) => {
-  return "This is a fallback response since the Gemini service is unavailable in this environment.";
-};
+// Import the Gemini frontend service
+import { getGeminiReply, geminiReady } from "../services/gemini";
 
 export function ChatDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -286,6 +283,7 @@ export function ChatDashboard() {
 
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
+  const utteranceRef = useRef(null); // Added to prevent iOS Safari TTS garbage collection
 
   const formatName = (str) => {
     if (!str) return "";
@@ -351,6 +349,88 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
+  // --- ENHANCED TTS LOGIC (Mobile Play/Pause/Resume Fix) ---
+  const speakText = (text, id) => {
+    const synth = window.speechSynthesis;
+
+    if (!synth) {
+      showToast("Text-to-speech is not supported in this browser.");
+      return;
+    }
+
+    // 1. Mobile Fix: Handle native pause/resume robustly
+    if (playingMessageId === id) {
+      if (synth.paused || isPaused) {
+        synth.resume();
+        setIsPaused(false);
+      } else {
+        synth.pause();
+        setIsPaused(true);
+      }
+      return;
+    }
+
+    // 2. iOS Bug Fix: Canceling while paused permanently breaks mobile TTS. Resume first.
+    synth.resume();
+    synth.cancel();
+
+    setPlayingMessageId(id);
+    setIsPaused(false);
+
+    // 3. Buffer Fix: Wait 50ms to allow mobile browsers to clear the audio queue
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utteranceRef.current = utterance; // Keep reference to avoid garbage collection
+
+      // Pitch 0.8 to sound deep but still very clear
+      utterance.pitch = 0.8;
+      utterance.rate = 0.95;
+
+      utterance.onend = () => {
+        setPlayingMessageId(null);
+        setIsPaused(false);
+      };
+
+      utterance.onerror = (e) => {
+        console.error("TTS Error:", e);
+        setPlayingMessageId(null);
+        setIsPaused(false);
+      };
+
+      const voices = synth.getVoices();
+
+      // Aggressive list of the clearest Male voices across all devices
+      const maleVoiceNames = [
+        "Google UK English Male", // Android / Chrome
+        "Alex", // Apple Mac (Very clear)
+        "Daniel", // Apple iOS/Mac (UK Male)
+        "Fred", // Apple Mac
+        "Guy", // Windows
+        "David", // Windows
+        "Mark", // Windows
+        "Aaron", // Apple iOS fallback
+        "Arthur", // Apple iOS fallback
+        "Rishi", // Indian Male (Good fallback)
+      ];
+
+      let maleVoice = null;
+      for (const name of maleVoiceNames) {
+        maleVoice = voices.find((v) => v.name.includes(name));
+        if (maleVoice) break;
+      }
+
+      if (!maleVoice) {
+        maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
+      }
+
+      if (maleVoice) {
+        utterance.voice = maleVoice;
+      }
+
+      synth.speak(utterance);
+    }, 50);
+  };
+
   // --- ENHANCED MIC LOGIC (Mute functionality) ---
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -384,86 +464,6 @@ export function ChatDashboard() {
       setIsRecording(true);
       setIsMuted(false);
     }
-  };
-
-  // --- ENHANCED TTS LOGIC (Mobile Play/Pause/Resume Fix) ---
-  const speakText = (text, id) => {
-    const synth = window.speechSynthesis;
-
-    if (!synth) {
-      showToast("Text-to-speech is not supported in this browser.");
-      return;
-    }
-
-    // 1. Mobile Fix: Check native synth state instead of just React state
-    if (playingMessageId === id) {
-      if (synth.paused) {
-        synth.resume();
-        setIsPaused(false);
-      } else if (synth.speaking) {
-        synth.pause();
-        setIsPaused(true);
-      }
-      return;
-    }
-
-    // 2. iOS Bug Fix: Canceling while paused permanently breaks mobile TTS. Resume first.
-    synth.resume();
-    synth.cancel();
-
-    setPlayingMessageId(id);
-    setIsPaused(false);
-
-    // 3. Buffer Fix: Wait 50ms to allow mobile browsers to clear the audio queue
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(text);
-
-      utterance.pitch = 0.8;
-      utterance.rate = 0.95;
-
-      // Sync React UI state with native mobile background audio events
-      utterance.onend = () => {
-        setPlayingMessageId(null);
-        setIsPaused(false);
-      };
-      utterance.onerror = () => {
-        setPlayingMessageId(null);
-        setIsPaused(false);
-      };
-      utterance.onpause = () => setIsPaused(true);
-      utterance.onresume = () => setIsPaused(false);
-
-      const voices = synth.getVoices();
-
-      const maleVoiceNames = [
-        "Google UK English Male",
-        "Alex",
-        "Daniel",
-        "Fred",
-        "Guy",
-        "David",
-        "Mark",
-        "Aaron",
-        "Arthur",
-        "Rishi",
-      ];
-
-      let maleVoice = null;
-      for (const name of maleVoiceNames) {
-        maleVoice = voices.find((v) => v.name.includes(name));
-        if (maleVoice) break;
-      }
-
-      if (!maleVoice) {
-        maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
-      }
-
-      if (maleVoice) {
-        utterance.voice = maleVoice;
-      }
-
-      synth.speak(utterance);
-    }, 50);
   };
 
   const handleImageUpload = (e) => {
@@ -1280,7 +1280,7 @@ export function ChatDashboard() {
                       {msg.sender === "bot" && (
                         <button
                           onClick={() => speakText(msg.text, msg.id)}
-                          className={`p-2.5 sm:p-1.5 transition-colors rounded-lg ${playingMessageId === msg.id ? "text-teal-400 bg-teal-500/10 sm:bg-transparent" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
+                          className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md ${playingMessageId === msg.id ? "text-teal-400 bg-teal-500/10 sm:bg-transparent" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
                           title="Read aloud"
                         >
                           {playingMessageId === msg.id ? (
@@ -1332,7 +1332,7 @@ export function ChatDashboard() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4 mb-8">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-full bg-teal-500/10 border border-teal-500/30 flex items-center justify-center shrink-0">
-                      <User className="h-8 w-8 text-teal-500" />
+                      <User className="h-8 w-8 text-teal-400" />
                     </div>
                     <div className="overflow-hidden">
                       <h1
