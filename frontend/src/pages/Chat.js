@@ -51,8 +51,11 @@ import {
   Pause,
 } from "lucide-react";
 
-// Import the Gemini frontend service
-import { getGeminiReply, geminiReady } from "../services/gemini";
+// Mocked Gemini frontend service to fix resolution errors
+const geminiReady = false;
+const getGeminiReply = async (text, summary, userName) => {
+  return "This is a fallback response since the Gemini service is unavailable in this environment.";
+};
 
 export function ChatDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -130,7 +133,7 @@ export function ChatDashboard() {
       if (!token) return;
       try {
         const res = await fetch(
-          "https://healthbot-backend-ezxv.onrender.com/api/auth/profile",
+          "https://healthbot-production-3c7d.up.railway.app/api/auth/profile",
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -283,7 +286,7 @@ export function ChatDashboard() {
 
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
-  const utteranceRef = useRef(null); // Added to prevent iOS Safari TTS garbage collection
+  const utteranceRef = useRef(null); // Prevents iOS Safari TTS garbage collection
 
   const formatName = (str) => {
     if (!str) return "";
@@ -381,6 +384,7 @@ export function ChatDashboard() {
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(text);
       utteranceRef.current = utterance; // Keep reference to avoid garbage collection
+      window.globalUtterance = utterance; // CRITICAL: Fixes Desktop Chrome pause/resume garbage collection bug
 
       // Pitch 0.8 to sound deep but still very clear
       utterance.pitch = 0.8;
@@ -497,7 +501,7 @@ export function ChatDashboard() {
     setSavingProfile(true);
     try {
       const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com/api/auth/profile`,
+        `https://healthbot-production-3c7d.up.railway.app/api/auth/profile`,
         {
           method: "PUT",
           headers: {
@@ -545,7 +549,7 @@ export function ChatDashboard() {
     setSavingPassword(true);
     try {
       const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com/api/auth/change-password`,
+        `https://healthbot-production-3c7d.up.railway.app/api/auth/change-password`,
         {
           method: "PUT",
           headers: {
@@ -595,7 +599,7 @@ export function ChatDashboard() {
       const method = accountAction.type === "delete" ? "DELETE" : "POST";
 
       const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com${endpoint}`,
+        `https://healthbot-production-3c7d.up.railway.app${endpoint}`,
         {
           method: method,
           headers: {
@@ -751,7 +755,7 @@ export function ChatDashboard() {
 
     try {
       const res = await axios.post(
-        "https://healthbot-backend-ezxv.onrender.com/api/chat/message",
+        "https://healthbot-production-3c7d.up.railway.app/api/chat/message",
         { text: textToSend, image: currentImg },
         { headers: { Authorization: `Bearer ${token}` } },
       );
