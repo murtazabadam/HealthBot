@@ -46,6 +46,9 @@ import {
   Volume2,
   AlertTriangle,
   UserX,
+  MicOff,
+  Play,
+  Pause,
 } from "lucide-react";
 
 // Import the Gemini frontend service
@@ -56,6 +59,11 @@ export function ChatDashboard() {
   const [page, setPage] = useState("chat");
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
+
+  // --- NEW VOICE & TTS STATES ---
+  const [playingMessageId, setPlayingMessageId] = useState(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   // Real-time Chat & Settings States
   const [activeSessionId, setActiveSessionId] = useState(Date.now());
@@ -340,45 +348,43 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-  const recognition = SpeechRecognition ? new SpeechRecognition() : null;
-
-  if (recognition) {
-    recognition.continuous = false;
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setInputText((prev) => (prev ? prev + " " + transcript : transcript));
-      setIsRecording(false);
-    };
-    recognition.onerror = () => setIsRecording(false);
-    recognition.onend = () => setIsRecording(false);
-  }
-
-  const toggleRecording = () => {
-    if (!recognition)
-      return showToast("Speech recognition is not supported in this browser.");
-    if (isRecording) {
-      recognition.stop();
-    } else {
-      recognition.start();
-      setIsRecording(true);
-    }
-  };
-
-  // --- LOCKED CLEAR MALE VOICE ---
-  const speakText = (text) => {
+  // --- ENHANCED TTS LOGIC (Play/Pause/Resume) ---
+  const speakText = (text, id) => {
     if (!window.speechSynthesis) {
       showToast("Text-to-speech is not supported in this browser.");
       return;
     }
 
+    if (playingMessageId === id) {
+      if (isPaused) {
+        window.speechSynthesis.resume();
+        setIsPaused(false);
+      } else {
+        window.speechSynthesis.pause();
+        setIsPaused(true);
+      }
+      return;
+    }
+
     window.speechSynthesis.cancel();
+    setPlayingMessageId(id);
+    setIsPaused(false);
+
     const utterance = new SpeechSynthesisUtterance(text);
 
     // Pitch 0.8 to sound deep but still very clear
     utterance.pitch = 0.8;
     utterance.rate = 0.95; // Slightly slower for perfect pronunciation
+
+    utterance.onend = () => {
+      setPlayingMessageId(null);
+      setIsPaused(false);
+    };
+
+    utterance.onerror = () => {
+      setPlayingMessageId(null);
+      setIsPaused(false);
+    };
 
     const voices = window.speechSynthesis.getVoices();
 
@@ -415,6 +421,41 @@ export function ChatDashboard() {
     }
 
     window.speechSynthesis.speak(utterance);
+  };
+
+  // --- ENHANCED MIC LOGIC (Mute functionality) ---
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+
+  if (recognition) {
+    recognition.continuous = false;
+    recognition.onresult = (event) => {
+      if (isMuted) return; // Mute Check
+      const transcript = event.results[0][0].transcript;
+      setInputText((prev) => (prev ? prev + " " + transcript : transcript));
+      setIsRecording(false);
+      setIsMuted(false);
+    };
+    recognition.onerror = () => {
+      setIsRecording(false);
+      setIsMuted(false);
+    };
+    recognition.onend = () => setIsRecording(false);
+  }
+
+  const toggleRecording = () => {
+    if (!recognition)
+      return showToast("Speech recognition is not supported in this browser.");
+    if (isRecording) {
+      recognition.stop();
+      setIsRecording(false);
+      setIsMuted(false);
+    } else {
+      recognition.start();
+      setIsRecording(true);
+      setIsMuted(false);
+    }
   };
 
   const handleImageUpload = (e) => {
@@ -676,6 +717,7 @@ export function ChatDashboard() {
       setEmergencyAlert(true);
       speakText(
         "Emergency alert. Please select an option to get immediate help.",
+        "emergency",
       );
     }
 
@@ -1229,11 +1271,19 @@ export function ChatDashboard() {
                       {msg.time}
                       {msg.sender === "bot" && (
                         <button
-                          onClick={() => speakText(msg.text)}
-                          className={`p-1 transition-colors rounded-md ${isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
+                          onClick={() => speakText(msg.text, msg.id)}
+                          className={`p-1 transition-colors rounded-md ${playingMessageId === msg.id ? "text-teal-400" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
                           title="Read aloud"
                         >
-                          <Volume2 size={12} />
+                          {playingMessageId === msg.id ? (
+                            isPaused ? (
+                              <Play size={12} />
+                            ) : (
+                              <Pause size={12} />
+                            )
+                          ) : (
+                            <Volume2 size={12} />
+                          )}
                         </button>
                       )}
                     </span>
@@ -1923,6 +1973,17 @@ export function ChatDashboard() {
               <div
                 className={`border rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl focus-within:border-teal-500/40 transition-all ${isDark ? "bg-slate-900/90 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
               >
+                {/* NEW: MIC MUTE BUTTON */}
+                {isRecording && (
+                  <button
+                    onClick={() => setIsMuted(!isMuted)}
+                    className={`p-2 rounded-full transition-all ${isMuted ? "bg-rose-500 text-white" : "bg-teal-500/10 text-teal-500"}`}
+                    title={isMuted ? "Unmute Mic" : "Mute Mic"}
+                  >
+                    {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+                  </button>
+                )}
+
                 <input
                   type="file"
                   ref={fileInputRef}
