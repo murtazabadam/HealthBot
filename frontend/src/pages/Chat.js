@@ -1190,7 +1190,8 @@ export function ChatDashboard() {
         <SidebarContent />
       </div>
 
-      {/* Main Content Area - Strict Flex Column */}
+      {}
+      {/* Main Content Area - Strict Flex Column to prevent keyboard jump */}
       <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative overflow-hidden">
         {/* HEADER - Strict Flex None */}
         <header
@@ -1540,7 +1541,7 @@ export function ChatDashboard() {
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-3">
-                    <Shield className="h-5 w-5 text-teal-400" />
+                    <Shield className="h-5 w-5 text-teal-500" />
                     <h2
                       className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}
                     >
@@ -1609,7 +1610,7 @@ export function ChatDashboard() {
                           {passwordRequirements.map((req, i) => (
                             <div
                               key={i}
-                              className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-400" : "text-slate-400"}`}
+                              className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-500" : "text-slate-400"}`}
                             >
                               <div
                                 className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${req.met ? "bg-teal-500/20 border-teal-500/50" : "border-slate-300"}`}
