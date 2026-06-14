@@ -51,11 +51,8 @@ import {
   Pause,
 } from "lucide-react";
 
-// Mocked Gemini frontend service to fix resolution errors
-const geminiReady = false;
-const getGeminiReply = async (text, summary, userName) => {
-  return "This is a fallback response since the Gemini service is unavailable in this environment.";
-};
+// Import the real Gemini frontend service
+import { getGeminiReply, geminiReady } from "../services/gemini";
 
 export function ChatDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -287,6 +284,7 @@ export function ChatDashboard() {
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
   const utteranceRef = useRef(null); // Prevents iOS Safari TTS garbage collection
+  const textareaRef = useRef(null); // Auto-resize textarea ref
 
   const formatName = (str) => {
     if (!str) return "";
@@ -361,7 +359,6 @@ export function ChatDashboard() {
       return;
     }
 
-    // 1. Mobile Fix: Handle native pause/resume robustly
     if (playingMessageId === id) {
       if (synth.paused || isPaused) {
         synth.resume();
@@ -373,48 +370,50 @@ export function ChatDashboard() {
       return;
     }
 
-    // 2. iOS Bug Fix: Canceling while paused permanently breaks mobile TTS. Resume first.
     synth.resume();
     synth.cancel();
 
     setPlayingMessageId(id);
     setIsPaused(false);
 
-    // 3. Buffer Fix: Wait 50ms to allow mobile browsers to clear the audio queue
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(text);
-      utteranceRef.current = utterance; // Keep reference to avoid garbage collection
-      window.globalUtterance = utterance; // CRITICAL: Fixes Desktop Chrome pause/resume garbage collection bug
+      utteranceRef.current = utterance;
+      window.speechBugFixUtterance = utterance;
 
-      // Pitch 0.8 to sound deep but still very clear
       utterance.pitch = 0.8;
       utterance.rate = 0.95;
+
+      utterance.onstart = () => setIsPaused(false);
+      utterance.onpause = () => setIsPaused(true);
+      utterance.onresume = () => setIsPaused(false);
 
       utterance.onend = () => {
         setPlayingMessageId(null);
         setIsPaused(false);
+        window.speechBugFixUtterance = null;
       };
 
       utterance.onerror = (e) => {
         console.error("TTS Error:", e);
         setPlayingMessageId(null);
         setIsPaused(false);
+        window.speechBugFixUtterance = null;
       };
 
       const voices = synth.getVoices();
 
-      // Aggressive list of the clearest Male voices across all devices
       const maleVoiceNames = [
-        "Google UK English Male", // Android / Chrome
-        "Alex", // Apple Mac (Very clear)
-        "Daniel", // Apple iOS/Mac (UK Male)
-        "Fred", // Apple Mac
-        "Guy", // Windows
-        "David", // Windows
-        "Mark", // Windows
-        "Aaron", // Apple iOS fallback
-        "Arthur", // Apple iOS fallback
-        "Rishi", // Indian Male (Good fallback)
+        "Google UK English Male",
+        "Alex",
+        "Daniel",
+        "Fred",
+        "Guy",
+        "David",
+        "Mark",
+        "Aaron",
+        "Arthur",
+        "Rishi",
       ];
 
       let maleVoice = null;
@@ -432,6 +431,10 @@ export function ChatDashboard() {
       }
 
       synth.speak(utterance);
+
+      if (synth.paused) {
+        synth.resume();
+      }
     }, 50);
   };
 
@@ -446,6 +449,10 @@ export function ChatDashboard() {
       if (isMuted) return; // Mute Check
       const transcript = event.results[0][0].transcript;
       setInputText((prev) => (prev ? prev + " " + transcript : transcript));
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+      }
       setIsRecording(false);
       setIsMuted(false);
     };
@@ -586,7 +593,6 @@ export function ChatDashboard() {
     }
   };
 
-  // --- ACCOUNT DEACTIVATION & DELETION LOGIC ---
   const confirmAccountAction = async (e) => {
     e.preventDefault();
     setAccountAction((prev) => ({ ...prev, loading: true }));
@@ -606,7 +612,6 @@ export function ChatDashboard() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          // Sending credentials for backend verification
           body: JSON.stringify({
             email: accountAction.email,
             password: accountAction.password,
@@ -704,7 +709,6 @@ export function ChatDashboard() {
     const textToSend = textOverride || inputText;
     if ((!textToSend.trim() && !uploadedImage) || loading) return;
 
-    // --- SMARTER EMERGENCY SCANNER ---
     const emergencyKeywords = [
       "heart attack",
       "stroke",
@@ -748,7 +752,12 @@ export function ChatDashboard() {
         time: now,
       },
     ]);
+
     setInputText("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
+
     const currentImg = uploadedImage;
     setUploadedImage(null);
     setLoading(true);
@@ -1181,11 +1190,11 @@ export function ChatDashboard() {
         <SidebarContent />
       </div>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative">
-        {/* HEADER */}
+      {/* Main Content Area - Strict Flex Column */}
+      <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative overflow-hidden">
+        {/* HEADER - Strict Flex None */}
         <header
-          className={`fixed top-0 left-0 right-0 lg:static z-[90] h-[72px] border-b flex items-center justify-between px-3 sm:px-4 lg:px-8 backdrop-blur-md transition-colors duration-300 ${isDark ? "bg-[#020617]/95 border-slate-800/60 shadow-xl" : "bg-white/95 border-slate-200 shadow-sm"}`}
+          className={`flex-none z-[90] h-[72px] border-b flex items-center justify-between px-3 sm:px-4 lg:px-8 backdrop-blur-md transition-colors duration-300 ${isDark ? "bg-[#020617]/95 border-slate-800/60 shadow-xl" : "bg-white/95 border-slate-200 shadow-sm"}`}
         >
           <div className="flex items-center gap-2 sm:gap-3">
             <button
@@ -1234,8 +1243,8 @@ export function ChatDashboard() {
           </div>
         </header>
 
-        {/* --- DYNAMIC VIEW SWITCHER --- */}
-        <div className="flex-1 overflow-y-auto pt-[88px] lg:pt-6 pb-6 px-4 lg:px-6 no-scrollbar relative z-0">
+        {/* --- DYNAMIC VIEW SWITCHER (Scrollable Area) --- */}
+        <div className="flex-1 overflow-y-auto pt-6 pb-6 px-4 lg:px-6 no-scrollbar relative z-0">
           {/* VIEW: CHAT */}
           {page === "chat" && (
             <div className="max-w-4xl mx-auto space-y-6">
@@ -1246,6 +1255,7 @@ export function ChatDashboard() {
                   Session Started Today
                 </span>
               </div>
+
               {messages.map((msg) => (
                 <div
                   key={msg.id}
@@ -1530,7 +1540,7 @@ export function ChatDashboard() {
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-3">
-                    <Shield className="h-5 w-5 text-teal-500" />
+                    <Shield className="h-5 w-5 text-teal-400" />
                     <h2
                       className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}
                     >
@@ -1599,7 +1609,7 @@ export function ChatDashboard() {
                           {passwordRequirements.map((req, i) => (
                             <div
                               key={i}
-                              className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-500" : "text-slate-400"}`}
+                              className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-400" : "text-slate-400"}`}
                             >
                               <div
                                 className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${req.met ? "bg-teal-500/20 border-teal-500/50" : "border-slate-300"}`}
@@ -1943,23 +1953,26 @@ export function ChatDashboard() {
           )}
         </div>
 
-        {/* --- INPUT BAR --- */}
+        {/* --- INPUT BAR (Strict Flex None) --- */}
         {page === "chat" && (
           <div
             className={`flex-none p-3 sm:p-4 lg:p-6 border-t w-full relative z-10 pb-4 sm:pb-6 transition-colors duration-300 ${isDark ? "bg-[#020617] border-slate-800/40 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]" : "bg-white border-slate-200 shadow-sm"}`}
           >
             <div className="max-w-4xl mx-auto">
-              <div className="flex overflow-x-auto gap-2 mb-3 no-scrollbar pb-1">
-                {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
-                  <button
-                    key={symptom}
-                    onClick={() => sendMessage(`I have a ${symptom}`)}
-                    className={`whitespace-nowrap border px-3 py-1.5 rounded-full text-[10px] transition-all flex items-center gap-1 font-bold ${isDark ? "bg-slate-800/40 border-slate-700/50 text-slate-400 hover:text-teal-400 hover:border-teal-500/30" : "bg-slate-100 border-slate-200 text-slate-600 hover:text-teal-600 hover:border-teal-400"}`}
-                  >
-                    {symptom} <ChevronRight size={10} />
-                  </button>
-                ))}
-              </div>
+              {/* Auto-Hiding Quick Symptoms */}
+              {messages.length <= 1 && (
+                <div className="flex overflow-x-auto gap-2 mb-3 no-scrollbar pb-1">
+                  {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
+                    <button
+                      key={symptom}
+                      onClick={() => sendMessage(`I have a ${symptom}`)}
+                      className={`whitespace-nowrap border px-3 py-1.5 rounded-full text-[10px] transition-all flex items-center gap-1 font-bold ${isDark ? "bg-slate-800/40 border-slate-700/50 text-slate-400 hover:text-teal-400 hover:border-teal-500/30" : "bg-slate-100 border-slate-200 text-slate-600 hover:text-teal-600 hover:border-teal-400"}`}
+                    >
+                      {symptom} <ChevronRight size={10} />
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {uploadedImage && (
                 <div
@@ -1985,7 +1998,6 @@ export function ChatDashboard() {
               <div
                 className={`border rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl focus-within:border-teal-500/40 transition-all ${isDark ? "bg-slate-900/90 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
               >
-                {/* NEW: MIC MUTE BUTTON */}
                 {isRecording && (
                   <button
                     onClick={() => setIsMuted(!isMuted)}
@@ -2011,9 +2023,14 @@ export function ChatDashboard() {
                 </button>
 
                 <textarea
+                  ref={textareaRef}
                   rows={1}
                   value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
+                  onChange={(e) => {
+                    setInputText(e.target.value);
+                    e.target.style.height = "auto";
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                  }}
                   onKeyPress={(e) =>
                     e.key === "Enter" &&
                     !e.shiftKey &&
@@ -2024,6 +2041,7 @@ export function ChatDashboard() {
                       ? "Listening to your voice..."
                       : "Describe symptoms..."
                   }
+                  style={{ maxHeight: "120px" }}
                   className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar outline-none transition-all ${isRecording ? "placeholder-teal-400" : "placeholder-slate-400"} ${isDark ? "text-white" : "text-slate-900"}`}
                 />
 
