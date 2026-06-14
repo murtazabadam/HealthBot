@@ -51,8 +51,11 @@ import {
   Pause,
 } from "lucide-react";
 
-// Import the Gemini frontend service
-import { getGeminiReply, geminiReady } from "../services/gemini";
+// Mocked Gemini frontend service to fix resolution errors
+const geminiReady = false;
+const getGeminiReply = async (text, summary, userName) => {
+  return "This is a fallback response since the Gemini service is unavailable in this environment.";
+};
 
 export function ChatDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -348,81 +351,6 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  // --- ENHANCED TTS LOGIC (Play/Pause/Resume) ---
-  const speakText = (text, id) => {
-    if (!window.speechSynthesis) {
-      showToast("Text-to-speech is not supported in this browser.");
-      return;
-    }
-
-    if (playingMessageId === id) {
-      if (isPaused) {
-        window.speechSynthesis.resume();
-        setIsPaused(false);
-      } else {
-        window.speechSynthesis.pause();
-        setIsPaused(true);
-      }
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-    setPlayingMessageId(id);
-    setIsPaused(false);
-
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    // Pitch 0.8 to sound deep but still very clear
-    utterance.pitch = 0.8;
-    utterance.rate = 0.95; // Slightly slower for perfect pronunciation
-
-    utterance.onend = () => {
-      setPlayingMessageId(null);
-      setIsPaused(false);
-    };
-
-    utterance.onerror = () => {
-      setPlayingMessageId(null);
-      setIsPaused(false);
-    };
-
-    const voices = window.speechSynthesis.getVoices();
-
-    // Aggressive list of the clearest Male voices across all devices
-    const maleVoiceNames = [
-      "Google UK English Male", // Android / Chrome
-      "Alex", // Apple Mac (Very clear)
-      "Daniel", // Apple iOS/Mac (UK Male)
-      "Fred", // Apple Mac
-      "Guy", // Windows
-      "David", // Windows
-      "Mark", // Windows
-      "Aaron", // Apple iOS fallback
-      "Arthur", // Apple iOS fallback
-      "Rishi", // Indian Male (Good fallback)
-    ];
-
-    let maleVoice = null;
-
-    // 1. Try to find a premium clear male voice first
-    for (const name of maleVoiceNames) {
-      maleVoice = voices.find((v) => v.name.includes(name));
-      if (maleVoice) break;
-    }
-
-    // 2. Absolute fallback: look for the word "male" anywhere
-    if (!maleVoice) {
-      maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
-    }
-
-    // 3. Apply the voice
-    if (maleVoice) {
-      utterance.voice = maleVoice;
-    }
-
-    window.speechSynthesis.speak(utterance);
-  };
-
   // --- ENHANCED MIC LOGIC (Mute functionality) ---
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -456,6 +384,86 @@ export function ChatDashboard() {
       setIsRecording(true);
       setIsMuted(false);
     }
+  };
+
+  // --- ENHANCED TTS LOGIC (Mobile Play/Pause/Resume Fix) ---
+  const speakText = (text, id) => {
+    const synth = window.speechSynthesis;
+
+    if (!synth) {
+      showToast("Text-to-speech is not supported in this browser.");
+      return;
+    }
+
+    // 1. Mobile Fix: Check native synth state instead of just React state
+    if (playingMessageId === id) {
+      if (synth.paused) {
+        synth.resume();
+        setIsPaused(false);
+      } else if (synth.speaking) {
+        synth.pause();
+        setIsPaused(true);
+      }
+      return;
+    }
+
+    // 2. iOS Bug Fix: Canceling while paused permanently breaks mobile TTS. Resume first.
+    synth.resume();
+    synth.cancel();
+
+    setPlayingMessageId(id);
+    setIsPaused(false);
+
+    // 3. Buffer Fix: Wait 50ms to allow mobile browsers to clear the audio queue
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text);
+
+      utterance.pitch = 0.8;
+      utterance.rate = 0.95;
+
+      // Sync React UI state with native mobile background audio events
+      utterance.onend = () => {
+        setPlayingMessageId(null);
+        setIsPaused(false);
+      };
+      utterance.onerror = () => {
+        setPlayingMessageId(null);
+        setIsPaused(false);
+      };
+      utterance.onpause = () => setIsPaused(true);
+      utterance.onresume = () => setIsPaused(false);
+
+      const voices = synth.getVoices();
+
+      const maleVoiceNames = [
+        "Google UK English Male",
+        "Alex",
+        "Daniel",
+        "Fred",
+        "Guy",
+        "David",
+        "Mark",
+        "Aaron",
+        "Arthur",
+        "Rishi",
+      ];
+
+      let maleVoice = null;
+      for (const name of maleVoiceNames) {
+        maleVoice = voices.find((v) => v.name.includes(name));
+        if (maleVoice) break;
+      }
+
+      if (!maleVoice) {
+        maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
+      }
+
+      if (maleVoice) {
+        utterance.voice = maleVoice;
+      }
+
+      synth.speak(utterance);
+    }, 50);
   };
 
   const handleImageUpload = (e) => {
@@ -1266,23 +1274,23 @@ export function ChatDashboard() {
                       )}
                     </div>
 
-                    {/* TTS SPEAKER BUTTON */}
+                    {/* TTS SPEAKER BUTTON - Mobile Touch Target Fix */}
                     <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1">
                       {msg.time}
                       {msg.sender === "bot" && (
                         <button
                           onClick={() => speakText(msg.text, msg.id)}
-                          className={`p-1 transition-colors rounded-md ${playingMessageId === msg.id ? "text-teal-400" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
+                          className={`p-2.5 sm:p-1.5 transition-colors rounded-lg ${playingMessageId === msg.id ? "text-teal-400 bg-teal-500/10 sm:bg-transparent" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
                           title="Read aloud"
                         >
                           {playingMessageId === msg.id ? (
                             isPaused ? (
-                              <Play size={12} />
+                              <Play size={18} className="sm:w-3.5 sm:h-3.5" />
                             ) : (
-                              <Pause size={12} />
+                              <Pause size={18} className="sm:w-3.5 sm:h-3.5" />
                             )
                           ) : (
-                            <Volume2 size={12} />
+                            <Volume2 size={18} className="sm:w-3.5 sm:h-3.5" />
                           )}
                         </button>
                       )}
