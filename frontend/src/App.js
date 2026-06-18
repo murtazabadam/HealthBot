@@ -10,7 +10,6 @@ import Chat from "./pages/Chat";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import Profile from "./pages/Profile";
 import AuthCallback from "./pages/AuthCallback"; // <-- NEW IMPORT ADDED HERE
 
 // --- GLOBAL AUTO-LOGOUT INTERCEPTOR ---
@@ -53,22 +52,12 @@ function App() {
         {/* NEW: Google OAuth Callback Route */}
         <Route path="/auth/callback" element={<AuthCallback />} />
 
-        {/* Protected Chat Route */}
+        {/* Protected Chat Route (This is your main dashboard!) */}
         <Route
           path="/chat"
           element={
             <ProtectedRoute>
               <Chat />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Protected Profile Route */}
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Profile />
             </ProtectedRoute>
           }
         />
