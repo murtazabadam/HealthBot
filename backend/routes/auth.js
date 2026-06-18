@@ -28,7 +28,6 @@ function userResponse(user) {
     address:     user.address     || '',
     phoneNumber: user.phoneNumber || '',
     isVerified:  user.isVerified,
-    isActive:    user.isActive,
     createdAt:   user.createdAt
   };
 }
@@ -110,7 +109,6 @@ router.post('/register', async (req, res) => {
     user.address         = address     || '';
     user.phoneNumber     = phoneNumber || '';
     user.isVerified      = true;
-    user.isActive        = true;
     user.verificationOTP = null;
     user.verificationExpires = null;
     await user.save();
@@ -136,23 +134,15 @@ router.post('/login', async (req, res) => {
 
     if (!user.isVerified) {
       return res.status(400).json({
-        message: 'Email not verified. Please verify your email first.',
+        message:              'Email not verified. Please verify your email first.',
         requiresVerification: true,
-        email: user.email
+        email:                user.email
       });
     }
 
-    if (user.isActive === false) {
-      return res.status(403).json({
-        message: 'This account has been deactivated. Please contact support.',
-        deactivated: true
-      });
-    }
-
-    // Google OAuth user trying to login with password
     if (user.authType === 'google' && !user.password) {
       return res.status(400).json({
-        message: 'This account uses Google Sign-In. Please click "Continue with Google" to login.',
+        message:         'This account uses Google Sign-In. Please click "Continue with Google".',
         isGoogleAccount: true
       });
     }
@@ -178,10 +168,9 @@ router.post('/forgot-password', async (req, res) => {
     if (!user)
       return res.status(400).json({ message: 'No verified account found with this email' });
 
-    // Google OAuth users have no password — direct them to Google login
     if (user.authType === 'google' && !user.password) {
       return res.status(400).json({
-        message: 'This account uses Google Sign-In. Please click "Continue with Google" to login. No password is needed.',
+        message:         'This account uses Google Sign-In. Please use "Continue with Google" to login.',
         isGoogleAccount: true
       });
     }
@@ -225,9 +214,8 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 // ── Reset Password ─────────────────────────────────────────────────────────────
-// Supports two flows:
-// Flow 1 (standard): { resetToken, newPassword }
-// Flow 2 (simple):   { email, otp, newPassword }
+// Flow 1: { resetToken, newPassword }
+// Flow 2: { email, otp, newPassword }
 router.post('/reset-password', async (req, res) => {
   try {
     const { resetToken, newPassword, email, otp } = req.body;
@@ -240,7 +228,6 @@ router.post('/reset-password', async (req, res) => {
     let user = null;
 
     if (resetToken) {
-      // Flow 1 — token from /verify-otp
       try {
         const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
         user = await User.findById(decoded.id);
@@ -249,7 +236,6 @@ router.post('/reset-password', async (req, res) => {
         return res.status(400).json({ message: 'Reset token expired. Please request a new OTP.' });
       }
     } else if (email && otp) {
-      // Flow 2 — email + OTP directly (simpler, no token needed)
       const cleanEmail = email.trim().toLowerCase();
       user = await User.findOne({ email: cleanEmail });
       if (!user || user.resetOTP !== otp.trim())
@@ -295,7 +281,7 @@ router.put('/profile', auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (name)           user.name        = name;
+    if (name)              user.name        = name;
     if (age         !== undefined) user.age         = age;
     if (gender      !== undefined) user.gender      = gender;
     if (bloodGroup  !== undefined) user.bloodGroup  = bloodGroup;
@@ -318,7 +304,7 @@ router.put('/change-password', auth, async (req, res) => {
 
     if (user.authType === 'google' && !user.password) {
       return res.status(400).json({
-        message: 'Google account has no password. Use "Set Password" instead.',
+        message:         'Google account has no password. Use Set Password instead.',
         isGoogleAccount: true
       });
     }
@@ -335,7 +321,7 @@ router.put('/change-password', auth, async (req, res) => {
   }
 });
 
-// ── Set Password (for Google OAuth users) ─────────────────────────────────────
+// ── Set Password for Google OAuth users ───────────────────────────────────────
 router.post('/set-password', auth, async (req, res) => {
   try {
     const { newPassword } = req.body;
@@ -347,10 +333,8 @@ router.post('/set-password', auth, async (req, res) => {
 
     const salt    = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
-    // Keep authType as google but now they can also use email+password
     await user.save();
-
-    res.json({ message: 'Password set! You can now login with email and password too.' });
+    res.json({ message: 'Password set! You can now also login with email and password.' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -386,35 +370,6 @@ router.delete('/delete-account', auth, async (req, res) => {
     res.json({ message: 'Account and all chat history deleted successfully.' });
   } catch (err) {
     console.error('Delete account error:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// ── Deactivate Account ─────────────────────────────────────────────────────────
-router.put('/deactivate-account', auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    user.isActive      = false;
-    user.deactivatedAt = new Date();
-    await user.save();
-    res.json({ message: 'Account deactivated successfully.' });
-  } catch (err) {
-    console.error('Deactivate error:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// ── Reactivate Account ─────────────────────────────────────────────────────────
-router.put('/reactivate-account', auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-    user.isActive      = true;
-    user.deactivatedAt = null;
-    await user.save();
-    res.json({ message: 'Account reactivated successfully.' });
-  } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -463,7 +418,9 @@ router.get('/test-groq', async (req, res) => {
 
 router.get('/test-email', async (req, res) => {
   const { sendOTPEmail } = require('../config/emailService');
-  const sent = await sendOTPEmail(process.env.EMAIL_FROM, 'Test', '123456', 'verification');
+  const sent = await sendOTPEmail(
+    process.env.EMAIL_FROM, 'Test', '123456', 'verification'
+  );
   res.json({ sent, emailFrom: process.env.EMAIL_FROM || 'NOT SET' });
 });
 

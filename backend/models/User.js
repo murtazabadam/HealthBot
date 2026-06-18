@@ -24,10 +24,6 @@ const UserSchema = new mongoose.Schema({
   resetOTP:            { type: String,  default: null },
   resetOTPExpires:     { type: Date,    default: null },
 
-  // Account status
-  isActive:            { type: Boolean, default: true },
-  deactivatedAt:       { type: Date,    default: null },
-
   createdAt:           { type: Date,    default: Date.now }
 });
 
