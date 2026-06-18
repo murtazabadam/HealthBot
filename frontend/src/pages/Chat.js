@@ -350,7 +350,7 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  // --- ENHANCED TTS LOGIC (Mobile Play/Pause/Resume Fix) ---
+  // --- ULTIMATE TTS LOGIC (Claude-like Smooth Pause/Resume) ---
   const speakText = (text, id) => {
     const synth = window.speechSynthesis;
 
@@ -359,31 +359,40 @@ export function ChatDashboard() {
       return;
     }
 
+    // 1. If clicking the EXACT same message that is currently active
     if (playingMessageId === id) {
-      if (synth.paused || isPaused) {
+      if (isPaused) {
+        // Force Resume
         synth.resume();
         setIsPaused(false);
       } else {
+        // Force Pause
         synth.pause();
         setIsPaused(true);
       }
-      return;
+      return; // CRITICAL: Return immediately so it doesn't restart the audio
     }
 
-    synth.resume();
+    // 2. If clicking a NEW message: Stop anything currently playing
+    synth.resume(); // iOS requires resuming before canceling
     synth.cancel();
 
     setPlayingMessageId(id);
     setIsPaused(false);
 
+    // 3. Start new speech with 50ms buffer
     setTimeout(() => {
       const utterance = new SpeechSynthesisUtterance(text);
+
+      // CRITICAL FIX: Attach to the global window object.
+      // This stops Android & Desktop Chrome from deleting the audio while it's paused!
       utteranceRef.current = utterance;
-      window.speechBugFixUtterance = utterance;
+      window.__speechBugFixKeeper = utterance;
 
       utterance.pitch = 0.8;
       utterance.rate = 0.95;
 
+      // STRICT STATE SYNC: Tie React state directly to native audio events
       utterance.onstart = () => setIsPaused(false);
       utterance.onpause = () => setIsPaused(true);
       utterance.onresume = () => setIsPaused(false);
@@ -391,50 +400,52 @@ export function ChatDashboard() {
       utterance.onend = () => {
         setPlayingMessageId(null);
         setIsPaused(false);
-        window.speechBugFixUtterance = null;
+        window.__speechBugFixKeeper = null;
       };
 
       utterance.onerror = (e) => {
-        console.error("TTS Error:", e);
+        // Ignore expected cancellation errors when user skips to a new message
+        if (e.error !== "interrupted" && e.error !== "canceled") {
+          console.error("TTS Error:", e);
+        }
         setPlayingMessageId(null);
         setIsPaused(false);
-        window.speechBugFixUtterance = null;
+        window.__speechBugFixKeeper = null;
       };
 
       const voices = synth.getVoices();
 
-      const maleVoiceNames = [
+      // Find the most natural, human-like voice available on the device
+      const preferredVoices = [
         "Google UK English Male",
         "Alex",
         "Daniel",
         "Fred",
+        "Google US English",
+        "Samantha",
+        "Rishi",
         "Guy",
         "David",
-        "Mark",
-        "Aaron",
-        "Arthur",
-        "Rishi",
       ];
 
-      let maleVoice = null;
-      for (const name of maleVoiceNames) {
-        maleVoice = voices.find((v) => v.name.includes(name));
-        if (maleVoice) break;
+      let selectedVoice = null;
+      for (const name of preferredVoices) {
+        selectedVoice = voices.find((v) => v.name.includes(name));
+        if (selectedVoice) break;
       }
 
-      if (!maleVoice) {
-        maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
+      if (!selectedVoice) {
+        selectedVoice =
+          voices.find((v) => v.name.toLowerCase().includes("male")) ||
+          voices[0];
       }
 
-      if (maleVoice) {
-        utterance.voice = maleVoice;
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
       }
 
+      // Fire the speech engine
       synth.speak(utterance);
-
-      if (synth.paused) {
-        synth.resume();
-      }
     }, 50);
   };
 
@@ -755,7 +766,7 @@ export function ChatDashboard() {
 
     setInputText("");
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = "auto"; // Reset height
     }
 
     const currentImg = uploadedImage;
@@ -1190,7 +1201,6 @@ export function ChatDashboard() {
         <SidebarContent />
       </div>
 
-      {}
       {/* Main Content Area - Strict Flex Column to prevent keyboard jump */}
       <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative overflow-hidden">
         {/* HEADER - Strict Flex None */}
