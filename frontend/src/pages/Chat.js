@@ -108,13 +108,6 @@ export function ChatDashboard() {
 
   // Danger Zone States
   const [emergencyAlert, setEmergencyAlert] = useState(false);
-  const [accountAction, setAccountAction] = useState({
-    isOpen: false,
-    type: "", // 'delete' or 'deactivate'
-    email: "",
-    password: "",
-    loading: false,
-  });
 
   // --- Theme Logic ---
   const isDark = appSettings.darkMode;
@@ -359,7 +352,6 @@ export function ChatDashboard() {
       return;
     }
 
-    // 1. Same Message Clicked: Handle Play/Pause securely
     if (playingMessageId === id) {
       if (isPaused) {
         synth.resume();
@@ -368,11 +360,9 @@ export function ChatDashboard() {
         synth.pause();
         setIsPaused(true);
       }
-      return; // CRITICAL: Stop here so it doesn't trigger new speech!
+      return;
     }
 
-    // 2. New Message Clicked: Clean up old, prepare new
-    // iOS Safari bug requires resuming before canceling, otherwise it bricks the TTS engine.
     if (synth.paused) {
       synth.resume();
     }
@@ -381,25 +371,21 @@ export function ChatDashboard() {
     setPlayingMessageId(id);
     setIsPaused(false);
 
-    // 3. Create the audio object
     const utterance = new SpeechSynthesisUtterance(text);
 
-    // Protect from Mobile Safari/Chrome Garbage Collection
     utteranceRef.current = utterance;
     window.__speechBugFixKeeper = utterance;
 
     utterance.pitch = 0.8;
     utterance.rate = 0.95;
 
-    // CRITICAL FIX: Only update state if THIS utterance is still the active one!
-    // This prevents the old message's `cancel()` event from wiping out the new message's state.
     utterance.onstart = () => setIsPaused(false);
     utterance.onpause = () => setIsPaused(true);
     utterance.onresume = () => setIsPaused(false);
 
     utterance.onend = () => {
       setPlayingMessageId((currentId) => {
-        if (currentId === id) return null; // Only clear if we haven't clicked a new message
+        if (currentId === id) return null;
         return currentId;
       });
       setIsPaused(false);
@@ -418,7 +404,6 @@ export function ChatDashboard() {
       window.__speechBugFixKeeper = null;
     };
 
-    // Grab the clearest available voice
     const voices = synth.getVoices();
     const preferredVoices = [
       "Google UK English Male",
@@ -444,7 +429,6 @@ export function ChatDashboard() {
       utterance.voice = selectedVoice;
     }
 
-    // CRITICAL: Call speak synchronously (no setTimeout) to bypass Mobile "User Gesture" blocks
     synth.speak(utterance);
   };
 
@@ -603,45 +587,35 @@ export function ChatDashboard() {
     }
   };
 
-  const confirmAccountAction = async (e) => {
-    e.preventDefault();
-    setAccountAction((prev) => ({ ...prev, loading: true }));
+  // --- NEW ACCOUNT DELETION LOGIC ---
+  const handleDeleteAccount = async () => {
+    if (
+      !window.confirm(
+        "Are you sure you want to permanently delete your account? This action is irreversible.",
+      )
+    ) {
+      return;
+    }
 
     try {
-      const endpoint =
-        accountAction.type === "delete"
-          ? "/api/auth/delete-account"
-          : "/api/auth/deactivate";
-      const method = accountAction.type === "delete" ? "DELETE" : "POST";
-
       const res = await fetch(
-        `https://healthbot-production-3c7d.up.railway.app${endpoint}`,
+        "https://healthbot-backend-ezxv.onrender.com/api/auth/delete-account",
         {
-          method: method,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            email: accountAction.email,
-            password: accountAction.password,
-          }),
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
         },
       );
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Invalid credentials or server error.");
+        throw new Error(data.message || "Failed to delete account.");
       }
 
-      showToast(
-        `Account successfully ${accountAction.type === "delete" ? "deleted" : "deactivated"}.`,
-      );
+      showToast("Account successfully deleted.");
       localStorage.clear();
-      window.location.href = "/register";
+      window.location.href = "/login";
     } catch (err) {
       showToast(err.message);
-      setAccountAction((prev) => ({ ...prev, loading: false }));
     }
   };
 
@@ -965,96 +939,6 @@ export function ChatDashboard() {
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-teal-500 text-slate-900 px-5 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-3 z-[200] animate-in slide-in-from-bottom-5">
           <CheckCircle2 size={20} /> {toastMessage}
-        </div>
-      )}
-
-      {/* ACCOUNT DELETION/DEACTIVATION MODAL */}
-      {accountAction.isOpen && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div
-            className={`w-full max-w-md p-6 rounded-3xl shadow-2xl ${isDark ? "bg-[#111827] border border-slate-700/50" : "bg-white border border-slate-200"}`}
-          >
-            <div className="flex justify-between items-center mb-4">
-              <h3
-                className={`text-xl font-bold ${accountAction.type === "delete" ? "text-rose-500" : "text-teal-500"}`}
-              >
-                {accountAction.type === "delete"
-                  ? "Delete Account"
-                  : "Deactivate Account"}
-              </h3>
-              <button
-                onClick={() =>
-                  setAccountAction((prev) => ({ ...prev, isOpen: false }))
-                }
-                className="p-1 text-slate-400 hover:text-rose-500 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <p
-              className={`text-sm mb-6 ${isDark ? "text-slate-400" : "text-slate-600"}`}
-            >
-              Please enter your email and password to verify your identity
-              before we {accountAction.type} your account.
-            </p>
-
-            <form
-              onSubmit={confirmAccountAction}
-              className="flex flex-col gap-4"
-            >
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="Enter your email"
-                  value={accountAction.email}
-                  onChange={(e) =>
-                    setAccountAction((prev) => ({
-                      ...prev,
-                      email: e.target.value,
-                    }))
-                  }
-                  className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter your password"
-                  value={accountAction.password}
-                  onChange={(e) =>
-                    setAccountAction((prev) => ({
-                      ...prev,
-                      password: e.target.value,
-                    }))
-                  }
-                  className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={accountAction.loading}
-                className={`w-full mt-4 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 ${
-                  accountAction.type === "delete"
-                    ? "bg-rose-500 hover:bg-rose-600 text-white"
-                    : "bg-teal-500 hover:bg-teal-400 text-slate-900"
-                }`}
-              >
-                {accountAction.loading
-                  ? "Verifying..."
-                  : `Confirm ${accountAction.type === "delete" ? "Deletion" : "Deactivation"}`}
-              </button>
-            </form>
-          </div>
         </div>
       )}
 
@@ -1686,39 +1570,15 @@ export function ChatDashboard() {
                 <p
                   className={`text-sm mb-6 ${isDark ? "text-slate-400" : "text-slate-600"}`}
                 >
-                  You can temporarily deactivate your account or permanently
-                  delete it. You will need to verify your email and password to
-                  proceed.
+                  You can permanently delete your account here. Warning: This
+                  action is irreversible.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <button
-                    onClick={() =>
-                      setAccountAction({
-                        isOpen: true,
-                        type: "deactivate",
-                        email: "",
-                        password: "",
-                        loading: false,
-                      })
-                    }
-                    className={`flex-1 px-6 py-3 border font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2 ${isDark ? "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"}`}
+                    onClick={handleDeleteAccount}
+                    className={`px-6 py-3 border font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2 ${isDark ? "bg-slate-800 text-rose-400 border-slate-700 hover:bg-rose-500/10 hover:border-rose-500/30" : "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100"}`}
                   >
-                    <UserX size={18} /> Deactivate Account
-                  </button>
-
-                  <button
-                    onClick={() =>
-                      setAccountAction({
-                        isOpen: true,
-                        type: "delete",
-                        email: "",
-                        password: "",
-                        loading: false,
-                      })
-                    }
-                    className={`flex-1 px-6 py-3 border font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2 ${isDark ? "bg-slate-800 text-rose-400 border-slate-700 hover:bg-rose-500/10 hover:border-rose-500/30" : "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100"}`}
-                  >
-                    <Trash2 size={18} /> Delete Account
+                    <Trash2 size={18} /> Delete Account Permanently
                   </button>
                 </div>
               </div>
