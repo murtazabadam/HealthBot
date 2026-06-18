@@ -130,7 +130,7 @@ export function ChatDashboard() {
       if (!token) return;
       try {
         const res = await fetch(
-          "https://healthbot-backend-ezxv.onrender.com/api/auth/profile",
+          "https://healthbot-production-3c7d.up.railway.app/api/auth/profile",
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -350,7 +350,7 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  // --- ULTIMATE TTS LOGIC (Claude-like Smooth Pause/Resume) ---
+  // --- THE ULTIMATE ROCK-SOLID TTS LOGIC ---
   const speakText = (text, id) => {
     const synth = window.speechSynthesis;
 
@@ -359,94 +359,93 @@ export function ChatDashboard() {
       return;
     }
 
-    // 1. If clicking the EXACT same message that is currently active
+    // 1. Same Message Clicked: Handle Play/Pause securely
     if (playingMessageId === id) {
       if (isPaused) {
-        // Force Resume
         synth.resume();
         setIsPaused(false);
       } else {
-        // Force Pause
         synth.pause();
         setIsPaused(true);
       }
-      return; // CRITICAL: Return immediately so it doesn't restart the audio
+      return; // CRITICAL: Stop here so it doesn't trigger new speech!
     }
 
-    // 2. If clicking a NEW message: Stop anything currently playing
-    synth.resume(); // iOS requires resuming before canceling
+    // 2. New Message Clicked: Clean up old, prepare new
+    // iOS Safari bug requires resuming before canceling, otherwise it bricks the TTS engine.
+    if (synth.paused) {
+      synth.resume();
+    }
     synth.cancel();
 
     setPlayingMessageId(id);
     setIsPaused(false);
 
-    // 3. Start new speech with 50ms buffer
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(text);
+    // 3. Create the audio object
+    const utterance = new SpeechSynthesisUtterance(text);
 
-      // CRITICAL FIX: Attach to the global window object.
-      // This stops Android & Desktop Chrome from deleting the audio while it's paused!
-      utteranceRef.current = utterance;
-      window.__speechBugFixKeeper = utterance;
+    // Protect from Mobile Safari/Chrome Garbage Collection
+    utteranceRef.current = utterance;
+    window.__speechBugFixKeeper = utterance;
 
-      utterance.pitch = 0.8;
-      utterance.rate = 0.95;
+    utterance.pitch = 0.8;
+    utterance.rate = 0.95;
 
-      // STRICT STATE SYNC: Tie React state directly to native audio events
-      utterance.onstart = () => setIsPaused(false);
-      utterance.onpause = () => setIsPaused(true);
-      utterance.onresume = () => setIsPaused(false);
+    // CRITICAL FIX: Only update state if THIS utterance is still the active one!
+    // This prevents the old message's `cancel()` event from wiping out the new message's state.
+    utterance.onstart = () => setIsPaused(false);
+    utterance.onpause = () => setIsPaused(true);
+    utterance.onresume = () => setIsPaused(false);
 
-      utterance.onend = () => {
-        setPlayingMessageId(null);
-        setIsPaused(false);
-        window.__speechBugFixKeeper = null;
-      };
+    utterance.onend = () => {
+      setPlayingMessageId((currentId) => {
+        if (currentId === id) return null; // Only clear if we haven't clicked a new message
+        return currentId;
+      });
+      setIsPaused(false);
+      window.__speechBugFixKeeper = null;
+    };
 
-      utterance.onerror = (e) => {
-        // Ignore expected cancellation errors when user skips to a new message
-        if (e.error !== "interrupted" && e.error !== "canceled") {
-          console.error("TTS Error:", e);
-        }
-        setPlayingMessageId(null);
-        setIsPaused(false);
-        window.__speechBugFixKeeper = null;
-      };
-
-      const voices = synth.getVoices();
-
-      // Find the most natural, human-like voice available on the device
-      const preferredVoices = [
-        "Google UK English Male",
-        "Alex",
-        "Daniel",
-        "Fred",
-        "Google US English",
-        "Samantha",
-        "Rishi",
-        "Guy",
-        "David",
-      ];
-
-      let selectedVoice = null;
-      for (const name of preferredVoices) {
-        selectedVoice = voices.find((v) => v.name.includes(name));
-        if (selectedVoice) break;
+    utterance.onerror = (e) => {
+      if (e.error !== "interrupted" && e.error !== "canceled") {
+        console.error("TTS Error:", e);
       }
+      setPlayingMessageId((currentId) => {
+        if (currentId === id) return null;
+        return currentId;
+      });
+      setIsPaused(false);
+      window.__speechBugFixKeeper = null;
+    };
 
-      if (!selectedVoice) {
-        selectedVoice =
-          voices.find((v) => v.name.toLowerCase().includes("male")) ||
-          voices[0];
-      }
+    // Grab the clearest available voice
+    const voices = synth.getVoices();
+    const preferredVoices = [
+      "Google UK English Male",
+      "Alex",
+      "Daniel",
+      "Fred",
+      "Google US English",
+      "Samantha",
+      "Rishi",
+      "Guy",
+      "David",
+    ];
 
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-      }
+    let selectedVoice = voices.find((v) =>
+      preferredVoices.some((name) => v.name.includes(name)),
+    );
+    if (!selectedVoice) {
+      selectedVoice =
+        voices.find((v) => v.name.toLowerCase().includes("male")) || voices[0];
+    }
 
-      // Fire the speech engine
-      synth.speak(utterance);
-    }, 50);
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
+
+    // CRITICAL: Call speak synchronously (no setTimeout) to bypass Mobile "User Gesture" blocks
+    synth.speak(utterance);
   };
 
   // --- ENHANCED MIC LOGIC (Mute functionality) ---
@@ -519,7 +518,7 @@ export function ChatDashboard() {
     setSavingProfile(true);
     try {
       const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com/api/auth/profile`,
+        `https://healthbot-production-3c7d.up.railway.app/api/auth/profile`,
         {
           method: "PUT",
           headers: {
@@ -567,7 +566,7 @@ export function ChatDashboard() {
     setSavingPassword(true);
     try {
       const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com/api/auth/change-password`,
+        `https://healthbot-production-3c7d.up.railway.app/api/auth/change-password`,
         {
           method: "PUT",
           headers: {
@@ -616,7 +615,7 @@ export function ChatDashboard() {
       const method = accountAction.type === "delete" ? "DELETE" : "POST";
 
       const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com${endpoint}`,
+        `https://healthbot-production-3c7d.up.railway.app${endpoint}`,
         {
           method: method,
           headers: {
@@ -775,7 +774,7 @@ export function ChatDashboard() {
 
     try {
       const res = await axios.post(
-        "https://healthbot-backend-ezxv.onrender.com/api/chat/message",
+        "https://healthbot-production-3c7d.up.railway.app/api/chat/message",
         { text: textToSend, image: currentImg },
         { headers: { Authorization: `Bearer ${token}` } },
       );
