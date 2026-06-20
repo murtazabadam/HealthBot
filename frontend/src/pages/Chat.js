@@ -49,6 +49,7 @@ import {
   MicOff,
   Play,
   Pause,
+  RotateCcw,
 } from "lucide-react";
 
 // Import the real Gemini frontend service
@@ -123,7 +124,7 @@ export function ChatDashboard() {
       if (!token) return;
       try {
         const res = await fetch(
-          "https://healthbot-backend-ezxv.onrender.com/api/auth/profile",
+          "https://healthbot-production-3c7d.up.railway.app/api/auth/profile",
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -331,7 +332,7 @@ export function ChatDashboard() {
   }, [messages, loading, page]);
 
   // --- ENHANCED TTS LOGIC (Mobile Play/Pause/Resume Fix) ---
-  const speakText = (text, id) => {
+  const speakText = (text, id, forceReplay = false) => {
     const synth = window.speechSynthesis;
 
     if (!synth) {
@@ -339,7 +340,11 @@ export function ChatDashboard() {
       return;
     }
 
-    if (playingMessageId === id) {
+    if (forceReplay) {
+      synth.cancel();
+      setPlayingMessageId(null);
+      setIsPaused(false);
+    } else if (playingMessageId === id) {
       if (synth.paused || isPaused) {
         synth.resume();
         setIsPaused(false);
@@ -356,65 +361,64 @@ export function ChatDashboard() {
     setPlayingMessageId(id);
     setIsPaused(false);
 
-    setTimeout(() => {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utteranceRef.current = utterance;
-      window.speechBugFixUtterance = utterance;
+    // REMOVED setTimeout: Mobile browsers strictly block TTS if not triggered synchronously by a user tap.
+    const utterance = new SpeechSynthesisUtterance(text);
+    utteranceRef.current = utterance;
+    window.speechBugFixUtterance = utterance;
 
-      utterance.pitch = 0.8;
-      utterance.rate = 0.95;
+    utterance.pitch = 0.8;
+    utterance.rate = 0.95;
 
-      utterance.onstart = () => setIsPaused(false);
-      utterance.onpause = () => setIsPaused(true);
-      utterance.onresume = () => setIsPaused(false);
+    utterance.onstart = () => setIsPaused(false);
+    utterance.onpause = () => setIsPaused(true);
+    utterance.onresume = () => setIsPaused(false);
 
-      utterance.onend = () => {
-        setPlayingMessageId(null);
-        setIsPaused(false);
-        window.speechBugFixUtterance = null;
-      };
+    utterance.onend = () => {
+      setPlayingMessageId(null);
+      setIsPaused(false);
+      window.speechBugFixUtterance = null;
+    };
 
-      utterance.onerror = (e) => {
-        console.error("TTS Error:", e);
-        setPlayingMessageId(null);
-        setIsPaused(false);
-        window.speechBugFixUtterance = null;
-      };
+    utterance.onerror = (e) => {
+      console.error("TTS Error:", e);
+      setPlayingMessageId(null);
+      setIsPaused(false);
+      window.speechBugFixUtterance = null;
+    };
 
-      const voices = synth.getVoices();
-      const maleVoiceNames = [
-        "Google UK English Male",
-        "Alex",
-        "Daniel",
-        "Fred",
-        "Guy",
-        "David",
-        "Mark",
-        "Aaron",
-        "Arthur",
-        "Rishi",
-      ];
+    const voices = synth.getVoices();
+    const maleVoiceNames = [
+      "Google UK English Male",
+      "Alex",
+      "Daniel",
+      "Fred",
+      "Guy",
+      "David",
+      "Mark",
+      "Aaron",
+      "Arthur",
+      "Rishi",
+    ];
 
-      let maleVoice = null;
-      for (const name of maleVoiceNames) {
-        maleVoice = voices.find((v) => v.name.includes(name));
-        if (maleVoice) break;
-      }
+    let maleVoice = null;
+    for (const name of maleVoiceNames) {
+      maleVoice = voices.find((v) => v.name.includes(name));
+      if (maleVoice) break;
+    }
 
-      if (!maleVoice) {
-        maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
-      }
+    if (!maleVoice) {
+      maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
+    }
 
-      if (maleVoice) {
-        utterance.voice = maleVoice;
-      }
+    if (maleVoice) {
+      utterance.voice = maleVoice;
+    }
 
-      synth.speak(utterance);
+    synth.speak(utterance);
 
-      if (synth.paused) {
-        synth.resume();
-      }
-    }, 50);
+    if (synth.paused) {
+      synth.resume();
+    }
   };
 
   // --- ENHANCED MIC LOGIC (Mute functionality) ---
@@ -487,7 +491,7 @@ export function ChatDashboard() {
     setSavingProfile(true);
     try {
       const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com/api/auth/profile`,
+        `https://healthbot-production-3c7d.up.railway.app/api/auth/profile`,
         {
           method: "PUT",
           headers: {
@@ -535,7 +539,7 @@ export function ChatDashboard() {
     setSavingPassword(true);
     try {
       const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com/api/auth/change-password`,
+        `https://healthbot-production-3c7d.up.railway.app/api/auth/change-password`,
         {
           method: "PUT",
           headers: {
@@ -721,7 +725,7 @@ export function ChatDashboard() {
 
     try {
       const res = await axios.post(
-        "https://healthbot-backend-ezxv.onrender.com/api/chat/message",
+        "https://healthbot-production-3c7d.up.railway.app/api/chat/message",
         { text: textToSend, image: currentImg },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -1176,34 +1180,49 @@ export function ChatDashboard() {
                           )}
                         </div>
 
-                        {/* TTS SPEAKER BUTTON - Mobile Touch Target Fix */}
-                        <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1">
+                        {/* TTS SPEAKER BUTTONS - Mobile Touch Target Fix */}
+                        <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
                           {msg.sender === "bot" && (
-                            <button
-                              onClick={() => speakText(msg.text, msg.id)}
-                              className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md ${playingMessageId === msg.id ? "text-teal-400 bg-teal-500/10 sm:bg-transparent" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
-                              title="Read aloud"
-                            >
-                              {playingMessageId === msg.id ? (
-                                isPaused ? (
-                                  <Play
-                                    size={18}
-                                    className="sm:w-3.5 sm:h-3.5"
-                                  />
+                            <div className="flex items-center gap-1 ml-1">
+                              <button
+                                onClick={() => speakText(msg.text, msg.id)}
+                                className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md ${playingMessageId === msg.id ? "text-teal-400 bg-teal-500/10 sm:bg-transparent" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
+                                title="Play/Pause"
+                              >
+                                {playingMessageId === msg.id ? (
+                                  isPaused ? (
+                                    <Play
+                                      size={18}
+                                      className="sm:w-3.5 sm:h-3.5"
+                                    />
+                                  ) : (
+                                    <Pause
+                                      size={18}
+                                      className="sm:w-3.5 sm:h-3.5"
+                                    />
+                                  )
                                 ) : (
-                                  <Pause
+                                  <Volume2
                                     size={18}
                                     className="sm:w-3.5 sm:h-3.5"
                                   />
-                                )
-                              ) : (
-                                <Volume2
+                                )}
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  speakText(msg.text, msg.id, true)
+                                }
+                                className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md text-slate-500 ${isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
+                                title="Repeat message"
+                              >
+                                <RotateCcw
                                   size={18}
                                   className="sm:w-3.5 sm:h-3.5"
                                 />
-                              )}
-                            </button>
+                              </button>
+                            </div>
                           )}
                         </span>
                       </div>
