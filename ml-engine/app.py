@@ -187,25 +187,55 @@ def extract_symptoms(text):
 le = LabelEncoder()
 y_encoded = le.fit_transform(y)
 
-# ── Train / test split ─────────────────────────────────────────────────────────
-# Clean training — no noise augmentation.
-# Noise at 15% corrupts symptom patterns and causes wrong predictions.
+# ── Safe dropout augmentation ───────────────────────────────────────────────────
+# Root cause of 100% accuracy: each disease has only ONE unique symptom
+# pattern repeated ~120 times in the raw dataset, so train/test rows are
+# literally identical copies of each other - the model memorizes, not learns.
+#
+# Fix: simulate realistic incomplete symptom reporting by RANDOMLY REMOVING
+# symptoms a patient might not have mentioned. We NEVER add a symptom that
+# wasn't already present, so we can never create medically impossible
+# combinations (e.g. headache -> Paralysis, which happened with bit-flip noise).
+import random as _random
+
+def safe_dropout_augment(X, y, dropout_rate=0.2, copies=2, seed=42):
+    X_aug, y_aug = list(X), list(y)
+    rng = _random.Random(seed)
+    for i in range(len(X)):
+        active_idx = [j for j, v in enumerate(X[i]) if v == 1]
+        if len(active_idx) <= 2:
+            continue  # too sparse already, skip
+        for _ in range(copies):
+            noisy = X[i].copy()
+            for j in active_idx:
+                if rng.random() < dropout_rate:
+                    noisy[j] = 0  # only remove, never add
+            X_aug.append(noisy)
+            y_aug.append(y[i])
+    return np.array(X_aug, dtype=np.float32), np.array(y_aug)
+
+print("Applying safe dropout augmentation (removes symptoms only, never adds)...")
+X_safe, y_safe = safe_dropout_augment(X, y_encoded, dropout_rate=0.2, copies=2)
+print(f"Original: {len(X)} | After safe augmentation: {len(X_safe)}")
+
+# ── Train / test split on augmented data ───────────────────────────────────────
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y_encoded, test_size=0.2, random_state=42, stratify=y_encoded
+    X_safe, y_safe, test_size=0.2, random_state=42, stratify=y_safe
 )
 print(f"Training: {len(X_train)} | Testing: {len(X_test)}")
 
-# ── Train 3 models ─────────────────────────────────────────────────────────────
+# ── Train 3 models — reduced capacity to discourage memorization ───────────────
 print("\nTraining models...")
 
 rf_model = RandomForestClassifier(
-    n_estimators=150, max_depth=None,
-    min_samples_split=2, min_samples_leaf=1,
+    n_estimators=120, max_depth=12,
+    min_samples_split=4, min_samples_leaf=2,
     random_state=42, n_jobs=1
 )
 gb_model = GradientBoostingClassifier(
-    n_estimators=100, learning_rate=0.1,
-    max_depth=5, random_state=42
+    n_estimators=80, learning_rate=0.08,
+    max_depth=3, min_samples_split=4,
+    random_state=42
 )
 nb_model = GaussianNB()
 
@@ -227,7 +257,7 @@ print(f"{nb_acc*100:.1f}%")
 # ── 5-fold cross-validation ────────────────────────────────────────────────────
 print("Running cross-validation...")
 cv        = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-cv_scores = cross_val_score(rf_model, X, y_encoded,
+cv_scores = cross_val_score(rf_model, X_safe, y_safe,
                              cv=cv, scoring='accuracy', n_jobs=1)
 print(f"\nRandom Forest:     {rf_acc*100:.1f}%")
 print(f"Gradient Boosting: {gb_acc*100:.1f}%")
