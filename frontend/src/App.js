@@ -10,8 +10,6 @@ import Chat from "./pages/Chat";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import Profile from "./pages/Profile";
-import AuthCallback from "./pages/AuthCallback"; // <-- NEW IMPORT ADDED HERE
 
 // --- GLOBAL AUTO-LOGOUT INTERCEPTOR ---
 axios.interceptors.response.use(
@@ -45,13 +43,11 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* If logged in, skip Home and go straight to Chat */}
+        {/* If logged in, skip Home/Login/Register and go straight to Chat */}
         <Route
           path="/"
           element={token ? <Navigate to="/chat" replace /> : <Home />}
         />
-
-        {/* If logged in, prevent them from seeing the Login/Register screens */}
         <Route
           path="/login"
           element={token ? <Navigate to="/chat" replace /> : <Login />}
@@ -65,25 +61,12 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* NEW: Google OAuth Callback Route */}
-        <Route path="/auth/callback" element={<AuthCallback />} />
-
-        {/* Protected Chat Route */}
+        {/* Protected Chat Route (Your mega dashboard!) */}
         <Route
           path="/chat"
           element={
             <ProtectedRoute>
               <Chat />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Protected Profile Route */}
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Profile />
             </ProtectedRoute>
           }
         />
