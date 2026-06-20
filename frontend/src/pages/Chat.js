@@ -107,6 +107,16 @@ export function ChatDashboard() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Account Management States (Secure Modal)
+  const [accountAction, setAccountAction] = useState({
+    isOpen: false,
+    type: "",
+    email: "",
+    password: "",
+    loading: false,
+  });
+  const [showAccountActionPw, setShowAccountActionPw] = useState(false);
+
   // Danger Zone States
   const [emergencyAlert, setEmergencyAlert] = useState(false);
 
@@ -292,6 +302,11 @@ export function ChatDashboard() {
   const rawFirstName = rawFullName.trim().split(" ")[0];
   const firstName = formatName(rawFirstName);
 
+  // Smart Greeting Logic Check
+  const isNewUser = user?.createdAt
+    ? Date.now() - new Date(user.createdAt).getTime() < 5 * 60 * 1000
+    : chatHistoryList.length === 0;
+
   // Close sidebar automatically on mobile
   useEffect(() => {
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
@@ -361,7 +376,6 @@ export function ChatDashboard() {
     setPlayingMessageId(id);
     setIsPaused(false);
 
-    // REMOVED setTimeout: Mobile browsers strictly block TTS if not triggered synchronously by a user tap.
     const utterance = new SpeechSynthesisUtterance(text);
     utteranceRef.current = utterance;
     window.speechBugFixUtterance = utterance;
@@ -576,34 +590,43 @@ export function ChatDashboard() {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to permanently delete your account? This action is irreversible.",
-      )
-    ) {
-      return;
-    }
+  // --- ACCOUNT DEACTIVATION & DELETION LOGIC (SECURE) ---
+  const confirmAccountAction = async (e) => {
+    e.preventDefault();
+    setAccountAction((prev) => ({ ...prev, loading: true }));
 
     try {
-      const res = await fetch(
-        "https://healthbot-backend-ezxv.onrender.com/api/auth/delete-account",
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
+      const endpoint =
+        accountAction.type === "delete"
+          ? "https://healthbot-backend-ezxv.onrender.com/api/auth/delete-account"
+          : "https://healthbot-backend-ezxv.onrender.com/api/auth/deactivate";
+      const method = accountAction.type === "delete" ? "DELETE" : "POST";
+
+      const res = await fetch(endpoint, {
+        method: method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      );
+        body: JSON.stringify({
+          email: accountAction.email,
+          password: accountAction.password,
+        }),
+      });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to delete account.");
+        throw new Error(data.message || "Invalid credentials or server error.");
       }
 
-      showToast("Account successfully deleted.");
+      showToast(
+        `Account successfully ${accountAction.type === "delete" ? "deleted" : "deactivated"}.`,
+      );
       localStorage.clear();
-      window.location.href = "/login";
+      window.location.href = "/register";
     } catch (err) {
       showToast(err.message);
+      setAccountAction((prev) => ({ ...prev, loading: false }));
     }
   };
 
@@ -1048,6 +1071,119 @@ export function ChatDashboard() {
         </div>
       )}
 
+      {/* ACCOUNT DELETION/DEACTIVATION MODAL */}
+      {accountAction.isOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div
+            className={`w-full max-w-md p-6 rounded-3xl shadow-2xl ${isDark ? "bg-[#111827] border border-slate-700/50" : "bg-white border border-slate-200"}`}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3
+                className={`text-xl font-bold ${accountAction.type === "delete" ? "text-rose-500" : "text-teal-500"}`}
+              >
+                {accountAction.type === "delete"
+                  ? "Delete Account"
+                  : "Deactivate Account"}
+              </h3>
+              <button
+                onClick={() =>
+                  setAccountAction({
+                    isOpen: false,
+                    type: "",
+                    email: "",
+                    password: "",
+                    loading: false,
+                  })
+                }
+                className="p-1 text-slate-400 hover:text-rose-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p
+              className={`text-sm mb-6 ${isDark ? "text-slate-400" : "text-slate-600"}`}
+            >
+              Please enter your email and password to verify your identity
+              before we {accountAction.type} your account.{" "}
+              <strong className="text-rose-500">
+                This action is irreversible.
+              </strong>
+            </p>
+
+            <form
+              onSubmit={confirmAccountAction}
+              className="flex flex-col gap-4"
+            >
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="Enter your email"
+                  value={accountAction.email}
+                  onChange={(e) =>
+                    setAccountAction((prev) => ({
+                      ...prev,
+                      email: e.target.value,
+                    }))
+                  }
+                  className={`w-full border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showAccountActionPw ? "text" : "password"}
+                    required
+                    placeholder="Enter your password"
+                    value={accountAction.password}
+                    onChange={(e) =>
+                      setAccountAction((prev) => ({
+                        ...prev,
+                        password: e.target.value,
+                      }))
+                    }
+                    className={`w-full border rounded-xl py-3 pl-4 pr-12 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAccountActionPw(!showAccountActionPw)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-500"
+                  >
+                    {showAccountActionPw ? (
+                      <EyeOff size={18} />
+                    ) : (
+                      <Eye size={18} />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={accountAction.loading}
+                className={`w-full mt-4 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 ${
+                  accountAction.type === "delete"
+                    ? "bg-rose-500 hover:bg-rose-600 text-white"
+                    : "bg-teal-500 hover:bg-teal-400 text-slate-900"
+                }`}
+              >
+                {accountAction.loading
+                  ? "Verifying..."
+                  : `Confirm ${accountAction.type === "delete" ? "Deletion" : "Deactivation"}`}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-[100] transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
@@ -1128,12 +1264,16 @@ export function ChatDashboard() {
                   <h2
                     className={`text-3xl md:text-4xl font-bold mb-3 text-center tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}
                   >
-                    Welcome back, {firstName}
+                    {isNewUser
+                      ? `Hello ${firstName}!`
+                      : `Welcome back, ${firstName}`}
                   </h2>
                   <p
                     className={`text-center max-w-md text-sm md:text-base ${isDark ? "text-slate-400" : "text-slate-600"}`}
                   >
-                    I am your AI health assistant. How can I help you today?
+                    {isNewUser
+                      ? "I am your HealthBot. How are you feeling today? Please describe your symptoms."
+                      : "I am your AI health assistant. How can I help you today?"}
                   </p>
                 </div>
               ) : (
@@ -1582,7 +1722,7 @@ export function ChatDashboard() {
                 )}
               </div>
 
-              {/* NEW: ACCOUNT MANAGEMENT CARD (Replaces Danger Zone) */}
+              {/* ACCOUNT MANAGEMENT CARD (Secure Deletion/Deactivation) */}
               <div
                 className={`border rounded-3xl p-6 sm:p-8 mt-6 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 border-slate-700/50" : "bg-white border-slate-200"}`}
               >
@@ -1597,13 +1737,39 @@ export function ChatDashboard() {
                 <p
                   className={`text-sm mb-6 ${isDark ? "text-slate-400" : "text-slate-600"}`}
                 >
-                  You can permanently delete your account here. Warning: This
-                  action is irreversible.
+                  You can temporarily deactivate your account or permanently
+                  delete it. You will need to verify your email and password to
+                  proceed.{" "}
+                  <strong className="text-rose-500">
+                    This action is irreversible.
+                  </strong>
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <button
-                    onClick={handleDeleteAccount}
-                    className={`px-6 py-3 border font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2 ${isDark ? "bg-slate-800 text-rose-400 border-slate-700 hover:bg-rose-500/10 hover:border-rose-500/30" : "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100"}`}
+                    onClick={() =>
+                      setAccountAction({
+                        isOpen: true,
+                        type: "deactivate",
+                        email: "",
+                        password: "",
+                        loading: false,
+                      })
+                    }
+                    className={`flex-1 px-6 py-3 border font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2 ${isDark ? "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"}`}
+                  >
+                    <UserX size={18} /> Deactivate Account
+                  </button>
+                  <button
+                    onClick={() =>
+                      setAccountAction({
+                        isOpen: true,
+                        type: "delete",
+                        email: "",
+                        password: "",
+                        loading: false,
+                      })
+                    }
+                    className={`flex-1 px-6 py-3 border font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2 ${isDark ? "bg-slate-800 text-rose-400 border-slate-700 hover:bg-rose-500/10 hover:border-rose-500/30" : "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100"}`}
                   >
                     <Trash2 size={18} /> Delete Account Permanently
                   </button>
