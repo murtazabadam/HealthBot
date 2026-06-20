@@ -45,7 +45,6 @@ import {
   CalendarDays,
   Volume2,
   AlertTriangle,
-  UserX,
   MicOff,
   Play,
   Pause,
@@ -107,10 +106,9 @@ export function ChatDashboard() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Account Management States (Secure Modal)
+  // Account Management States (Secure Modal - Delete Only)
   const [accountAction, setAccountAction] = useState({
     isOpen: false,
-    type: "",
     email: "",
     password: "",
     loading: false,
@@ -590,38 +588,33 @@ export function ChatDashboard() {
     }
   };
 
-  // --- ACCOUNT DEACTIVATION & DELETION LOGIC (SECURE) ---
+  // --- ACCOUNT DELETION LOGIC (SECURE) ---
   const confirmAccountAction = async (e) => {
     e.preventDefault();
     setAccountAction((prev) => ({ ...prev, loading: true }));
 
     try {
-      const endpoint =
-        accountAction.type === "delete"
-          ? "https://healthbot-backend-ezxv.onrender.com/api/auth/delete-account"
-          : "https://healthbot-backend-ezxv.onrender.com/api/auth/deactivate";
-      const method = accountAction.type === "delete" ? "DELETE" : "POST";
-
-      const res = await fetch(endpoint, {
-        method: method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const res = await fetch(
+        "https://healthbot-backend-ezxv.onrender.com/api/auth/delete-account",
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            email: accountAction.email,
+            password: accountAction.password,
+          }),
         },
-        body: JSON.stringify({
-          email: accountAction.email,
-          password: accountAction.password,
-        }),
-      });
+      );
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.message || "Invalid credentials or server error.");
       }
 
-      showToast(
-        `Account successfully ${accountAction.type === "delete" ? "deleted" : "deactivated"}.`,
-      );
+      showToast("Account successfully deleted.");
       localStorage.clear();
       window.location.href = "/register";
     } catch (err) {
@@ -1071,25 +1064,20 @@ export function ChatDashboard() {
         </div>
       )}
 
-      {/* ACCOUNT DELETION/DEACTIVATION MODAL */}
+      {/* ACCOUNT DELETION MODAL */}
       {accountAction.isOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div
             className={`w-full max-w-md p-6 rounded-3xl shadow-2xl ${isDark ? "bg-[#111827] border border-slate-700/50" : "bg-white border border-slate-200"}`}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3
-                className={`text-xl font-bold ${accountAction.type === "delete" ? "text-rose-500" : "text-teal-500"}`}
-              >
-                {accountAction.type === "delete"
-                  ? "Delete Account"
-                  : "Deactivate Account"}
+              <h3 className="text-xl font-bold text-rose-500">
+                Delete Account
               </h3>
               <button
                 onClick={() =>
                   setAccountAction({
                     isOpen: false,
-                    type: "",
                     email: "",
                     password: "",
                     loading: false,
@@ -1105,7 +1093,7 @@ export function ChatDashboard() {
               className={`text-sm mb-6 ${isDark ? "text-slate-400" : "text-slate-600"}`}
             >
               Please enter your email and password to verify your identity
-              before we {accountAction.type} your account.{" "}
+              before we delete your account.{" "}
               <strong className="text-rose-500">
                 This action is irreversible.
               </strong>
@@ -1169,15 +1157,9 @@ export function ChatDashboard() {
               <button
                 type="submit"
                 disabled={accountAction.loading}
-                className={`w-full mt-4 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 ${
-                  accountAction.type === "delete"
-                    ? "bg-rose-500 hover:bg-rose-600 text-white"
-                    : "bg-teal-500 hover:bg-teal-400 text-slate-900"
-                }`}
+                className="w-full mt-4 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 text-white"
               >
-                {accountAction.loading
-                  ? "Verifying..."
-                  : `Confirm ${accountAction.type === "delete" ? "Deletion" : "Deactivation"}`}
+                {accountAction.loading ? "Verifying..." : "Confirm Deletion"}
               </button>
             </form>
           </div>
@@ -1722,24 +1704,23 @@ export function ChatDashboard() {
                 )}
               </div>
 
-              {/* ACCOUNT MANAGEMENT CARD (Secure Deletion/Deactivation) */}
+              {/* DANGER ZONE CARD (Secure Deletion) */}
               <div
-                className={`border rounded-3xl p-6 sm:p-8 mt-6 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 border-slate-700/50" : "bg-white border-slate-200"}`}
+                className={`border rounded-3xl p-6 sm:p-8 mt-6 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 border-rose-900/30" : "bg-white border-rose-100"}`}
               >
                 <div className="flex items-center gap-3 mb-2">
-                  <UserX className="h-5 w-5 text-teal-500" />
+                  <AlertTriangle className="h-5 w-5 text-rose-500" />
                   <h2
                     className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}
                   >
-                    Account Management
+                    Danger Zone
                   </h2>
                 </div>
                 <p
                   className={`text-sm mb-6 ${isDark ? "text-slate-400" : "text-slate-600"}`}
                 >
-                  You can temporarily deactivate your account or permanently
-                  delete it. You will need to verify your email and password to
-                  proceed.{" "}
+                  You can permanently delete your account here. You will need to
+                  verify your email and password to proceed.{" "}
                   <strong className="text-rose-500">
                     This action is irreversible.
                   </strong>
@@ -1749,27 +1730,12 @@ export function ChatDashboard() {
                     onClick={() =>
                       setAccountAction({
                         isOpen: true,
-                        type: "deactivate",
                         email: "",
                         password: "",
                         loading: false,
                       })
                     }
-                    className={`flex-1 px-6 py-3 border font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2 ${isDark ? "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"}`}
-                  >
-                    <UserX size={18} /> Deactivate Account
-                  </button>
-                  <button
-                    onClick={() =>
-                      setAccountAction({
-                        isOpen: true,
-                        type: "delete",
-                        email: "",
-                        password: "",
-                        loading: false,
-                      })
-                    }
-                    className={`flex-1 px-6 py-3 border font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2 ${isDark ? "bg-slate-800 text-rose-400 border-slate-700 hover:bg-rose-500/10 hover:border-rose-500/30" : "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100"}`}
+                    className={`w-full sm:w-auto px-8 py-3 border font-bold rounded-xl transition-all text-sm flex items-center justify-center gap-2 ${isDark ? "bg-slate-800 text-rose-400 border-slate-700 hover:bg-rose-500/10 hover:border-rose-500/30" : "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100"}`}
                   >
                     <Trash2 size={18} /> Delete Account Permanently
                   </button>
