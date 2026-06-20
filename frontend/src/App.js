@@ -10,6 +10,7 @@ import Chat from "./pages/Chat";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Profile from "./pages/Profile";
 import AuthCallback from "./pages/AuthCallback"; // <-- NEW IMPORT ADDED HERE
 
 // --- GLOBAL AUTO-LOGOUT INTERCEPTOR ---
@@ -31,6 +32,8 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
+  const token = localStorage.getItem("token");
+
   // WAKE UP BACKEND ON APP LOAD
   useEffect(() => {
     // Ping backend on app load to wake it up before user tries to login
@@ -42,9 +45,22 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        {/* If logged in, skip Home and go straight to Chat */}
+        <Route
+          path="/"
+          element={token ? <Navigate to="/chat" replace /> : <Home />}
+        />
+
+        {/* If logged in, prevent them from seeing the Login/Register screens */}
+        <Route
+          path="/login"
+          element={token ? <Navigate to="/chat" replace /> : <Login />}
+        />
+        <Route
+          path="/register"
+          element={token ? <Navigate to="/chat" replace /> : <Register />}
+        />
+
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
@@ -52,12 +68,22 @@ function App() {
         {/* NEW: Google OAuth Callback Route */}
         <Route path="/auth/callback" element={<AuthCallback />} />
 
-        {/* Protected Chat Route (This is your main dashboard!) */}
+        {/* Protected Chat Route */}
         <Route
           path="/chat"
           element={
             <ProtectedRoute>
               <Chat />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected Profile Route */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
             </ProtectedRoute>
           }
         />

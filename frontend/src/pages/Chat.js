@@ -276,8 +276,8 @@ export function ChatDashboard() {
 
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
-  const utteranceRef = useRef(null); // Prevents iOS Safari TTS garbage collection
-  const textareaRef = useRef(null); // Auto-resize textarea ref
+  const utteranceRef = useRef(null);
+  const textareaRef = useRef(null);
 
   const formatName = (str) => {
     if (!str) return "";
@@ -291,23 +291,10 @@ export function ChatDashboard() {
   const rawFirstName = rawFullName.trim().split(" ")[0];
   const firstName = formatName(rawFirstName);
 
+  // Close sidebar automatically on mobile
   useEffect(() => {
-    const now = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    if (messages.length === 0) {
-      setMessages([
-        {
-          id: "welcome",
-          sender: "bot",
-          text: `Hello ${firstName}! I am your HealthBot. How are you feeling today? Please describe your symptoms.`,
-          time: now,
-        },
-      ]);
-    }
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
-  }, [firstName, messages.length]);
+  }, []);
 
   useEffect(() => {
     if (appSettings.saveHistory && messages.length > 1) {
@@ -343,7 +330,7 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  // --- THE ULTIMATE ROCK-SOLID TTS LOGIC ---
+  // --- ENHANCED TTS LOGIC (Mobile Play/Pause/Resume Fix) ---
   const speakText = (text, id) => {
     const synth = window.speechSynthesis;
 
@@ -353,83 +340,81 @@ export function ChatDashboard() {
     }
 
     if (playingMessageId === id) {
-      if (isPaused) {
+      if (synth.paused || isPaused) {
         synth.resume();
         setIsPaused(false);
-      } else {
+      } else if (synth.speaking) {
         synth.pause();
         setIsPaused(true);
       }
       return;
     }
 
-    if (synth.paused) {
-      synth.resume();
-    }
+    synth.resume();
     synth.cancel();
 
     setPlayingMessageId(id);
     setIsPaused(false);
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utteranceRef.current = utterance;
+      window.speechBugFixUtterance = utterance;
 
-    utteranceRef.current = utterance;
-    window.__speechBugFixKeeper = utterance;
+      utterance.pitch = 0.8;
+      utterance.rate = 0.95;
 
-    utterance.pitch = 0.8;
-    utterance.rate = 0.95;
+      utterance.onstart = () => setIsPaused(false);
+      utterance.onpause = () => setIsPaused(true);
+      utterance.onresume = () => setIsPaused(false);
 
-    utterance.onstart = () => setIsPaused(false);
-    utterance.onpause = () => setIsPaused(true);
-    utterance.onresume = () => setIsPaused(false);
+      utterance.onend = () => {
+        setPlayingMessageId(null);
+        setIsPaused(false);
+        window.speechBugFixUtterance = null;
+      };
 
-    utterance.onend = () => {
-      setPlayingMessageId((currentId) => {
-        if (currentId === id) return null;
-        return currentId;
-      });
-      setIsPaused(false);
-      window.__speechBugFixKeeper = null;
-    };
-
-    utterance.onerror = (e) => {
-      if (e.error !== "interrupted" && e.error !== "canceled") {
+      utterance.onerror = (e) => {
         console.error("TTS Error:", e);
+        setPlayingMessageId(null);
+        setIsPaused(false);
+        window.speechBugFixUtterance = null;
+      };
+
+      const voices = synth.getVoices();
+      const maleVoiceNames = [
+        "Google UK English Male",
+        "Alex",
+        "Daniel",
+        "Fred",
+        "Guy",
+        "David",
+        "Mark",
+        "Aaron",
+        "Arthur",
+        "Rishi",
+      ];
+
+      let maleVoice = null;
+      for (const name of maleVoiceNames) {
+        maleVoice = voices.find((v) => v.name.includes(name));
+        if (maleVoice) break;
       }
-      setPlayingMessageId((currentId) => {
-        if (currentId === id) return null;
-        return currentId;
-      });
-      setIsPaused(false);
-      window.__speechBugFixKeeper = null;
-    };
 
-    const voices = synth.getVoices();
-    const preferredVoices = [
-      "Google UK English Male",
-      "Alex",
-      "Daniel",
-      "Fred",
-      "Google US English",
-      "Samantha",
-      "Rishi",
-      "Guy",
-      "David",
-    ];
+      if (!maleVoice) {
+        maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
+      }
 
-    let selectedVoice = voices.find((v) =>
-      preferredVoices.some((name) => v.name.includes(name)),
-    );
-    if (!selectedVoice) {
-      selectedVoice =
-        voices.find((v) => v.name.toLowerCase().includes("male")) || voices[0];
-    }
+      if (maleVoice) {
+        utterance.voice = maleVoice;
+      }
 
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
+      synth.speak(utterance);
 
-    synth.speak(utterance);
+      if (synth.paused) {
+        synth.resume();
+      }
+    }, 50);
   };
 
   // --- ENHANCED MIC LOGIC (Mute functionality) ---
@@ -587,7 +572,6 @@ export function ChatDashboard() {
     }
   };
 
-  // --- NEW ACCOUNT DELETION LOGIC ---
   const handleDeleteAccount = async () => {
     if (
       !window.confirm(
@@ -631,19 +615,8 @@ export function ChatDashboard() {
   };
 
   const handleNewChat = () => {
-    const now = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
     setActiveSessionId(Date.now());
-    setMessages([
-      {
-        id: "welcome",
-        sender: "bot",
-        text: `Hello ${firstName}! I am your HealthBot. How are you feeling today? Please describe your symptoms.`,
-        time: now,
-      },
-    ]);
+    setMessages([]);
     handleNavClick("chat");
   };
 
@@ -739,7 +712,7 @@ export function ChatDashboard() {
 
     setInputText("");
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto"; // Reset height
+      textareaRef.current.style.height = "auto";
     }
 
     const currentImg = uploadedImage;
@@ -995,7 +968,7 @@ export function ChatDashboard() {
       {isReminderModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div
-            className={`w-full max-w-md p-6 rounded-3xl shadow-2xl ${isDark ? "bg-[#111827] border border-slate-700/50" : "bg-white border border-slate-200"}`}
+            className={`w-full max-w-md p-6 rounded-3xl shadow-2xl ${isDark ? "bg-[#111827] border border-slate-700/50" : "bg-white border-slate-200"}`}
           >
             <div className="flex justify-between items-center mb-6">
               <h3
@@ -1084,7 +1057,7 @@ export function ChatDashboard() {
         <SidebarContent />
       </div>
 
-      {/* Main Content Area - Strict Flex Column to prevent keyboard jump */}
+      {/* Main Content Area - Strict Flex Column */}
       <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative overflow-hidden">
         {/* HEADER - Strict Flex None */}
         <header
@@ -1141,88 +1114,123 @@ export function ChatDashboard() {
         <div className="flex-1 overflow-y-auto pt-6 pb-6 px-4 lg:px-6 no-scrollbar relative z-0">
           {/* VIEW: CHAT */}
           {page === "chat" && (
-            <div className="max-w-4xl mx-auto space-y-6">
-              <div className="flex justify-center">
-                <span
-                  className={`text-[9px] px-3 py-1 rounded-full font-bold uppercase tracking-widest border transition-colors duration-300 ${isDark ? "bg-slate-800/50 text-slate-500 border-slate-700/50" : "bg-slate-100 text-slate-400 border-slate-200"}`}
-                >
-                  Session Started Today
-                </span>
-              </div>
-
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2`}
-                >
-                  <div
-                    className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : isDark ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"}`}
-                  >
-                    {msg.sender === "user" ? (
-                      <User size={18} className="text-teal-500" />
-                    ) : (
-                      <Activity size={18} className="text-teal-500" />
-                    )}
+            <div className="max-w-4xl mx-auto h-full flex flex-col justify-end space-y-6">
+              {/* CLAUDE STYLE GREETING FOR NEW CHAT */}
+              {messages.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
+                  <div className="w-20 h-20 bg-teal-500/10 border border-teal-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(45,212,191,0.15)]">
+                    <Activity className="h-10 w-10 text-teal-400" />
                   </div>
-                  <div
-                    className={`flex flex-col gap-1.5 ${msg.sender === "user" ? "items-end" : ""}`}
+                  <h2
+                    className={`text-3xl md:text-4xl font-bold mb-3 text-center tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}
                   >
-                    <div
-                      className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none"}`}
+                    Welcome back, {firstName}
+                  </h2>
+                  <p
+                    className={`text-center max-w-md text-sm md:text-base ${isDark ? "text-slate-400" : "text-slate-600"}`}
+                  >
+                    I am your AI health assistant. How can I help you today?
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-center mt-4">
+                    <span
+                      className={`text-[9px] px-3 py-1 rounded-full font-bold uppercase tracking-widest border transition-colors duration-300 ${isDark ? "bg-slate-800/50 text-slate-500 border-slate-700/50" : "bg-slate-100 text-slate-400 border-slate-200"}`}
                     >
-                      {msg.image && (
-                        <img
-                          src={msg.image}
-                          alt="Upload"
-                          className="max-w-full rounded-lg mb-3 border border-white/10 shadow-lg"
-                        />
-                      )}
-                      {msg.text && (
-                        <div className="whitespace-pre-wrap">{msg.text}</div>
-                      )}
-                    </div>
-
-                    {/* TTS SPEAKER BUTTON - Mobile Touch Target Fix */}
-                    <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1">
-                      {msg.time}
-                      {msg.sender === "bot" && (
-                        <button
-                          onClick={() => speakText(msg.text, msg.id)}
-                          className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md ${playingMessageId === msg.id ? "text-teal-400 bg-teal-500/10 sm:bg-transparent" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
-                          title="Read aloud"
-                        >
-                          {playingMessageId === msg.id ? (
-                            isPaused ? (
-                              <Play size={18} className="sm:w-3.5 sm:h-3.5" />
-                            ) : (
-                              <Pause size={18} className="sm:w-3.5 sm:h-3.5" />
-                            )
-                          ) : (
-                            <Volume2 size={18} className="sm:w-3.5 sm:h-3.5" />
-                          )}
-                        </button>
-                      )}
+                      Session Started Today
                     </span>
                   </div>
-                </div>
-              ))}
-              {loading && (
-                <div className="flex gap-3 animate-pulse">
-                  <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center border ${isDark ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"}`}
-                  >
-                    <Activity size={18} className="text-teal-500 opacity-50" />
-                  </div>
-                  <div
-                    className={`p-4 rounded-2xl rounded-tl-none border flex gap-1 ${isDark ? "bg-slate-800/40 border-slate-700/30" : "bg-slate-50 border-slate-200"}`}
-                  >
-                    <span className="w-1 h-1 bg-teal-500 rounded-full animate-bounce" />
-                    <span className="w-1 h-1 bg-teal-500 rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-1 h-1 bg-teal-500 rounded-full animate-bounce [animation-delay:0.4s]" />
-                  </div>
-                </div>
+
+                  {messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`flex gap-3 ${msg.sender === "user" ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-2`}
+                    >
+                      <div
+                        className={`w-9 h-9 rounded-xl shrink-0 flex items-center justify-center border ${msg.sender === "user" ? "bg-teal-500/10 border-teal-500/20" : isDark ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"}`}
+                      >
+                        {msg.sender === "user" ? (
+                          <User size={18} className="text-teal-500" />
+                        ) : (
+                          <Activity size={18} className="text-teal-500" />
+                        )}
+                      </div>
+                      <div
+                        className={`flex flex-col gap-1.5 ${msg.sender === "user" ? "items-end" : ""}`}
+                      >
+                        <div
+                          className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none"}`}
+                        >
+                          {msg.image && (
+                            <img
+                              src={msg.image}
+                              alt="Upload"
+                              className="max-w-full rounded-lg mb-3 border border-white/10 shadow-lg"
+                            />
+                          )}
+                          {msg.text && (
+                            <div className="whitespace-pre-wrap">
+                              {msg.text}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* TTS SPEAKER BUTTON - Mobile Touch Target Fix */}
+                        <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1">
+                          {msg.time}
+                          {msg.sender === "bot" && (
+                            <button
+                              onClick={() => speakText(msg.text, msg.id)}
+                              className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md ${playingMessageId === msg.id ? "text-teal-400 bg-teal-500/10 sm:bg-transparent" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
+                              title="Read aloud"
+                            >
+                              {playingMessageId === msg.id ? (
+                                isPaused ? (
+                                  <Play
+                                    size={18}
+                                    className="sm:w-3.5 sm:h-3.5"
+                                  />
+                                ) : (
+                                  <Pause
+                                    size={18}
+                                    className="sm:w-3.5 sm:h-3.5"
+                                  />
+                                )
+                              ) : (
+                                <Volume2
+                                  size={18}
+                                  className="sm:w-3.5 sm:h-3.5"
+                                />
+                              )}
+                            </button>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {loading && (
+                    <div className="flex gap-3 animate-pulse">
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center border ${isDark ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"}`}
+                      >
+                        <Activity
+                          size={18}
+                          className="text-teal-500 opacity-50"
+                        />
+                      </div>
+                      <div
+                        className={`p-4 rounded-2xl rounded-tl-none border flex gap-1 ${isDark ? "bg-slate-800/40 border-slate-700/30" : "bg-slate-50 border-slate-200"}`}
+                      >
+                        <span className="w-1 h-1 bg-teal-500 rounded-full animate-bounce" />
+                        <span className="w-1 h-1 bg-teal-500 rounded-full animate-bounce [animation-delay:0.2s]" />
+                        <span className="w-1 h-1 bg-teal-500 rounded-full animate-bounce [animation-delay:0.4s]" />
+                      </div>
+                    </div>
+                  )}
+                  <div ref={bottomRef} className="h-2" />
+                </>
               )}
-              <div ref={bottomRef} className="h-2" />
             </div>
           )}
 
@@ -1823,15 +1831,15 @@ export function ChatDashboard() {
           )}
         </div>
 
-        {/* --- INPUT BAR (Strict Flex None) --- */}
+        {/* --- INPUT BAR --- */}
         {page === "chat" && (
           <div
             className={`flex-none p-3 sm:p-4 lg:p-6 border-t w-full relative z-10 pb-4 sm:pb-6 transition-colors duration-300 ${isDark ? "bg-[#020617] border-slate-800/40 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]" : "bg-white border-slate-200 shadow-sm"}`}
           >
             <div className="max-w-4xl mx-auto">
               {/* Auto-Hiding Quick Symptoms */}
-              {messages.length <= 1 && (
-                <div className="flex overflow-x-auto gap-2 mb-3 no-scrollbar pb-1">
+              {messages.length === 0 && (
+                <div className="flex overflow-x-auto gap-2 mb-3 no-scrollbar pb-1 justify-center w-full">
                   {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
                     <button
                       key={symptom}
