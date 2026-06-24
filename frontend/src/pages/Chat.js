@@ -132,7 +132,7 @@ export function ChatDashboard() {
       if (!token) return;
       try {
         const res = await fetch(
-          "https://healthbot-backend-ezxv.onrender.com/api/auth/profile",
+          "https://healthbot-production-3c7d.up.railway.app/api/auth/profile",
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -368,69 +368,73 @@ export function ChatDashboard() {
       return;
     }
 
-    synth.resume();
+    // Cancel any active speech to clear buffers
     synth.cancel();
 
-    setPlayingMessageId(id);
-    setIsPaused(false);
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utteranceRef.current = utterance;
-    window.speechBugFixUtterance = utterance;
-
-    utterance.pitch = 0.8;
-    utterance.rate = 0.95;
-
-    utterance.onstart = () => setIsPaused(false);
-    utterance.onpause = () => setIsPaused(true);
-    utterance.onresume = () => setIsPaused(false);
-
-    utterance.onend = () => {
-      setPlayingMessageId(null);
+    // Small delay ensures mobile OS clears the audio thread before starting new
+    setTimeout(() => {
+      setPlayingMessageId(id);
       setIsPaused(false);
-      window.speechBugFixUtterance = null;
-    };
 
-    utterance.onerror = (e) => {
-      console.error("TTS Error:", e);
-      setPlayingMessageId(null);
-      setIsPaused(false);
-      window.speechBugFixUtterance = null;
-    };
+      const utterance = new SpeechSynthesisUtterance(text);
+      utteranceRef.current = utterance;
+      window.speechBugFixUtterance = utterance;
 
-    const voices = synth.getVoices();
-    const maleVoiceNames = [
-      "Google UK English Male",
-      "Alex",
-      "Daniel",
-      "Fred",
-      "Guy",
-      "David",
-      "Mark",
-      "Aaron",
-      "Arthur",
-      "Rishi",
-    ];
+      utterance.pitch = 0.8;
+      utterance.rate = 0.95;
 
-    let maleVoice = null;
-    for (const name of maleVoiceNames) {
-      maleVoice = voices.find((v) => v.name.includes(name));
-      if (maleVoice) break;
-    }
+      utterance.onstart = () => setIsPaused(false);
+      utterance.onpause = () => setIsPaused(true);
+      utterance.onresume = () => setIsPaused(false);
 
-    if (!maleVoice) {
-      maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
-    }
+      utterance.onend = () => {
+        setPlayingMessageId(null);
+        setIsPaused(false);
+        window.speechBugFixUtterance = null;
+      };
 
-    if (maleVoice) {
-      utterance.voice = maleVoice;
-    }
+      utterance.onerror = (e) => {
+        console.error("TTS Error:", e);
+        setPlayingMessageId(null);
+        setIsPaused(false);
+        window.speechBugFixUtterance = null;
+      };
 
-    synth.speak(utterance);
+      const voices = synth.getVoices();
+      const maleVoiceNames = [
+        "Google UK English Male",
+        "Alex",
+        "Daniel",
+        "Fred",
+        "Guy",
+        "David",
+        "Mark",
+        "Aaron",
+        "Arthur",
+        "Rishi",
+      ];
 
-    if (synth.paused) {
-      synth.resume();
-    }
+      let maleVoice = null;
+      for (const name of maleVoiceNames) {
+        maleVoice = voices.find((v) => v.name.includes(name));
+        if (maleVoice) break;
+      }
+
+      if (!maleVoice) {
+        maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
+      }
+
+      if (maleVoice) {
+        utterance.voice = maleVoice;
+      }
+
+      synth.speak(utterance);
+
+      // Force resume to unfreeze stuck Android/iOS mobile engines
+      if (synth.paused) {
+        synth.resume();
+      }
+    }, 50);
   };
 
   // --- ENHANCED MIC LOGIC (Mute functionality) ---
@@ -503,7 +507,7 @@ export function ChatDashboard() {
     setSavingProfile(true);
     try {
       const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com/api/auth/profile`,
+        `https://healthbot-production-3c7d.up.railway.app/api/auth/profile`,
         {
           method: "PUT",
           headers: {
@@ -551,7 +555,7 @@ export function ChatDashboard() {
     setSavingPassword(true);
     try {
       const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com/api/auth/change-password`,
+        `https://healthbot-production-3c7d.up.railway.app/api/auth/change-password`,
         {
           method: "PUT",
           headers: {
@@ -687,11 +691,11 @@ export function ChatDashboard() {
     e.stopPropagation(); // Prevents the chat from loading when you click delete
     if (window.confirm("Are you sure you want to delete this specific chat?")) {
       setChatHistoryList((prev) => {
-        const newHistory = prev.filter((session) => session.id !== sessionId);
+        const newHistory = prev.filter(session => session.id !== sessionId);
         localStorage.setItem("chatHistory", JSON.stringify(newHistory));
         return newHistory;
       });
-
+      
       // If the user is currently viewing the chat they just deleted, reset to a new chat
       if (activeSessionId === sessionId) {
         handleNewChat();
@@ -759,7 +763,7 @@ export function ChatDashboard() {
 
     try {
       const res = await axios.post(
-        "https://healthbot-backend-ezxv.onrender.com/api/chat/message",
+        "https://healthbot-production-3c7d.up.railway.app/api/chat/message",
         { text: textToSend, image: currentImg },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -1254,10 +1258,10 @@ export function ChatDashboard() {
         <div className="flex-1 overflow-y-auto pt-6 pb-6 px-4 lg:px-6 no-scrollbar relative z-0">
           {/* VIEW: CHAT */}
           {page === "chat" && (
-            <div className="max-w-4xl mx-auto h-full flex flex-col justify-end space-y-6">
+            <div className={`max-w-4xl mx-auto space-y-6 ${messages.length === 0 ? "h-full flex flex-col justify-center" : ""}`}>
               {/* CLAUDE STYLE GREETING FOR NEW CHAT */}
               {messages.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
+                <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500 pb-20">
                   <div className="w-20 h-20 bg-teal-500/10 border border-teal-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(45,212,191,0.15)]">
                     <Activity className="h-10 w-10 text-teal-400" />
                   </div>
