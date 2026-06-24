@@ -344,7 +344,7 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  // --- STRICT MOBILE-COMPLIANT TTS LOGIC ---
+  // --- MOBILE-COMPLIANT TTS LOGIC ---
   const speakText = (text, id, forceReplay = false) => {
     const synth = window.speechSynthesis;
 
@@ -353,25 +353,23 @@ export function ChatDashboard() {
       return;
     }
 
-    // Completely reset engine if replay is forced
-    if (forceReplay) {
-      synth.cancel();
-      setPlayingMessageId(null);
-      setIsPaused(false);
-    }
-    // Handle Pause/Resume immediately on the tap event thread
-    else if (playingMessageId === id) {
-      if (synth.paused || isPaused) {
-        synth.resume();
-        setIsPaused(false);
-      } else if (synth.speaking) {
+    // Toggle behavior for Play/Pause
+    if (playingMessageId === id && !forceReplay) {
+      if (synth.speaking && !synth.paused) {
         synth.pause();
         setIsPaused(true);
+      } else if (synth.paused) {
+        synth.resume();
+        setIsPaused(false);
+        // MOBILE RESUME SAFETY: If mobile browser blocks resume, force re-speak
+        setTimeout(() => {
+          if (synth.paused) speakText(text, id, true);
+        }, 100);
       }
       return;
     }
 
-    // New playback execution
+    // Completely reset engine
     synth.cancel();
     setPlayingMessageId(id);
     setIsPaused(false);
@@ -661,15 +659,6 @@ export function ChatDashboard() {
         handleNewChat();
       }
       showToast("Chat session deleted.");
-    }
-  };
-
-  // --- NEW: DELETE SINGLE MESSAGE WITHIN CHAT ---
-  const deleteMessage = (id) => {
-    if (
-      window.confirm("Are you sure you want to delete this specific message?")
-    ) {
-      setMessages((prev) => prev.filter((msg) => msg.id !== id));
     }
   };
 
@@ -1331,7 +1320,7 @@ export function ChatDashboard() {
                           )}
                         </div>
 
-                        {/* TTS SPEAKER & DELETE BUTTONS */}
+                        {/* TTS SPEAKER BUTTONS */}
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
                           {msg.sender === "bot" && (
@@ -1375,19 +1364,6 @@ export function ChatDashboard() {
                               </button>
                             </div>
                           )}
-
-                          {/* DELETE INDIVIDUAL MESSAGE BUTTON */}
-                          <div
-                            className={`flex items-center ml-2 pl-2 border-l ${isDark ? "border-slate-700" : "border-slate-300"}`}
-                          >
-                            <button
-                              onClick={() => deleteMessage(msg.id)}
-                              className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md text-slate-500 hover:text-rose-500 ${isDark ? "hover:bg-rose-500/10" : "hover:bg-rose-100"}`}
-                              title="Delete Message"
-                            >
-                              <Trash2 size={18} className="sm:w-3.5 sm:h-3.5" />
-                            </button>
-                          </div>
                         </span>
                       </div>
                     </div>
