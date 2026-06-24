@@ -344,7 +344,7 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  // --- BULLETPROOF TTS LOGIC ---
+  // --- STRICT MOBILE-COMPLIANT TTS LOGIC ---
   const speakText = (text, id, forceReplay = false) => {
     const synth = window.speechSynthesis;
 
@@ -353,20 +353,17 @@ export function ChatDashboard() {
       return;
     }
 
+    // Completely reset engine if replay is forced
     if (forceReplay) {
       synth.cancel();
       setPlayingMessageId(null);
       setIsPaused(false);
-    } else if (playingMessageId === id) {
+    }
+    // Handle Pause/Resume immediately on the tap event thread
+    else if (playingMessageId === id) {
       if (synth.paused || isPaused) {
         synth.resume();
         setIsPaused(false);
-        // MOBILE FIX: Kickstart engine if it went to sleep
-        setTimeout(() => {
-          if (synth.paused) {
-            synth.resume();
-          }
-        }, 50);
       } else if (synth.speaking) {
         synth.pause();
         setIsPaused(true);
@@ -374,68 +371,65 @@ export function ChatDashboard() {
       return;
     }
 
-    // Completely clear existing cache before starting a new clip
+    // New playback execution
     synth.cancel();
+    setPlayingMessageId(id);
+    setIsPaused(false);
 
-    // Add tiny delay for mobile browser buffers to clear
-    setTimeout(() => {
-      setPlayingMessageId(id);
+    const utterance = new SpeechSynthesisUtterance(text);
+    utteranceRef.current = utterance;
+    window.speechBugFixUtterance = utterance; // Prevent garbage collection mid-speech
+
+    utterance.pitch = 0.8;
+    utterance.rate = 0.95;
+
+    utterance.onstart = () => setIsPaused(false);
+    utterance.onpause = () => setIsPaused(true);
+    utterance.onresume = () => setIsPaused(false);
+
+    utterance.onend = () => {
+      setPlayingMessageId(null);
       setIsPaused(false);
+      window.speechBugFixUtterance = null;
+    };
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      utteranceRef.current = utterance;
-      window.speechBugFixUtterance = utterance; // Prevent garbage collection
+    utterance.onerror = (e) => {
+      console.error("TTS Error:", e);
+      setPlayingMessageId(null);
+      setIsPaused(false);
+      window.speechBugFixUtterance = null;
+    };
 
-      utterance.pitch = 0.8;
-      utterance.rate = 0.95;
+    const voices = synth.getVoices();
+    const maleVoiceNames = [
+      "Google UK English Male",
+      "Alex",
+      "Daniel",
+      "Fred",
+      "Guy",
+      "David",
+      "Mark",
+      "Aaron",
+      "Arthur",
+      "Rishi",
+    ];
 
-      utterance.onstart = () => setIsPaused(false);
-      utterance.onpause = () => setIsPaused(true);
-      utterance.onresume = () => setIsPaused(false);
+    let maleVoice = null;
+    for (const name of maleVoiceNames) {
+      maleVoice = voices.find((v) => v.name.includes(name));
+      if (maleVoice) break;
+    }
 
-      utterance.onend = () => {
-        setPlayingMessageId(null);
-        setIsPaused(false);
-        window.speechBugFixUtterance = null;
-      };
+    if (!maleVoice) {
+      maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
+    }
 
-      utterance.onerror = (e) => {
-        console.error("TTS Error:", e);
-        setPlayingMessageId(null);
-        setIsPaused(false);
-        window.speechBugFixUtterance = null;
-      };
+    if (maleVoice) {
+      utterance.voice = maleVoice;
+    }
 
-      const voices = synth.getVoices();
-      const maleVoiceNames = [
-        "Google UK English Male",
-        "Alex",
-        "Daniel",
-        "Fred",
-        "Guy",
-        "David",
-        "Mark",
-        "Aaron",
-        "Arthur",
-        "Rishi",
-      ];
-
-      let maleVoice = null;
-      for (const name of maleVoiceNames) {
-        maleVoice = voices.find((v) => v.name.includes(name));
-        if (maleVoice) break;
-      }
-
-      if (!maleVoice) {
-        maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
-      }
-
-      if (maleVoice) {
-        utterance.voice = maleVoice;
-      }
-
-      synth.speak(utterance);
-    }, 50);
+    // Execute immediately so mobile browsers register the user tap gesture
+    synth.speak(utterance);
   };
 
   // --- ENHANCED MIC LOGIC (Mute functionality) ---
@@ -651,9 +645,9 @@ export function ChatDashboard() {
     handleNavClick("chat");
   };
 
-  // --- NEW: DELETE SINGLE CHAT ---
+  // --- DELETE SINGLE CHAT SESSION ---
   const deleteSession = (e, id) => {
-    e.stopPropagation(); // Prevents loading the chat when you just want to delete it
+    e.stopPropagation();
     if (
       window.confirm(
         "Are you sure you want to permanently delete this chat session?",
@@ -663,11 +657,19 @@ export function ChatDashboard() {
       setChatHistoryList(updatedHistory);
       localStorage.setItem("chatHistory", JSON.stringify(updatedHistory));
 
-      // If they deleted the chat they are currently looking at, start a new chat
       if (activeSessionId === id) {
         handleNewChat();
       }
       showToast("Chat session deleted.");
+    }
+  };
+
+  // --- NEW: DELETE SINGLE MESSAGE WITHIN CHAT ---
+  const deleteMessage = (id) => {
+    if (
+      window.confirm("Are you sure you want to delete this specific message?")
+    ) {
+      setMessages((prev) => prev.filter((msg) => msg.id !== id));
     }
   };
 
@@ -1329,7 +1331,7 @@ export function ChatDashboard() {
                           )}
                         </div>
 
-                        {/* TTS SPEAKER BUTTONS - Mobile Touch Target Fix */}
+                        {/* TTS SPEAKER & DELETE BUTTONS */}
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
                           {msg.sender === "bot" && (
@@ -1373,6 +1375,19 @@ export function ChatDashboard() {
                               </button>
                             </div>
                           )}
+
+                          {/* DELETE INDIVIDUAL MESSAGE BUTTON */}
+                          <div
+                            className={`flex items-center ml-2 pl-2 border-l ${isDark ? "border-slate-700" : "border-slate-300"}`}
+                          >
+                            <button
+                              onClick={() => deleteMessage(msg.id)}
+                              className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md text-slate-500 hover:text-rose-500 ${isDark ? "hover:bg-rose-500/10" : "hover:bg-rose-100"}`}
+                              title="Delete Message"
+                            >
+                              <Trash2 size={18} className="sm:w-3.5 sm:h-3.5" />
+                            </button>
+                          </div>
                         </span>
                       </div>
                     </div>
