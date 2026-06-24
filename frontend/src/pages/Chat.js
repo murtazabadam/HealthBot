@@ -682,6 +682,24 @@ export function ChatDashboard() {
     }
   };
 
+  // --- NEW: DELETE SINGLE CHAT FUNCTION ---
+  const deleteSingleChat = (e, sessionId) => {
+    e.stopPropagation(); // Prevents the chat from loading when you click delete
+    if (window.confirm("Are you sure you want to delete this specific chat?")) {
+      setChatHistoryList((prev) => {
+        const newHistory = prev.filter((session) => session.id !== sessionId);
+        localStorage.setItem("chatHistory", JSON.stringify(newHistory));
+        return newHistory;
+      });
+
+      // If the user is currently viewing the chat they just deleted, reset to a new chat
+      if (activeSessionId === sessionId) {
+        handleNewChat();
+      }
+      showToast("Chat deleted.");
+    }
+  };
+
   const sendMessage = async (textOverride = null) => {
     const textToSend = textOverride || inputText;
     if ((!textToSend.trim() && !uploadedImage) || loading) return;
@@ -1781,6 +1799,7 @@ export function ChatDashboard() {
                       desc={session.desc}
                       isDark={isDark}
                       onClick={() => loadChatSession(session)}
+                      onDelete={(e) => deleteSingleChat(e, session.id)}
                     />
                   ))
                 )}
@@ -2336,23 +2355,32 @@ const SidebarBtn = ({ icon: Icon, label, active, onClick, isDark }) => (
   </button>
 );
 
-const HistoryCard = ({ date, title, desc, onClick, isDark }) => (
+const HistoryCard = ({ date, title, desc, onClick, onDelete, isDark }) => (
   <div
     onClick={onClick}
     className={`border rounded-2xl p-6 transition-all cursor-pointer flex items-center justify-between group backdrop-blur-md shadow-sm ${isDark ? "bg-slate-900/80 border-slate-700/50 hover:bg-slate-800/80 hover:border-teal-500/30" : "bg-white border-slate-200 hover:bg-slate-50 hover:border-teal-500/50"}`}
   >
-    <div>
+    <div className="flex-1 pr-4 overflow-hidden">
       <h4
-        className={`font-bold text-lg mb-1 transition-colors ${isDark ? "text-white group-hover:text-teal-400" : "text-slate-900 group-hover:text-teal-500"}`}
+        className={`font-bold text-lg mb-1 transition-colors truncate ${isDark ? "text-white group-hover:text-teal-400" : "text-slate-900 group-hover:text-teal-500"}`}
       >
         {title}
       </h4>
-      <p className="text-slate-500 text-sm mb-2">{desc}</p>
+      <p className="text-slate-500 text-sm mb-2 truncate">{desc}</p>
       <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
         {date}
       </span>
     </div>
-    <ChevronRight className="text-slate-400 group-hover:text-teal-500 transition-colors" />
+    <div className="flex items-center gap-2 shrink-0">
+      <button
+        onClick={onDelete}
+        title="Delete Chat"
+        className={`p-2 rounded-lg transition-all ${isDark ? "text-slate-500 hover:text-rose-400 hover:bg-rose-500/10" : "text-slate-400 hover:text-rose-500 hover:bg-rose-50"}`}
+      >
+        <Trash2 size={18} />
+      </button>
+      <ChevronRight className="text-slate-400 group-hover:text-teal-500 transition-colors" />
+    </div>
   </div>
 );
 
