@@ -344,7 +344,7 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  // --- ENHANCED TTS LOGIC (Mobile Play/Pause/Resume Fix) ---
+  // --- BULLETPROOF TTS LOGIC ---
   const speakText = (text, id, forceReplay = false) => {
     const synth = window.speechSynthesis;
 
@@ -361,6 +361,12 @@ export function ChatDashboard() {
       if (synth.paused || isPaused) {
         synth.resume();
         setIsPaused(false);
+        // MOBILE FIX: Kickstart engine if it went to sleep
+        setTimeout(() => {
+          if (synth.paused) {
+            synth.resume();
+          }
+        }, 50);
       } else if (synth.speaking) {
         synth.pause();
         setIsPaused(true);
@@ -368,17 +374,17 @@ export function ChatDashboard() {
       return;
     }
 
-    // Cancel any active speech to clear buffers
+    // Completely clear existing cache before starting a new clip
     synth.cancel();
 
-    // Small delay ensures mobile OS clears the audio thread before starting new
+    // Add tiny delay for mobile browser buffers to clear
     setTimeout(() => {
       setPlayingMessageId(id);
       setIsPaused(false);
 
       const utterance = new SpeechSynthesisUtterance(text);
       utteranceRef.current = utterance;
-      window.speechBugFixUtterance = utterance;
+      window.speechBugFixUtterance = utterance; // Prevent garbage collection
 
       utterance.pitch = 0.8;
       utterance.rate = 0.95;
@@ -429,11 +435,6 @@ export function ChatDashboard() {
       }
 
       synth.speak(utterance);
-
-      // Force resume to unfreeze stuck Android/iOS mobile engines
-      if (synth.paused) {
-        synth.resume();
-      }
     }, 50);
   };
 
@@ -650,6 +651,26 @@ export function ChatDashboard() {
     handleNavClick("chat");
   };
 
+  // --- NEW: DELETE SINGLE CHAT ---
+  const deleteSession = (e, id) => {
+    e.stopPropagation(); // Prevents loading the chat when you just want to delete it
+    if (
+      window.confirm(
+        "Are you sure you want to permanently delete this chat session?",
+      )
+    ) {
+      const updatedHistory = chatHistoryList.filter((s) => s.id !== id);
+      setChatHistoryList(updatedHistory);
+      localStorage.setItem("chatHistory", JSON.stringify(updatedHistory));
+
+      // If they deleted the chat they are currently looking at, start a new chat
+      if (activeSessionId === id) {
+        handleNewChat();
+      }
+      showToast("Chat session deleted.");
+    }
+  };
+
   const loadSavedAdvice = (title) => {
     const now = new Date().toLocaleTimeString([], {
       hour: "2-digit",
@@ -683,24 +704,6 @@ export function ChatDashboard() {
       localStorage.removeItem("chatHistory");
       handleNewChat();
       showToast("History Cleared");
-    }
-  };
-
-  // --- NEW: DELETE SINGLE CHAT FUNCTION ---
-  const deleteSingleChat = (e, sessionId) => {
-    e.stopPropagation(); // Prevents the chat from loading when you click delete
-    if (window.confirm("Are you sure you want to delete this specific chat?")) {
-      setChatHistoryList((prev) => {
-        const newHistory = prev.filter(session => session.id !== sessionId);
-        localStorage.setItem("chatHistory", JSON.stringify(newHistory));
-        return newHistory;
-      });
-      
-      // If the user is currently viewing the chat they just deleted, reset to a new chat
-      if (activeSessionId === sessionId) {
-        handleNewChat();
-      }
-      showToast("Chat deleted.");
     }
   };
 
@@ -1258,10 +1261,12 @@ export function ChatDashboard() {
         <div className="flex-1 overflow-y-auto pt-6 pb-6 px-4 lg:px-6 no-scrollbar relative z-0">
           {/* VIEW: CHAT */}
           {page === "chat" && (
-            <div className={`max-w-4xl mx-auto space-y-6 ${messages.length === 0 ? "h-full flex flex-col justify-center" : ""}`}>
+            <div
+              className={`max-w-4xl mx-auto flex flex-col space-y-6 pb-12 ${messages.length === 0 ? "h-full justify-center" : ""}`}
+            >
               {/* CLAUDE STYLE GREETING FOR NEW CHAT */}
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500 pb-20">
+                <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
                   <div className="w-20 h-20 bg-teal-500/10 border border-teal-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(45,212,191,0.15)]">
                     <Activity className="h-10 w-10 text-teal-400" />
                   </div>
@@ -1803,7 +1808,7 @@ export function ChatDashboard() {
                       desc={session.desc}
                       isDark={isDark}
                       onClick={() => loadChatSession(session)}
-                      onDelete={(e) => deleteSingleChat(e, session.id)}
+                      onDelete={(e) => deleteSession(e, session.id)}
                     />
                   ))
                 )}
@@ -2364,25 +2369,27 @@ const HistoryCard = ({ date, title, desc, onClick, onDelete, isDark }) => (
     onClick={onClick}
     className={`border rounded-2xl p-6 transition-all cursor-pointer flex items-center justify-between group backdrop-blur-md shadow-sm ${isDark ? "bg-slate-900/80 border-slate-700/50 hover:bg-slate-800/80 hover:border-teal-500/30" : "bg-white border-slate-200 hover:bg-slate-50 hover:border-teal-500/50"}`}
   >
-    <div className="flex-1 pr-4 overflow-hidden">
+    <div>
       <h4
-        className={`font-bold text-lg mb-1 transition-colors truncate ${isDark ? "text-white group-hover:text-teal-400" : "text-slate-900 group-hover:text-teal-500"}`}
+        className={`font-bold text-lg mb-1 transition-colors ${isDark ? "text-white group-hover:text-teal-400" : "text-slate-900 group-hover:text-teal-500"}`}
       >
         {title}
       </h4>
-      <p className="text-slate-500 text-sm mb-2 truncate">{desc}</p>
+      <p className="text-slate-500 text-sm mb-2">{desc}</p>
       <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
         {date}
       </span>
     </div>
-    <div className="flex items-center gap-2 shrink-0">
-      <button
-        onClick={onDelete}
-        title="Delete Chat"
-        className={`p-2 rounded-lg transition-all ${isDark ? "text-slate-500 hover:text-rose-400 hover:bg-rose-500/10" : "text-slate-400 hover:text-rose-500 hover:bg-rose-50"}`}
-      >
-        <Trash2 size={18} />
-      </button>
+    <div className="flex items-center gap-3">
+      {onDelete && (
+        <button
+          onClick={onDelete}
+          className="p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-colors"
+          title="Delete Chat"
+        >
+          <Trash2 size={18} />
+        </button>
+      )}
       <ChevronRight className="text-slate-400 group-hover:text-teal-500 transition-colors" />
     </div>
   </div>
