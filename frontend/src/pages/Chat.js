@@ -344,7 +344,7 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  // --- MOBILE-COMPLIANT TTS LOGIC ---
+  // --- STRICT MOBILE-COMPLIANT TTS LOGIC ---
   const speakText = (text, id, forceReplay = false) => {
     const synth = window.speechSynthesis;
 
@@ -353,7 +353,7 @@ export function ChatDashboard() {
       return;
     }
 
-    // Toggle behavior for Play/Pause
+    // Toggle behavior only if same message, otherwise re-init
     if (playingMessageId === id && !forceReplay) {
       if (synth.speaking && !synth.paused) {
         synth.pause();
@@ -361,15 +361,11 @@ export function ChatDashboard() {
       } else if (synth.paused) {
         synth.resume();
         setIsPaused(false);
-        // MOBILE RESUME SAFETY: If mobile browser blocks resume, force re-speak
-        setTimeout(() => {
-          if (synth.paused) speakText(text, id, true);
-        }, 100);
       }
       return;
     }
 
-    // Completely reset engine
+    // Force Re-initialization (The Mobile Fix)
     synth.cancel();
     setPlayingMessageId(id);
     setIsPaused(false);
@@ -1320,7 +1316,7 @@ export function ChatDashboard() {
                           )}
                         </div>
 
-                        {/* TTS SPEAKER BUTTONS */}
+                        {/* TTS SPEAKER BUTTONS ONLY */}
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
                           {msg.sender === "bot" && (
@@ -1731,7 +1727,7 @@ export function ChatDashboard() {
                   <h2
                     className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}
                   >
-                    Danger Zone
+                    Account Management
                   </h2>
                 </div>
                 <p
