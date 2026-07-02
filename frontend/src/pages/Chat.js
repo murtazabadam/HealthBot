@@ -46,9 +46,7 @@ import {
   Volume2,
   AlertTriangle,
   MicOff,
-  Play,
   Pause,
-  RotateCcw,
 } from "lucide-react";
 
 // Import the real Gemini frontend service
@@ -62,7 +60,6 @@ export function ChatDashboard() {
 
   // --- NEW VOICE & TTS STATES ---
   const [playingMessageId, setPlayingMessageId] = useState(null);
-  const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
   // Real-time Chat & Settings States
@@ -223,6 +220,16 @@ export function ChatDashboard() {
     time: "",
   });
 
+  // --- Utility: Format 24h Time to AM/PM ---
+  const formatTimeAMPM = (timeStr) => {
+    if (!timeStr) return "";
+    let [h, m] = timeStr.split(":");
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12; // Convert 0 to 12
+    return `${hour}:${m} ${ampm}`;
+  };
+
   const openAddReminderModal = () => {
     setEditingReminderId(null);
     setReminderForm({ name: "", date: "", time: "" });
@@ -344,8 +351,8 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  // --- STRICT MOBILE-COMPLIANT TTS LOGIC ---
-  const speakText = (text, id, forceReplay = false) => {
+  // --- MOBILE-COMPLIANT TTS LOGIC (PLAY/STOP) ---
+  const speakText = (text, id) => {
     const synth = window.speechSynthesis;
 
     if (!synth) {
@@ -353,22 +360,16 @@ export function ChatDashboard() {
       return;
     }
 
-    // Toggle behavior only if same message, otherwise re-init
-    if (playingMessageId === id && !forceReplay) {
-      if (synth.speaking && !synth.paused) {
-        synth.pause();
-        setIsPaused(true);
-      } else if (synth.paused) {
-        synth.resume();
-        setIsPaused(false);
-      }
+    // If clicking the same message that is playing, STOP it.
+    if (playingMessageId === id) {
+      synth.cancel();
+      setPlayingMessageId(null);
       return;
     }
 
-    // Force Re-initialization (The Mobile Fix)
+    // Start New Playback
     synth.cancel();
     setPlayingMessageId(id);
-    setIsPaused(false);
 
     const utterance = new SpeechSynthesisUtterance(text);
     utteranceRef.current = utterance;
@@ -377,52 +378,30 @@ export function ChatDashboard() {
     utterance.pitch = 0.8;
     utterance.rate = 0.95;
 
-    utterance.onstart = () => setIsPaused(false);
-    utterance.onpause = () => setIsPaused(true);
-    utterance.onresume = () => setIsPaused(false);
-
     utterance.onend = () => {
       setPlayingMessageId(null);
-      setIsPaused(false);
       window.speechBugFixUtterance = null;
     };
 
     utterance.onerror = (e) => {
       console.error("TTS Error:", e);
       setPlayingMessageId(null);
-      setIsPaused(false);
       window.speechBugFixUtterance = null;
     };
 
     const voices = synth.getVoices();
-    const maleVoiceNames = [
-      "Google UK English Male",
-      "Alex",
-      "Daniel",
-      "Fred",
-      "Guy",
-      "David",
-      "Mark",
-      "Aaron",
-      "Arthur",
-      "Rishi",
-    ];
-
-    let maleVoice = null;
-    for (const name of maleVoiceNames) {
-      maleVoice = voices.find((v) => v.name.includes(name));
-      if (maleVoice) break;
+    // Prioritize Google voices, fallback to any male voice, or the first available
+    let preferredVoice = voices.find((v) => v.name.includes("Google"));
+    if (!preferredVoice) {
+      preferredVoice =
+        voices.find((v) => v.name.toLowerCase().includes("male")) || voices[0];
     }
 
-    if (!maleVoice) {
-      maleVoice = voices.find((v) => v.name.toLowerCase().includes("male"));
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
     }
 
-    if (maleVoice) {
-      utterance.voice = maleVoice;
-    }
-
-    // Execute immediately so mobile browsers register the user tap gesture
+    // Execute immediately
     synth.speak(utterance);
   };
 
@@ -1324,39 +1303,23 @@ export function ChatDashboard() {
                               <button
                                 onClick={() => speakText(msg.text, msg.id)}
                                 className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md ${playingMessageId === msg.id ? "text-teal-400 bg-teal-500/10 sm:bg-transparent" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
-                                title="Play/Pause"
+                                title={
+                                  playingMessageId === msg.id
+                                    ? "Stop playing"
+                                    : "Play message"
+                                }
                               >
                                 {playingMessageId === msg.id ? (
-                                  isPaused ? (
-                                    <Play
-                                      size={18}
-                                      className="sm:w-3.5 sm:h-3.5"
-                                    />
-                                  ) : (
-                                    <Pause
-                                      size={18}
-                                      className="sm:w-3.5 sm:h-3.5"
-                                    />
-                                  )
+                                  <Pause
+                                    size={18}
+                                    className="sm:w-3.5 sm:h-3.5"
+                                  />
                                 ) : (
                                   <Volume2
                                     size={18}
                                     className="sm:w-3.5 sm:h-3.5"
                                   />
                                 )}
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  speakText(msg.text, msg.id, true)
-                                }
-                                className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md text-slate-500 ${isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
-                                title="Repeat message"
-                              >
-                                <RotateCcw
-                                  size={18}
-                                  className="sm:w-3.5 sm:h-3.5"
-                                />
                               </button>
                             </div>
                           )}
@@ -1718,7 +1681,7 @@ export function ChatDashboard() {
                 )}
               </div>
 
-              {/* DANGER ZONE CARD (Secure Deletion) */}
+              {/* ACCOUNT MANAGEMENT CARD (Secure Deletion) */}
               <div
                 className={`border rounded-3xl p-6 sm:p-8 mt-6 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 border-rose-900/30" : "bg-white border-rose-100"}`}
               >
@@ -1874,7 +1837,7 @@ export function ChatDashboard() {
                             <CalendarDays size={14} /> {r.date}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Clock size={14} /> {r.time}
+                            <Clock size={14} /> {formatTimeAMPM(r.time)}
                           </span>
                         </div>
                       </div>
