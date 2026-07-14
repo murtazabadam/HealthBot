@@ -48,7 +48,7 @@ import {
   MicOff,
   Pause,
 } from "lucide-react";
-
+import { API } from '../config';
 // Import the real Gemini frontend service
 import { getGeminiReply, geminiReady } from "../services/gemini";
 
@@ -129,7 +129,7 @@ export function ChatDashboard() {
       if (!token) return;
       try {
         const res = await fetch(
-          "https://healthbot-production-3c7d.up.railway.app/api/auth/profile",
+          API.CHAT_MESSAGE,
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -475,7 +475,7 @@ export function ChatDashboard() {
     setSavingProfile(true);
     try {
       const res = await fetch(
-        `https://healthbot-production-3c7d.up.railway.app/api/auth/profile`,
+        API.PROFILE,
         {
           method: "PUT",
           headers: {
@@ -523,7 +523,7 @@ export function ChatDashboard() {
     setSavingPassword(true);
     try {
       const res = await fetch(
-        `https://healthbot-production-3c7d.up.railway.app/api/auth/change-password`,
+       API.CHANGE_PASSWORD,
         {
           method: "PUT",
           headers: {
@@ -567,7 +567,7 @@ export function ChatDashboard() {
 
     try {
       const res = await fetch(
-        "https://healthbot-backend-ezxv.onrender.com/api/auth/delete-account",
+        API.DELETE_ACCOUNT,
         {
           method: "DELETE",
           headers: {
@@ -732,7 +732,7 @@ export function ChatDashboard() {
 
     try {
       const res = await axios.post(
-        "https://healthbot-production-3c7d.up.railway.app/api/chat/message",
+        API.CHAT_MESSAGE,
         { text: textToSend, image: currentImg },
         { headers: { Authorization: `Bearer ${token}` } },
       );

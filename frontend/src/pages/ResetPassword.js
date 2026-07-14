@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
-
+import { API } from '../config';
 export default function ResetPassword() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -31,7 +31,7 @@ export default function ResetPassword() {
 
     try {
       const res = await fetch(
-        "https://healthbot-backend-ezxv.onrender.com/api/auth/reset-password",
+        API.RESET_PASSWORD,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
