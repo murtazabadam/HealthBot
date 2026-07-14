@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { useNavigate, MemoryRouter } from "react-router-dom";
@@ -220,6 +221,34 @@ export function ChatDashboard() {
     time: "",
   });
 
+  // --- NOTIFICATION WATCHER ---
+  useEffect(() => {
+    // 1. Request permission on load
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+
+    // 2. Check reminders every 60 seconds
+    const interval = setInterval(() => {
+      const now = new Date();
+      const currentTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      const today = now.toISOString().split('T')[0];
+
+      reminders.forEach((reminder) => {
+        if (reminder.date === today && reminder.time === currentTime && reminder.active) {
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification("HealthBot Reminder", {
+              body: `It's time for: ${reminder.name}`,
+              icon: "/favicon.ico"
+            });
+          }
+        }
+      });
+    }, 60000); // Check every 60 seconds
+
+    return () => clearInterval(interval);
+  }, [reminders]);
+
   // --- Utility: Format 24h Time to AM/PM ---
   const formatTimeAMPM = (timeStr) => {
     if (!timeStr) return "";
@@ -292,7 +321,6 @@ export function ChatDashboard() {
 
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
-  const utteranceRef = useRef(null);
   const textareaRef = useRef(null);
 
   const formatName = (str) => {
@@ -351,7 +379,7 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  // --- MOBILE-COMPLIANT TTS LOGIC (PLAY/STOP) ---
+  // --- MOBILE-COMPLIANT TTS LOGIC (PLAY/STOP ONLY) ---
   const speakText = (text, id) => {
     const synth = window.speechSynthesis;
 
@@ -372,36 +400,31 @@ export function ChatDashboard() {
     setPlayingMessageId(id);
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utteranceRef.current = utterance;
-    window.speechBugFixUtterance = utterance; // Prevent garbage collection mid-speech
-
+    
     utterance.pitch = 0.8;
     utterance.rate = 0.95;
 
     utterance.onend = () => {
       setPlayingMessageId(null);
-      window.speechBugFixUtterance = null;
     };
 
     utterance.onerror = (e) => {
       console.error("TTS Error:", e);
       setPlayingMessageId(null);
-      window.speechBugFixUtterance = null;
     };
 
     const voices = synth.getVoices();
     // Prioritize Google voices, fallback to any male voice, or the first available
     let preferredVoice = voices.find((v) => v.name.includes("Google"));
     if (!preferredVoice) {
-      preferredVoice =
-        voices.find((v) => v.name.toLowerCase().includes("male")) || voices[0];
+      preferredVoice = voices.find((v) => v.name.toLowerCase().includes("male")) || voices[0];
     }
-
+    
     if (preferredVoice) {
       utterance.voice = preferredVoice;
     }
 
-    // Execute immediately
+    // Execute immediately so mobile browsers register the user tap gesture
     synth.speak(utterance);
   };
 
@@ -1310,15 +1333,9 @@ export function ChatDashboard() {
                                 }
                               >
                                 {playingMessageId === msg.id ? (
-                                  <Pause
-                                    size={18}
-                                    className="sm:w-3.5 sm:h-3.5"
-                                  />
+                                  <Pause size={18} className="sm:w-3.5 sm:h-3.5" />
                                 ) : (
-                                  <Volume2
-                                    size={18}
-                                    className="sm:w-3.5 sm:h-3.5"
-                                  />
+                                  <Volume2 size={18} className="sm:w-3.5 sm:h-3.5" />
                                 )}
                               </button>
                             </div>
