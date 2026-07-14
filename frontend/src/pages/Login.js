@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Activity, Mail, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
-
+import { API } from '../config';
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -15,8 +15,7 @@ export default function Login() {
   const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   const handleGoogleLogin = () => {
-    window.location.href =
-      "https://healthbot-backend-ezxv.onrender.com/api/auth/google";
+    window.location.href = API.GOOGLE_LOGIN;
   };
 
   const handleLogin = async (e) => {
@@ -35,8 +34,7 @@ export default function Login() {
       // Increase timeout to 60 seconds for Render cold start
       const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-      const res = await fetch(
-        "https://healthbot-backend-ezxv.onrender.com/api/auth/login",
+      const res = await fetch(API.LOGIN,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
