@@ -221,12 +221,6 @@ export default function Register() {
             HealthBot
           </span>
         </Link>
-        <Link
-          to="/login"
-          className="px-6 py-2.5 text-sm font-bold text-white border border-teal-500 hover:bg-teal-500/10 rounded-xl transition-all"
-        >
-          Log In
-        </Link>
       </nav>
 
       <main className="flex-1 flex flex-col justify-center items-center w-full px-4 z-10 my-10">
