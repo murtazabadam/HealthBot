@@ -14,7 +14,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   Check,
-  RefreshCw,
 } from "lucide-react";
 import { API } from "../config";
 
@@ -89,9 +88,6 @@ export default function Register() {
   const handleGoogleSignUp = () => {
     window.location.href = API.GOOGLE_LOGIN;
   };
-
-  const formatTime = (s) =>
-    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   // Step 1: Validate and Send OTP
   const handleContinue = async (e) => {
@@ -500,6 +496,7 @@ export default function Register() {
                   </label>
                 </div>
 
+                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -563,25 +560,37 @@ export default function Register() {
                ========================================= */
             <form
               onSubmit={handleRegister}
-              className="flex flex-col items-center gap-6 animate-in fade-in slide-in-from-right-4 duration-500"
+              className="flex flex-col w-full animate-in fade-in slide-in-from-right-4 duration-500"
             >
-              <div className="w-20 h-20 bg-teal-500/10 rounded-full flex items-center justify-center border border-teal-500/30">
+              {/* Top-left back button */}
+              <div className="w-full flex justify-start mb-6">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="text-slate-400 hover:text-white text-sm flex items-center gap-2 font-medium transition-colors"
+                >
+                  <ArrowLeft size={18} /> Back to details
+                </button>
+              </div>
+
+              {/* Shield */}
+              <div className="w-20 h-20 bg-teal-500/10 rounded-full flex items-center justify-center border border-teal-500/30 mb-6 mx-auto">
                 <ShieldCheck className="h-10 w-10 text-teal-400" />
               </div>
 
-              <div className="text-center mb-2">
-                <h2 className="text-2xl font-bold text-white mb-2">
+              {/* Text */}
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold text-white mb-3">
                   Verify your Email
                 </h2>
                 <p className="text-slate-400 text-sm">
-                  We've sent a 6-digit code to <br />
-                  <span className="text-teal-400 font-bold">
-                    {formData.email}
-                  </span>
+                  We sent a 6-digit code to <br />
+                  <span className="text-white font-bold">{formData.email}</span>
                 </p>
               </div>
 
-              <div className="flex gap-2 sm:gap-4 justify-center w-full">
+              {/* OTP Inputs */}
+              <div className="flex gap-2 sm:gap-4 justify-center w-full mb-8">
                 {otp.map((d, i) => (
                   <input
                     key={i}
@@ -591,44 +600,37 @@ export default function Register() {
                     value={d}
                     onChange={(e) => handleOtpChange(i, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                    className="w-12 h-14 bg-[#0B1120] border border-slate-700 rounded-xl text-center text-white font-bold text-2xl focus:border-teal-400 outline-none transition-all shadow-inner"
+                    className="w-12 h-14 sm:w-14 sm:h-16 bg-transparent border border-slate-700 rounded-xl text-center text-white font-bold text-2xl focus:border-teal-400 outline-none transition-all"
                   />
                 ))}
               </div>
 
-              <div className="flex flex-col items-center gap-2 mt-2 w-full">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-teal-400 to-blue-500 text-slate-900 font-extrabold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
-                >
-                  {loading ? "Verifying..." : "Verify & Create Account"}
-                </button>
+              {/* Verify Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-teal-400 to-blue-500 text-slate-900 font-extrabold py-4 rounded-xl shadow-lg uppercase tracking-wide hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {loading ? "VERIFYING..." : "VERIFY & CREATE ACCOUNT"}
+              </button>
 
-                <div className="flex items-center justify-between w-full mt-4 px-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="text-slate-500 text-sm flex items-center gap-1 hover:text-white transition-colors font-medium"
-                  >
-                    <ArrowLeft size={16} /> Edit Details
-                  </button>
-
+              {/* Resend Text */}
+              <div className="mt-8 text-center">
+                <p className="text-sm text-slate-400 font-medium">
+                  Didn't receive the code?{" "}
                   <button
                     type="button"
                     onClick={handleResendOtp}
                     disabled={timer > 0 || loading}
-                    className={`text-sm font-bold flex items-center gap-2 transition-colors ${timer > 0 ? "text-slate-600 cursor-not-allowed" : "text-teal-400 hover:text-teal-300"}`}
+                    className={`font-bold transition-colors ${
+                      timer > 0
+                        ? "text-teal-500/60 cursor-not-allowed"
+                        : "text-teal-400 hover:text-teal-300"
+                    }`}
                   >
-                    <RefreshCw
-                      size={14}
-                      className={loading && timer === 0 ? "animate-spin" : ""}
-                    />
-                    {timer > 0
-                      ? `Resend in ${formatTime(timer)}`
-                      : "Resend OTP"}
+                    {timer > 0 ? `Resend in ${timer}s` : "Resend"}
                   </button>
-                </div>
+                </p>
               </div>
             </form>
           )}
