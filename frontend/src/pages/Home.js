@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   Building,
   Store,
-  X
+  X,
 } from "lucide-react";
 
 export default function Home() {
@@ -220,10 +220,7 @@ export default function Home() {
 
       {}
       {/* --- SECTION 3: HOW IT WORKS --- */}
-      <section
-        id="how-it-works"
-        className="py-12 lg:py-16 px-6 lg:px-12"
-      >
+      <section id="how-it-works" className="py-12 lg:py-16 px-6 lg:px-12">
         <div className="max-w-[1200px] mx-auto text-center">
           <h2 className="text-3xl lg:text-4xl font-bold mb-10 text-white">
             How It Works
@@ -306,7 +303,7 @@ export default function Home() {
       {showModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in zoom-in duration-300">
           <div className="bg-[#111827] border border-slate-700 rounded-3xl p-6 sm:p-8 w-full max-w-4xl shadow-2xl relative">
-            <button 
+            <button
               onClick={() => setShowModal(false)}
               className="absolute top-4 right-4 sm:top-6 sm:right-6 text-slate-400 hover:text-white hover:bg-slate-800 p-2 rounded-full transition-colors"
             >
@@ -314,8 +311,13 @@ export default function Home() {
             </button>
 
             <div className="text-center mb-8 pr-8 sm:pr-0">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Nearby Facilities</h2>
-              <p className="text-slate-400 text-sm">Select a facility type to find the nearest options on Google Maps.</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                Nearby Facilities
+              </h2>
+              <p className="text-slate-400 text-sm">
+                Select a facility type to find the nearest options on Google
+                Maps.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -357,7 +359,15 @@ export default function Home() {
 
 // ── Helper Components ──────────────────────────────────────────────────────────
 
-const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal, onClick }) => {
+const FeatureCard = ({
+  icon: Icon,
+  theme,
+  title,
+  desc,
+  link,
+  isExternal,
+  onClick,
+}) => {
   const themes = {
     teal: "hover:border-teal-500/50 bg-teal-500/20 text-teal-400",
     blue: "hover:border-blue-500/50 bg-blue-500/20 text-blue-400",
@@ -380,7 +390,8 @@ const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal, onClick
       <div
         className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity mt-auto ${themes[theme].split(" ")[2]}`}
       >
-        {isExternal || onClick ? "View Options" : "Try it now"} <ChevronRight size={12} />
+        {isExternal || onClick ? "View Options" : "Try it now"}{" "}
+        <ChevronRight size={12} />
       </div>
     </div>
   );
@@ -396,7 +407,12 @@ const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal, onClick
 
   if (isExternal) {
     return (
-      <a href={link} target="_blank" rel="noopener noreferrer" className="block h-full">
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block h-full"
+      >
         {CardContent}
       </a>
     );
