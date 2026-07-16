@@ -12,20 +12,69 @@ import {
   Clock,
   Brain,
   AlertTriangle,
+  X,
   Building,
   Store,
-  X,
 } from "lucide-react";
 
 export default function Home() {
   const [showModal, setShowModal] = useState(false);
 
-  // Fetch user data from local storage to personalize the Google Maps link
+  // Fetch user data from local storage to personalize the Google Maps links
   const userData = JSON.parse(localStorage.getItem("user") || "{}");
-  const userAddress = userData.address;
+  const userAddress = userData.address ? `near ${userData.address}` : "near me";
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white relative w-full">
+      {/* --- MODAL FOR NEARBY FACILITIES --- */}
+      {showModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in zoom-in duration-300">
+          <div className="bg-[#111827] border border-slate-700/50 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl">
+            <div className="flex justify-between items-center p-6 border-b border-slate-800/80">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                <MapPin className="text-teal-400" /> Nearby Facilities
+              </h2>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-slate-400 hover:text-rose-500 transition-colors p-2 rounded-xl bg-slate-800/50 hover:bg-slate-800"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
+              <ModalCard
+                icon={Building}
+                title="Hospitals"
+                desc="Find general and specialized hospitals."
+                query="hospitals"
+                userAddress={userAddress}
+              />
+              <ModalCard
+                icon={Activity}
+                title="Health Centers"
+                desc="Locate community health centers."
+                query="health centers"
+                userAddress={userAddress}
+              />
+              <ModalCard
+                icon={HeartPulse}
+                title="Clinics"
+                desc="Discover walk-in clinics and outpatient care."
+                query="clinics"
+                userAddress={userAddress}
+              />
+              <ModalCard
+                icon={Store}
+                title="Medical Stores"
+                desc="Find local pharmacies and 24/7 stores."
+                query="pharmacies medical stores"
+                userAddress={userAddress}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Background Glow Orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-0 left-0 md:left-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-teal-500/10 rounded-full blur-[80px] md:blur-[120px]" />
@@ -60,34 +109,34 @@ export default function Home() {
         </div>
 
         {/* 5 Navigation Links - Scrollable on mobile */}
-        <div className="flex items-center justify-center gap-2 sm:gap-6 lg:gap-8 text-[12px] lg:text-sm font-medium text-slate-300 w-full md:w-auto mt-3 md:mt-0 overflow-x-auto no-scrollbar pb-1">
+        <div className="flex items-center justify-start md:justify-center gap-4 sm:gap-6 lg:gap-8 text-[12px] lg:text-sm font-medium text-slate-300 w-full md:w-auto mt-3 md:mt-0 overflow-x-auto no-scrollbar pb-1">
           <a
             href="#home"
-            className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
+            className="px-2 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
           >
             Home
           </a>
           <a
             href="#features"
-            className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
+            className="px-2 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
           >
             Features
           </a>
           <button
             onClick={() => setShowModal(true)}
-            className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
+            className="px-2 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
           >
             Facilities
           </button>
           <a
             href="#how-it-works"
-            className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
+            className="px-2 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
           >
             How It Works
           </a>
           <a
             href="#about"
-            className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
+            className="px-2 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
           >
             About Us
           </a>
@@ -110,11 +159,10 @@ export default function Home() {
         </div>
       </nav>
 
-      {}
       {/* --- SECTION 1: HOME --- */}
       <section
         id="home"
-        className="relative pt-32 pb-10 px-6 lg:pt-40 lg:pb-16 max-w-[1200px] mx-auto flex flex-col items-center text-center z-10"
+        className="relative pt-36 pb-10 px-6 lg:pt-40 lg:pb-16 max-w-[1200px] mx-auto flex flex-col items-center text-center z-10"
       >
         <div className="inline-flex items-center gap-2 px-3 py-1.5 lg:px-4 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-400 text-[10px] lg:text-xs font-bold tracking-wider mb-6 mt-4 lg:mt-0">
           <Activity size={14} /> AI POWERED HEALTH ASSISTANT
@@ -127,10 +175,10 @@ export default function Home() {
           Get instant answers to your health questions, check symptoms, and
           receive smart recommendations – anytime, anywhere.
         </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 w-full">
           <Link
             to="/chat"
-            className="px-8 py-3.5 text-base font-bold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all flex items-center gap-2 w-full sm:w-auto justify-center"
+            className="px-8 py-3.5 text-base font-bold text-slate-900 bg-teal-400 hover:bg-teal-300 rounded-full transition-all flex items-center gap-2 w-full sm:w-auto justify-center shadow-[0_0_20px_rgba(45,212,191,0.2)]"
           >
             <MessageSquare size={20} /> Start Chatting
           </Link>
@@ -143,7 +191,7 @@ export default function Home() {
         </div>
 
         {/* Trust Badges */}
-        <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-8 w-full max-w-3xl mx-auto">
+        <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-8 w-full max-w-3xl mx-auto opacity-80">
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4 lg:h-5 lg:w-5 text-teal-400" />
             <span className="text-xs lg:text-sm font-medium text-slate-200">
@@ -171,11 +219,10 @@ export default function Home() {
         </div>
       </section>
 
-      {}
       {/* --- SECTION 2: FEATURES --- */}
       <section
         id="features"
-        className="pt-12 pb-12 px-6 lg:pt-16 lg:pb-16 relative z-20 max-w-[1400px] mx-auto border-b border-slate-800/50"
+        className="pt-12 pb-12 px-6 lg:pt-16 lg:pb-16 relative z-20 max-w-[1400px] mx-auto"
       >
         <div className="text-center mb-12 lg:mb-16">
           <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-white">
@@ -218,9 +265,11 @@ export default function Home() {
         </div>
       </section>
 
-      {}
       {/* --- SECTION 3: HOW IT WORKS --- */}
-      <section id="how-it-works" className="py-12 lg:py-16 px-6 lg:px-12">
+      <section
+        id="how-it-works"
+        className="py-12 lg:py-16 px-6 lg:px-12 bg-[#111827]/30 border-y border-slate-800/50"
+      >
         <div className="max-w-[1200px] mx-auto text-center">
           <h2 className="text-3xl lg:text-4xl font-bold mb-10 text-white">
             How It Works
@@ -245,11 +294,10 @@ export default function Home() {
         </div>
       </section>
 
-      {}
       {/* --- SECTION 4: ABOUT US --- */}
       <section
         id="about"
-        className="pt-6 pb-6 lg:pt-8 lg:pb-8 px-6 lg:px-12 max-w-[1200px] mx-auto"
+        className="pt-10 pb-6 lg:pt-14 lg:pb-8 px-6 lg:px-12 max-w-[1200px] mx-auto"
       >
         <div className="bg-[#111827] border border-slate-800 p-8 lg:p-12 rounded-3xl flex flex-col md:flex-row items-center gap-10 shadow-lg">
           <div className="flex-1 text-center md:text-left">
@@ -297,77 +345,37 @@ export default function Home() {
           © 2026 Developed by Aarif, Junaid, and Murtaza.
         </p>
       </footer>
-
-      {}
-      {/* --- FACILITIES MODAL --- */}
-      {showModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in zoom-in duration-300">
-          <div className="bg-[#111827] border border-slate-700 rounded-3xl p-6 sm:p-8 w-full max-w-4xl shadow-2xl relative">
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 sm:top-6 sm:right-6 text-slate-400 hover:text-white hover:bg-slate-800 p-2 rounded-full transition-colors"
-            >
-              <X size={24} />
-            </button>
-
-            <div className="text-center mb-8 pr-8 sm:pr-0">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                Nearby Facilities
-              </h2>
-              <p className="text-slate-400 text-sm">
-                Select a facility type to find the nearest options on Google
-                Maps.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-              <FacilityCard
-                title="Hospitals"
-                desc="Find general and specialized hospitals near your location."
-                icon={Building}
-                query="hospitals"
-                userAddress={userAddress}
-              />
-              <FacilityCard
-                title="Health Centers"
-                desc="Locate community health centers and primary care facilities."
-                icon={Activity}
-                query="health centers"
-                userAddress={userAddress}
-              />
-              <FacilityCard
-                title="Clinics"
-                desc="Discover nearby walk-in clinics and outpatient care."
-                icon={HeartPulse}
-                query="clinics"
-                userAddress={userAddress}
-              />
-              <FacilityCard
-                title="Medical Stores"
-                desc="Find local pharmacies and 24/7 medical stores."
-                icon={Store}
-                query="pharmacies medical stores"
-                userAddress={userAddress}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-// ── Helper Components ──────────────────────────────────────────────────────────
+// Sub-Component for Modal Items
+const ModalCard = ({ icon: Icon, title, desc, query, userAddress }) => {
+  const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(query + " " + userAddress)}`;
 
-const FeatureCard = ({
-  icon: Icon,
-  theme,
-  title,
-  desc,
-  link,
-  isExternal,
-  onClick,
-}) => {
+  return (
+    <a
+      href={mapUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="bg-[#0B1120] border border-slate-800 rounded-2xl p-5 hover:border-teal-500/50 hover:-translate-y-1 transition-all group flex flex-col gap-3 shadow-lg"
+    >
+      <div className="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+        <Icon className="text-teal-400" size={24} />
+      </div>
+      <div>
+        <h3 className="text-lg font-bold text-white mb-1">{title}</h3>
+        <p className="text-sm text-slate-400">{desc}</p>
+      </div>
+      <div className="mt-auto flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-teal-500 opacity-80 group-hover:opacity-100 transition-opacity">
+        Open Map <ChevronRight size={12} />
+      </div>
+    </a>
+  );
+};
+
+// Feature Card Component
+const FeatureCard = ({ icon: Icon, theme, title, desc, link, onClick }) => {
   const themes = {
     teal: "hover:border-teal-500/50 bg-teal-500/20 text-teal-400",
     blue: "hover:border-blue-500/50 bg-blue-500/20 text-blue-400",
@@ -390,13 +398,12 @@ const FeatureCard = ({
       <div
         className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity mt-auto ${themes[theme].split(" ")[2]}`}
       >
-        {isExternal || onClick ? "View Options" : "Try it now"}{" "}
-        <ChevronRight size={12} />
+        {onClick ? "View Options" : "Try it now"} <ChevronRight size={12} />
       </div>
     </div>
   );
 
-  // If onClick is provided, render it as a button-like div
+  // If onClick is provided, use a div button
   if (onClick) {
     return (
       <div onClick={onClick} className="block h-full">
@@ -405,19 +412,7 @@ const FeatureCard = ({
     );
   }
 
-  if (isExternal) {
-    return (
-      <a
-        href={link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block h-full"
-      >
-        {CardContent}
-      </a>
-    );
-  }
-
+  // Otherwise, standard React Router Link
   return (
     <Link to={link} className="block h-full">
       {CardContent}
@@ -425,32 +420,7 @@ const FeatureCard = ({
   );
 };
 
-// Facility Card specifically for the Modal
-const FacilityCard = ({ title, desc, icon: Icon, query, userAddress }) => {
-  const location = userAddress ? `near ${userAddress}` : "near me";
-  const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(query + " " + location)}`;
-
-  return (
-    <a
-      href={mapUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="bg-[#0B1120] border border-slate-800 hover:border-teal-500/50 hover:-translate-y-1 transition-all rounded-2xl p-5 sm:p-6 flex flex-col items-start gap-4 group shadow-lg"
-    >
-      <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
-        <Icon size={28} />
-      </div>
-      <div className="flex-1 w-full">
-        <h4 className="font-bold text-xl mb-2 text-white">{title}</h4>
-        <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
-      </div>
-      <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-teal-500 mt-2 opacity-80 group-hover:opacity-100 transition-opacity">
-        Open Map <ChevronRight size={12} />
-      </div>
-    </a>
-  );
-};
-
+// Step Component
 const Step = ({ number, title, desc }) => (
   <div className="flex flex-col items-center">
     <div className="text-5xl font-black text-teal-500/50 mb-4">{number}</div>
