@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   Building,
   Store,
-  X,
+  X
 } from "lucide-react";
 
 export default function Home() {
@@ -25,13 +25,15 @@ export default function Home() {
   const userAddress = userData.address;
 
   return (
-    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white overflow-x-hidden relative w-full">
+    <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white relative w-full">
       {/* Background Glow Orbs */}
-      <div className="absolute top-0 left-0 md:left-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-teal-500/10 rounded-full blur-[80px] md:blur-[120px] pointer-events-none" />
-      <div className="absolute top-40 right-0 md:right-1/4 w-[250px] md:w-[400px] h-[250px] md:h-[400px] bg-cyan-500/10 rounded-full blur-[60px] md:blur-[100px] pointer-events-none" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-0 left-0 md:left-1/4 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-teal-500/10 rounded-full blur-[80px] md:blur-[120px]" />
+        <div className="absolute top-40 right-0 md:right-1/4 w-[250px] md:w-[400px] h-[250px] md:h-[400px] bg-cyan-500/10 rounded-full blur-[60px] md:blur-[100px]" />
+      </div>
 
       {/* Navigation Bar */}
-      <nav className="flex flex-col md:flex-row items-center justify-between px-4 py-3 lg:px-12 lg:py-5 border-b border-slate-800/60 bg-[#0B1120]/90 backdrop-blur-md fixed w-full top-0 z-[100]">
+      <nav className="fixed top-0 left-0 right-0 w-full z-[100] flex flex-col md:flex-row items-center justify-between px-4 py-3 lg:px-12 lg:py-5 border-b border-slate-800/60 bg-[#0B1120]/95 backdrop-blur-xl">
         {/* Top Row on Mobile (Logo & Auth) */}
         <div className="flex items-center justify-between w-full md:w-auto">
           <div className="flex items-center gap-2 cursor-pointer">
@@ -218,7 +220,10 @@ export default function Home() {
 
       {}
       {/* --- SECTION 3: HOW IT WORKS --- */}
-      <section id="how-it-works" className="py-12 lg:py-16 px-6 lg:px-12">
+      <section
+        id="how-it-works"
+        className="py-12 lg:py-16 px-6 lg:px-12"
+      >
         <div className="max-w-[1200px] mx-auto text-center">
           <h2 className="text-3xl lg:text-4xl font-bold mb-10 text-white">
             How It Works
@@ -301,7 +306,7 @@ export default function Home() {
       {showModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in zoom-in duration-300">
           <div className="bg-[#111827] border border-slate-700 rounded-3xl p-6 sm:p-8 w-full max-w-4xl shadow-2xl relative">
-            <button
+            <button 
               onClick={() => setShowModal(false)}
               className="absolute top-4 right-4 sm:top-6 sm:right-6 text-slate-400 hover:text-white hover:bg-slate-800 p-2 rounded-full transition-colors"
             >
@@ -309,13 +314,8 @@ export default function Home() {
             </button>
 
             <div className="text-center mb-8 pr-8 sm:pr-0">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                Nearby Facilities
-              </h2>
-              <p className="text-slate-400 text-sm">
-                Select a facility type to find the nearest options on Google
-                Maps.
-              </p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Nearby Facilities</h2>
+              <p className="text-slate-400 text-sm">Select a facility type to find the nearest options on Google Maps.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -357,15 +357,7 @@ export default function Home() {
 
 // ── Helper Components ──────────────────────────────────────────────────────────
 
-const FeatureCard = ({
-  icon: Icon,
-  theme,
-  title,
-  desc,
-  link,
-  isExternal,
-  onClick,
-}) => {
+const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal, onClick }) => {
   const themes = {
     teal: "hover:border-teal-500/50 bg-teal-500/20 text-teal-400",
     blue: "hover:border-blue-500/50 bg-blue-500/20 text-blue-400",
@@ -388,8 +380,7 @@ const FeatureCard = ({
       <div
         className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity mt-auto ${themes[theme].split(" ")[2]}`}
       >
-        {isExternal || onClick ? "View Options" : "Try it now"}{" "}
-        <ChevronRight size={12} />
+        {isExternal || onClick ? "View Options" : "Try it now"} <ChevronRight size={12} />
       </div>
     </div>
   );
@@ -405,12 +396,7 @@ const FeatureCard = ({
 
   if (isExternal) {
     return (
-      <a
-        href={link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block h-full"
-      >
+      <a href={link} target="_blank" rel="noopener noreferrer" className="block h-full">
         {CardContent}
       </a>
     );
