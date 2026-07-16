@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   HeartPulse,
@@ -14,9 +14,12 @@ import {
   AlertTriangle,
   Building,
   Store,
+  X,
 } from "lucide-react";
 
 export default function Home() {
+  const [showModal, setShowModal] = useState(false);
+
   // Fetch user data from local storage to personalize the Google Maps link
   const userData = JSON.parse(localStorage.getItem("user") || "{}");
   const userAddress = userData.address;
@@ -68,12 +71,12 @@ export default function Home() {
           >
             Features
           </a>
-          <a
-            href="#facilities"
+          <button
+            onClick={() => setShowModal(true)}
             className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
           >
             Facilities
-          </a>
+          </button>
           <a
             href="#how-it-works"
             className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
@@ -105,6 +108,7 @@ export default function Home() {
         </div>
       </nav>
 
+      {}
       {/* --- SECTION 1: HOME --- */}
       <section
         id="home"
@@ -165,10 +169,11 @@ export default function Home() {
         </div>
       </section>
 
+      {}
       {/* --- SECTION 2: FEATURES --- */}
       <section
         id="features"
-        className="pt-12 pb-12 px-6 lg:pt-16 lg:pb-16 relative z-20 max-w-[1400px] mx-auto"
+        className="pt-12 pb-12 px-6 lg:pt-16 lg:pb-16 relative z-20 max-w-[1400px] mx-auto border-b border-slate-800/50"
       >
         <div className="text-center mb-12 lg:mb-16">
           <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-white">
@@ -206,61 +211,13 @@ export default function Home() {
             theme="rose"
             title="Nearby Facilities"
             desc="Instantly find the nearest hospitals and clinics when needed."
-            link="#facilities" // Changed to scroll to the new section
-            isExternal={false}
+            onClick={() => setShowModal(true)}
           />
         </div>
       </section>
 
-      {/* --- SECTION 3: FACILITIES (NEW) --- */}
-      <section
-        id="facilities"
-        className="py-12 lg:py-16 px-6 lg:px-12 bg-[#111827]/30 border-y border-slate-800/50"
-      >
-        <div className="max-w-[1400px] mx-auto">
-          <div className="text-center mb-12 lg:mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-white">
-              Nearby Facilities
-            </h2>
-            <p className="text-slate-400 max-w-2xl mx-auto">
-              Find the nearest healthcare providers and medical stores instantly
-              based on your location.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <FacilityCard
-              title="Hospitals"
-              desc="Find general and specialized hospitals near your location."
-              icon={Building}
-              query="hospitals"
-              userAddress={userAddress}
-            />
-            <FacilityCard
-              title="Health Centers"
-              desc="Locate community health centers and primary care facilities."
-              icon={Activity}
-              query="health centers"
-              userAddress={userAddress}
-            />
-            <FacilityCard
-              title="Clinics"
-              desc="Discover nearby walk-in clinics and outpatient care."
-              icon={HeartPulse}
-              query="clinics"
-              userAddress={userAddress}
-            />
-            <FacilityCard
-              title="Medical Stores"
-              desc="Find local pharmacies and 24/7 medical stores."
-              icon={Store}
-              query="pharmacies medical stores"
-              userAddress={userAddress}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* --- SECTION 4: HOW IT WORKS --- */}
+      {}
+      {/* --- SECTION 3: HOW IT WORKS --- */}
       <section id="how-it-works" className="py-12 lg:py-16 px-6 lg:px-12">
         <div className="max-w-[1200px] mx-auto text-center">
           <h2 className="text-3xl lg:text-4xl font-bold mb-10 text-white">
@@ -286,7 +243,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- SECTION 5: ABOUT US --- */}
+      {}
+      {/* --- SECTION 4: ABOUT US --- */}
       <section
         id="about"
         className="pt-6 pb-6 lg:pt-8 lg:pb-8 px-6 lg:px-12 max-w-[1200px] mx-auto"
@@ -337,13 +295,77 @@ export default function Home() {
           © 2026 Developed by Aarif, Junaid, and Murtaza.
         </p>
       </footer>
+
+      {}
+      {/* --- FACILITIES MODAL --- */}
+      {showModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in zoom-in duration-300">
+          <div className="bg-[#111827] border border-slate-700 rounded-3xl p-6 sm:p-8 w-full max-w-4xl shadow-2xl relative">
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 text-slate-400 hover:text-white hover:bg-slate-800 p-2 rounded-full transition-colors"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="text-center mb-8 pr-8 sm:pr-0">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                Nearby Facilities
+              </h2>
+              <p className="text-slate-400 text-sm">
+                Select a facility type to find the nearest options on Google
+                Maps.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <FacilityCard
+                title="Hospitals"
+                desc="Find general and specialized hospitals near your location."
+                icon={Building}
+                query="hospitals"
+                userAddress={userAddress}
+              />
+              <FacilityCard
+                title="Health Centers"
+                desc="Locate community health centers and primary care facilities."
+                icon={Activity}
+                query="health centers"
+                userAddress={userAddress}
+              />
+              <FacilityCard
+                title="Clinics"
+                desc="Discover nearby walk-in clinics and outpatient care."
+                icon={HeartPulse}
+                query="clinics"
+                userAddress={userAddress}
+              />
+              <FacilityCard
+                title="Medical Stores"
+                desc="Find local pharmacies and 24/7 medical stores."
+                icon={Store}
+                query="pharmacies medical stores"
+                userAddress={userAddress}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Helper Components ──────────────────────────────────────────────────────────
 
-const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal }) => {
+const FeatureCard = ({
+  icon: Icon,
+  theme,
+  title,
+  desc,
+  link,
+  isExternal,
+  onClick,
+}) => {
   const themes = {
     teal: "hover:border-teal-500/50 bg-teal-500/20 text-teal-400",
     blue: "hover:border-blue-500/50 bg-blue-500/20 text-blue-400",
@@ -366,15 +388,20 @@ const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal }) => {
       <div
         className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity mt-auto ${themes[theme].split(" ")[2]}`}
       >
-        {isExternal
-          ? "Open Map"
-          : link.startsWith("#")
-            ? "View Options"
-            : "Try it now"}{" "}
+        {isExternal || onClick ? "View Options" : "Try it now"}{" "}
         <ChevronRight size={12} />
       </div>
     </div>
   );
+
+  // If onClick is provided, render it as a button-like div
+  if (onClick) {
+    return (
+      <div onClick={onClick} className="block h-full">
+        {CardContent}
+      </div>
+    );
+  }
 
   if (isExternal) {
     return (
@@ -389,14 +416,6 @@ const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal }) => {
     );
   }
 
-  if (link.startsWith("#")) {
-    return (
-      <a href={link} className="block h-full">
-        {CardContent}
-      </a>
-    );
-  }
-
   return (
     <Link to={link} className="block h-full">
       {CardContent}
@@ -404,7 +423,7 @@ const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal }) => {
   );
 };
 
-// Facility Card specifically for the new Facilities Section
+// Facility Card specifically for the Modal
 const FacilityCard = ({ title, desc, icon: Icon, query, userAddress }) => {
   const location = userAddress ? `near ${userAddress}` : "near me";
   const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(query + " " + location)}`;
@@ -414,7 +433,7 @@ const FacilityCard = ({ title, desc, icon: Icon, query, userAddress }) => {
       href={mapUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="bg-[#111827] border border-slate-800 hover:border-teal-500/50 hover:-translate-y-1 transition-all rounded-2xl p-6 flex flex-col items-start gap-4 group shadow-lg"
+      className="bg-[#0B1120] border border-slate-800 hover:border-teal-500/50 hover:-translate-y-1 transition-all rounded-2xl p-5 sm:p-6 flex flex-col items-start gap-4 group shadow-lg"
     >
       <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
         <Icon size={28} />
