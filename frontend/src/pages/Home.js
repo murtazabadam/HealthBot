@@ -12,17 +12,14 @@ import {
   Clock,
   Brain,
   AlertTriangle,
+  Building,
+  Store,
 } from "lucide-react";
 
 export default function Home() {
   // Fetch user data from local storage to personalize the Google Maps link
   const userData = JSON.parse(localStorage.getItem("user") || "{}");
   const userAddress = userData.address;
-
-  // Create a dynamic map URL based on whether the user has an address saved
-  const mapsUrl = userAddress
-    ? `https://www.google.com/maps/search/hospitals+and+clinics+near+${encodeURIComponent(userAddress)}`
-    : "https://www.google.com/maps/search/hospitals+near+me";
 
   return (
     <div className="min-h-screen bg-[#0B1120] font-sans text-slate-50 selection:bg-teal-500 selection:text-white overflow-x-hidden relative w-full">
@@ -57,8 +54,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 4 Navigation Links - Fixed for Clickability */}
-        <div className="flex items-center justify-center gap-2 sm:gap-6 lg:gap-10 text-[12px] lg:text-sm font-medium text-slate-300 w-full md:w-auto mt-3 md:mt-0 overflow-x-auto no-scrollbar pb-1">
+        {/* 5 Navigation Links - Scrollable on mobile */}
+        <div className="flex items-center justify-center gap-2 sm:gap-6 lg:gap-8 text-[12px] lg:text-sm font-medium text-slate-300 w-full md:w-auto mt-3 md:mt-0 overflow-x-auto no-scrollbar pb-1">
           <a
             href="#home"
             className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
@@ -70,6 +67,12 @@ export default function Home() {
             className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
           >
             Features
+          </a>
+          <a
+            href="#facilities"
+            className="px-3 py-2 hover:text-teal-400 active:text-teal-400 transition-colors whitespace-nowrap inline-block"
+          >
+            Facilities
           </a>
           <a
             href="#how-it-works"
@@ -203,17 +206,62 @@ export default function Home() {
             theme="rose"
             title="Nearby Facilities"
             desc="Instantly find the nearest hospitals and clinics when needed."
-            link={mapsUrl}
-            isExternal={true}
+            link="#facilities" // Changed to scroll to the new section
+            isExternal={false}
           />
         </div>
       </section>
 
-      {/* --- SECTION 3: HOW IT WORKS --- */}
+      {/* --- SECTION 3: FACILITIES (NEW) --- */}
       <section
-        id="how-it-works"
+        id="facilities"
         className="py-12 lg:py-16 px-6 lg:px-12 bg-[#111827]/30 border-y border-slate-800/50"
       >
+        <div className="max-w-[1400px] mx-auto">
+          <div className="text-center mb-12 lg:mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-white">
+              Nearby Facilities
+            </h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">
+              Find the nearest healthcare providers and medical stores instantly
+              based on your location.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <FacilityCard
+              title="Hospitals"
+              desc="Find general and specialized hospitals near your location."
+              icon={Building}
+              query="hospitals"
+              userAddress={userAddress}
+            />
+            <FacilityCard
+              title="Health Centers"
+              desc="Locate community health centers and primary care facilities."
+              icon={Activity}
+              query="health centers"
+              userAddress={userAddress}
+            />
+            <FacilityCard
+              title="Clinics"
+              desc="Discover nearby walk-in clinics and outpatient care."
+              icon={HeartPulse}
+              query="clinics"
+              userAddress={userAddress}
+            />
+            <FacilityCard
+              title="Medical Stores"
+              desc="Find local pharmacies and 24/7 medical stores."
+              icon={Store}
+              query="pharmacies medical stores"
+              userAddress={userAddress}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* --- SECTION 4: HOW IT WORKS --- */}
+      <section id="how-it-works" className="py-12 lg:py-16 px-6 lg:px-12">
         <div className="max-w-[1200px] mx-auto text-center">
           <h2 className="text-3xl lg:text-4xl font-bold mb-10 text-white">
             How It Works
@@ -238,10 +286,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- SECTION 4: ABOUT US --- */}
+      {/* --- SECTION 5: ABOUT US --- */}
       <section
         id="about"
-        className="pt-10 pb-6 lg:pt-14 lg:pb-8 px-6 lg:px-12 max-w-[1200px] mx-auto"
+        className="pt-6 pb-6 lg:pt-8 lg:pb-8 px-6 lg:px-12 max-w-[1200px] mx-auto"
       >
         <div className="bg-[#111827] border border-slate-800 p-8 lg:p-12 rounded-3xl flex flex-col md:flex-row items-center gap-10 shadow-lg">
           <div className="flex-1 text-center md:text-left">
@@ -277,7 +325,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* --- FOOTER (Centered as requested) --- */}
+      {/* --- FOOTER --- */}
       <footer className="pb-10 px-6 flex flex-col items-center justify-center w-full max-w-[1400px] mx-auto opacity-70 mt-4">
         <div className="flex items-center gap-2 mb-3">
           <HeartPulse className="text-slate-400" size={24} />
@@ -292,6 +340,8 @@ export default function Home() {
     </div>
   );
 }
+
+// ── Helper Components ──────────────────────────────────────────────────────────
 
 const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal }) => {
   const themes = {
@@ -313,16 +363,19 @@ const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal }) => {
       <h3 className="text-lg font-bold mb-3 text-white flex-1">{title}</h3>
       <p className="text-slate-400 text-sm leading-relaxed mb-4">{desc}</p>
 
-      {/* Hidden 'Try it now' link that appears on hover */}
       <div
         className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity mt-auto ${themes[theme].split(" ")[2]}`}
       >
-        {isExternal ? "Open Map" : "Try it now"} <ChevronRight size={12} />
+        {isExternal
+          ? "Open Map"
+          : link.startsWith("#")
+            ? "View Options"
+            : "Try it now"}{" "}
+        <ChevronRight size={12} />
       </div>
     </div>
   );
 
-  // If it's an external link (like Google Maps), use standard <a> tag
   if (isExternal) {
     return (
       <a
@@ -336,7 +389,14 @@ const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal }) => {
     );
   }
 
-  // If it's an internal link, use React Router's <Link>
+  if (link.startsWith("#")) {
+    return (
+      <a href={link} className="block h-full">
+        {CardContent}
+      </a>
+    );
+  }
+
   return (
     <Link to={link} className="block h-full">
       {CardContent}
@@ -344,7 +404,32 @@ const FeatureCard = ({ icon: Icon, theme, title, desc, link, isExternal }) => {
   );
 };
 
-// Fixed visibility of numbers
+// Facility Card specifically for the new Facilities Section
+const FacilityCard = ({ title, desc, icon: Icon, query, userAddress }) => {
+  const location = userAddress ? `near ${userAddress}` : "near me";
+  const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(query + " " + location)}`;
+
+  return (
+    <a
+      href={mapUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="bg-[#111827] border border-slate-800 hover:border-teal-500/50 hover:-translate-y-1 transition-all rounded-2xl p-6 flex flex-col items-start gap-4 group shadow-lg"
+    >
+      <div className="p-3 bg-teal-500/10 rounded-xl text-teal-400 group-hover:scale-110 transition-transform">
+        <Icon size={28} />
+      </div>
+      <div className="flex-1 w-full">
+        <h4 className="font-bold text-xl mb-2 text-white">{title}</h4>
+        <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+      </div>
+      <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-teal-500 mt-2 opacity-80 group-hover:opacity-100 transition-opacity">
+        Open Map <ChevronRight size={12} />
+      </div>
+    </a>
+  );
+};
+
 const Step = ({ number, title, desc }) => (
   <div className="flex flex-col items-center">
     <div className="text-5xl font-black text-teal-500/50 mb-4">{number}</div>
