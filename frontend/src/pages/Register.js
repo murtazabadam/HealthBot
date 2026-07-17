@@ -13,7 +13,6 @@ import {
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
-  Check,
 } from "lucide-react";
 import { API } from "../config";
 
@@ -289,6 +288,7 @@ export default function Register() {
                         value={formData.email}
                         onChange={handleChange}
                         className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                        style={{ colorScheme: "dark" }}
                       />
                     </div>
                   </div>
@@ -296,6 +296,7 @@ export default function Register() {
 
                 {/* Row 2: Passwords */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                  {/* Password Field */}
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                       Password <span className="text-red-500">*</span>
@@ -323,7 +324,22 @@ export default function Register() {
                         )}
                       </button>
                     </div>
+                    {/* Dynamic Password Requirements List */}
+                    <div className="flex flex-col gap-1 mt-1">
+                      {passwordRequirements.map((req, i) => (
+                        <span
+                          key={i}
+                          className={`text-[10px] font-medium flex items-center gap-1.5 transition-colors duration-300 ${
+                            req.met ? "text-green-500" : "text-red-500"
+                          }`}
+                        >
+                          {req.met ? "✓" : "✗"} {req.label}
+                        </span>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Confirm Password Field */}
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
                       Confirm Password <span className="text-red-500">*</span>
@@ -337,7 +353,13 @@ export default function Register() {
                         placeholder="Confirm password"
                         value={formData.confirmPassword}
                         onChange={handleChange}
-                        className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                        className={`w-full bg-[#0B1120] border rounded-xl py-3.5 pl-12 pr-12 text-sm text-white focus:outline-none transition-all ${
+                          formData.confirmPassword
+                            ? formData.password === formData.confirmPassword
+                              ? "border-green-500 focus:border-green-500"
+                              : "border-red-500 focus:border-red-500"
+                            : "border-slate-700 focus:border-teal-400"
+                        }`}
                       />
                       <button
                         type="button"
@@ -353,26 +375,21 @@ export default function Register() {
                         )}
                       </button>
                     </div>
-                  </div>
-                </div>
-
-                {/* Password Requirements Checklist */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 bg-slate-900/50 border border-slate-800 p-4 rounded-xl">
-                  {passwordRequirements.map((req, i) => (
-                    <div
-                      key={i}
-                      className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-500" : "text-slate-400"}`}
-                    >
-                      <div
-                        className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${req.met ? "bg-teal-500/20 border-teal-500/50" : "border-slate-600"}`}
+                    {/* Match/Mismatch Text */}
+                    {formData.confirmPassword && (
+                      <span
+                        className={`text-[10px] font-medium mt-1 flex items-center gap-1.5 transition-colors duration-300 ${
+                          formData.password === formData.confirmPassword
+                            ? "text-green-500"
+                            : "text-red-500"
+                        }`}
                       >
-                        {req.met && <Check size={10} strokeWidth={4} />}
-                      </div>
-                      <span className="text-[11px] font-medium">
-                        {req.label}
+                        {formData.password === formData.confirmPassword
+                          ? "✓ Passwords match"
+                          : "✗ Passwords do not match"}
                       </span>
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
 
                 {/* Row 3: Age, Phone, Address */}
@@ -384,10 +401,17 @@ export default function Register() {
                     <input
                       type="number"
                       name="age"
+                      min="1"
                       placeholder="Age"
                       value={formData.age}
                       onChange={handleChange}
-                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all"
+                      onKeyDown={(e) => {
+                        // Prevent typing -, +, e, E to enforce positive integer manually
+                        if (["-", "+", "e", "E"].includes(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                      className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-white focus:outline-none focus:border-teal-400 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -496,7 +520,6 @@ export default function Register() {
                   </label>
                 </div>
 
-                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={loading}
