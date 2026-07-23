@@ -7,7 +7,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
-import os, warnings
+import os, re, warnings
 warnings.filterwarnings('ignore')
 
 app = Flask(__name__)
@@ -170,18 +170,41 @@ NL_MAP = {
 }
 _SORTED_PHRASES = sorted(NL_MAP.keys(), key=len, reverse=True)
 
+def _contains_phrase(text_lower, phrase):
+    """Word-boundary match — 'pus' must not match inside 'campus'."""
+    return re.search(rf'\b{re.escape(phrase)}\b', text_lower) is not None
+
 def extract_symptoms(text):
     text_lower = text.lower()
     found = set()
     for phrase in _SORTED_PHRASES:
-        if phrase in text_lower:
+        if _contains_phrase(text_lower, phrase):
             sym = NL_MAP[phrase]
             if sym in ALL_SYMPTOMS:
                 found.add(sym)
     for symptom in ALL_SYMPTOMS:
-        if symptom.replace('_', ' ') in text_lower or symptom in text_lower:
+        readable = symptom.replace('_', ' ')
+        if _contains_phrase(text_lower, readable) or _contains_phrase(text_lower, symptom):
             found.add(symptom)
     return list(found)
+
+# ── Input-quality guard ─────────────────────────────────────────────────────────
+# Short, focused messages ("fever and headache") are trusted even with one match.
+# Long, unrelated text (a pasted paragraph, an article, etc.) needs a much higher
+# ratio of recognized symptom terms before we treat it as a genuine symptom report
+# — this stops a stray coincidental match from driving a confident diagnosis out
+# of text that was never describing symptoms in the first place.
+_SHORT_TEXT_WORD_LIMIT = 40
+_MIN_SYMPTOM_DENSITY   = 0.03  # roughly 1 recognized term per ~33 words
+
+def is_genuine_symptom_text(text, matched_symptoms):
+    word_count = len(text.split())
+    if word_count == 0:
+        return False
+    if word_count <= _SHORT_TEXT_WORD_LIMIT:
+        return True
+    density = len(matched_symptoms) / word_count
+    return density >= _MIN_SYMPTOM_DENSITY
 
 # ── Encode labels ──────────────────────────────────────────────────────────────
 le = LabelEncoder()
@@ -350,6 +373,14 @@ def predict():
     symptom_list = data.get('symptoms', [])
 
     ml_symptoms = extract_symptoms(text_input) if text_input else []
+
+    # Discard free-text matches if the message doesn't look like a genuine
+    # symptom report (e.g. a long unrelated paragraph that happened to
+    # contain a coincidental match). Explicitly provided symptoms (from a
+    # structured picker, not free text) are never affected by this.
+    if text_input and ml_symptoms and not is_genuine_symptom_text(text_input, ml_symptoms):
+        ml_symptoms = []
+
     provided = [
         s.strip().lower().replace(' ', '_')
         for s in symptom_list
