@@ -24,15 +24,19 @@ axios.interceptors.response.use(
   },
 );
 
-// --- DYNAMIC ROUTE PROTECTOR ---
+// --- DYNAMIC PROTECTED ROUTE (Requires Login) ---
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   return token ? children : <Navigate to="/login" replace />;
 };
 
-function App() {
+// --- DYNAMIC PUBLIC ROUTE (Hides pages if already logged in) ---
+const PublicRoute = ({ children }) => {
   const token = localStorage.getItem("token");
+  return token ? <Navigate to="/chat" replace /> : children;
+};
 
+function App() {
   // WAKE UP BACKEND ON APP LOAD
   useEffect(() => {
     // Ping backend on app load to wake it up before user tries to login
@@ -44,26 +48,39 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* If logged in, skip Home/Login/Register and go straight to Chat */}
+        {/* PUBLIC ROUTES - Redirects to Chat if already logged in */}
         <Route
           path="/"
-          element={token ? <Navigate to="/chat" replace /> : <Home />}
+          element={
+            <PublicRoute>
+              <Home />
+            </PublicRoute>
+          }
         />
         <Route
           path="/login"
-          element={token ? <Navigate to="/chat" replace /> : <Login />}
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
         />
         <Route
           path="/register"
-          element={token ? <Navigate to="/chat" replace /> : <Register />}
+          element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          }
         />
 
+        {/* STANDARD ROUTES */}
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
 
-        {/* Protected Chat Route (Your mega dashboard!) */}
+        {/* PROTECTED ROUTE (Your mega dashboard!) */}
         <Route
           path="/chat"
           element={
