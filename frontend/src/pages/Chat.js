@@ -685,7 +685,7 @@ export function ChatDashboard() {
       text =
         "Here is your pinned Hydration Schedule:\n- 8:00 AM: 2 glasses of water\n- 11:00 AM: 1 glass\n- 1:00 PM: 1 glass\n- 4:00 PM: 1 glass\n- 7:00 PM: 2 glasses.";
     } else if (title === "Emergency Contacts") {
-      text = `🚨 Emergency Information Profile:\n- Ambulance/Emergency: 112\n- Your Location: ${user.address || "Please update address in Profile"}\n- Blood Group: ${user.bloodGroup || "Unknown"}\n- Patient Age: ${user.age || "Unknown"}\n- Patient Gender: ${user.gender || "Unknown"}\n- Contact Number: ${user.phoneNumber || "Unknown"}\n\nTip: Provide these exact details to the emergency operator.`;
+      text = `🚨 Your Emergency Contacts:\n- Ambulance/Emergency: 112\n- Primary Doctor: +1-555-0198\n- Next of Kin: +1-555-0102\n- Your Registered Location: ${user.address || "Please update address in Profile"}\n\nTip: In a severe emergency, call 112 immediately and provide them with your registered location.`;
     }
 
     setActiveSessionId(Date.now());
