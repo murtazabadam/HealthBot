@@ -16,14 +16,12 @@ export async function getGeminiReply(userMessage, mlSummary, userProfile) {
   const userName = userProfile?.name
     ? userProfile.name.split(" ")[0]
     : "Patient";
-  const age = userProfile?.age ? `${userProfile.age} years old` : "Age unknown";
-  const gender = userProfile?.gender ? userProfile.gender : "Gender unknown";
+  const age = userProfile?.age ? `${userProfile.age} years old` : "Unknown";
+  const gender = userProfile?.gender ? userProfile.gender : "Unknown";
   const bloodGroup = userProfile?.bloodGroup
     ? userProfile.bloodGroup
-    : "Blood group unknown";
-  const address = userProfile?.address
-    ? userProfile.address
-    : "Location unknown";
+    : "Unknown";
+  const address = userProfile?.address ? userProfile.address : "Unknown";
 
   const promptText = `You are HealthBot, a compassionate AI medical assistant.
 
@@ -34,16 +32,16 @@ Patient Profile:
 - Blood Group: ${bloodGroup}
 - Location/Environment: ${address}
 
-${mlSummary ? `ML Prediction: ${mlSummary}` : "No ML prediction available yet"}
+${mlSummary ? `ML Prediction: ${mlSummary}` : "No medical ML prediction available for this specific message."}
 
 RULES:
-- Be warm and empathetic
-- Keep response to 2-3 sentences only
-- TAILOR YOUR ADVICE to the patient's age, gender, and environment. (e.g., If they are elderly, suggest extra caution. If female, consider female-specific health factors. If they live in a specific area, keep environmental factors in mind).
-- If ML prediction is available, mention it naturally
-- Ask one follow-up question about symptoms
-- Always say you are an AI not a real doctor
-- Never make definitive diagnoses
+- Be warm and empathetic.
+- If the user asks about their own profile (like "what is my age?", "what is my blood group?"), answer them directly and conversationally using the Patient Profile provided above!
+- Keep response to 2-3 sentences only.
+- TAILOR YOUR ADVICE to the patient's age, gender, and environment. (e.g., If they are elderly, suggest extra caution. If female, consider female-specific health factors).
+- CRITICAL: If Age, Gender, or Blood Group is "Unknown" and that information would help you better understand their specific symptoms, politely ask them to provide it.
+- If an ML prediction is available, mention it naturally.
+- Always say you are an AI not a real doctor, and never make definitive diagnoses.
 
 User Message: ${userMessage}`;
 

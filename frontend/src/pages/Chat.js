@@ -774,10 +774,11 @@ export function ChatDashboard() {
       const mlResult = res.data.mlResult;
       const intent = res.data.intent;
 
-      if (intent === "symptoms" && geminiReady) {
+      // PROCESS EVERY MESSAGE THROUGH GEMINI (REMOVED intent === "symptoms" restriction)
+      if (geminiReady) {
         try {
           let mlSummary = "";
-          let hasPredictions = false;
+          let isMedical = intent === "symptoms";
 
           if (
             mlResult &&
@@ -786,16 +787,21 @@ export function ChatDashboard() {
           ) {
             const top = mlResult.predictions[0];
             mlSummary = `Most likely ${top.disease} at ${top.confidence}% confidence. Severity: ${mlResult.severity}`;
-            hasPredictions = true;
           }
 
-          // Pass the FULL user object to Gemini so it can personalize advice
+          // Pass the FULL user object to Gemini so it can personalize advice AND answer questions about the profile
           const geminiText = await getGeminiReply(textToSend, mlSummary, user);
 
           if (geminiText) {
-            if (hasPredictions) {
+            // Only append the backend ML block if this was actually a medical symptom check
+            if (
+              isMedical &&
+              (botReply.includes("ML Analysis") ||
+                botReply.includes("I detected:"))
+            ) {
               botReply = geminiText + "\n\n" + botReply;
             } else {
+              // Otherwise, just use Gemini's natural conversational response
               botReply = geminiText;
             }
           }
