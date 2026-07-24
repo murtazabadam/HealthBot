@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { useNavigate, MemoryRouter } from "react-router-dom";
@@ -49,7 +48,7 @@ import {
   MicOff,
   Pause,
 } from "lucide-react";
-import { API } from '../config';
+
 // Import the real Gemini frontend service
 import { getGeminiReply, geminiReady } from "../services/gemini";
 
@@ -130,7 +129,7 @@ export function ChatDashboard() {
       if (!token) return;
       try {
         const res = await fetch(
-          API.CHAT_MESSAGE,
+          "https://healthbot-backend-ezxv.onrender.com/api/auth/profile",
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -231,15 +230,26 @@ export function ChatDashboard() {
     // 2. Check reminders every 60 seconds
     const interval = setInterval(() => {
       const now = new Date();
-      const currentTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-      const today = now.toISOString().split('T')[0];
+      const currentTime = now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+      const today = now.toISOString().split("T")[0];
 
       reminders.forEach((reminder) => {
-        if (reminder.date === today && reminder.time === currentTime && reminder.active) {
-          if ("Notification" in window && Notification.permission === "granted") {
+        if (
+          reminder.date === today &&
+          reminder.time === currentTime &&
+          reminder.active
+        ) {
+          if (
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
             new Notification("HealthBot Reminder", {
               body: `It's time for: ${reminder.name}`,
-              icon: "/favicon.ico"
+              icon: "/favicon.ico",
             });
           }
         }
@@ -400,7 +410,7 @@ export function ChatDashboard() {
     setPlayingMessageId(id);
 
     const utterance = new SpeechSynthesisUtterance(text);
-    
+
     utterance.pitch = 0.8;
     utterance.rate = 0.95;
 
@@ -417,9 +427,10 @@ export function ChatDashboard() {
     // Prioritize Google voices, fallback to any male voice, or the first available
     let preferredVoice = voices.find((v) => v.name.includes("Google"));
     if (!preferredVoice) {
-      preferredVoice = voices.find((v) => v.name.toLowerCase().includes("male")) || voices[0];
+      preferredVoice =
+        voices.find((v) => v.name.toLowerCase().includes("male")) || voices[0];
     }
-    
+
     if (preferredVoice) {
       utterance.voice = preferredVoice;
     }
@@ -498,7 +509,7 @@ export function ChatDashboard() {
     setSavingProfile(true);
     try {
       const res = await fetch(
-        API.PROFILE,
+        `https://healthbot-backend-ezxv.onrender.com/api/auth/profile`,
         {
           method: "PUT",
           headers: {
@@ -546,7 +557,7 @@ export function ChatDashboard() {
     setSavingPassword(true);
     try {
       const res = await fetch(
-       API.CHANGE_PASSWORD,
+        `https://healthbot-backend-ezxv.onrender.com/api/auth/change-password`,
         {
           method: "PUT",
           headers: {
@@ -590,7 +601,7 @@ export function ChatDashboard() {
 
     try {
       const res = await fetch(
-        API.DELETE_ACCOUNT,
+        "https://healthbot-backend-ezxv.onrender.com/api/auth/delete-account",
         {
           method: "DELETE",
           headers: {
@@ -674,8 +685,7 @@ export function ChatDashboard() {
       text =
         "Here is your pinned Hydration Schedule:\n- 8:00 AM: 2 glasses of water\n- 11:00 AM: 1 glass\n- 1:00 PM: 1 glass\n- 4:00 PM: 1 glass\n- 7:00 PM: 2 glasses.";
     } else if (title === "Emergency Contacts") {
-      text =
-        "Your Emergency Contacts:\n- Ambulance/Emergency: 112\n- Primary Doctor: +1-555-0198\n- Next of Kin: +1-555-0102.";
+      text = `🚨 Emergency Information Profile:\n- Ambulance/Emergency: 112\n- Your Location: ${user.address || "Please update address in Profile"}\n- Blood Group: ${user.bloodGroup || "Unknown"}\n- Patient Age: ${user.age || "Unknown"}\n- Patient Gender: ${user.gender || "Unknown"}\n- Contact Number: ${user.phoneNumber || "Unknown"}\n\nTip: Provide these exact details to the emergency operator.`;
     }
 
     setActiveSessionId(Date.now());
@@ -755,7 +765,7 @@ export function ChatDashboard() {
 
     try {
       const res = await axios.post(
-        API.CHAT_MESSAGE,
+        "https://healthbot-backend-ezxv.onrender.com/api/chat/message",
         { text: textToSend, image: currentImg },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -779,16 +789,8 @@ export function ChatDashboard() {
             hasPredictions = true;
           }
 
-          const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-          const userName = storedUser.name
-            ? storedUser.name.split(" ")[0]
-            : "there";
-
-          const geminiText = await getGeminiReply(
-            textToSend,
-            mlSummary,
-            userName,
-          );
+          // Pass the FULL user object to Gemini so it can personalize advice
+          const geminiText = await getGeminiReply(textToSend, mlSummary, user);
 
           if (geminiText) {
             if (hasPredictions) {
@@ -1333,9 +1335,15 @@ export function ChatDashboard() {
                                 }
                               >
                                 {playingMessageId === msg.id ? (
-                                  <Pause size={18} className="sm:w-3.5 sm:h-3.5" />
+                                  <Pause
+                                    size={18}
+                                    className="sm:w-3.5 sm:h-3.5"
+                                  />
                                 ) : (
-                                  <Volume2 size={18} className="sm:w-3.5 sm:h-3.5" />
+                                  <Volume2
+                                    size={18}
+                                    className="sm:w-3.5 sm:h-3.5"
+                                  />
                                 )}
                               </button>
                             </div>

@@ -9,17 +9,37 @@ if (!geminiReady) {
   console.log("Gemini ready in frontend!");
 }
 
-export async function getGeminiReply(userMessage, mlSummary, userName) {
+export async function getGeminiReply(userMessage, mlSummary, userProfile) {
   if (!geminiReady) return null;
+
+  // Extract user details to inject into the AI's brain
+  const userName = userProfile?.name
+    ? userProfile.name.split(" ")[0]
+    : "Patient";
+  const age = userProfile?.age ? `${userProfile.age} years old` : "Age unknown";
+  const gender = userProfile?.gender ? userProfile.gender : "Gender unknown";
+  const bloodGroup = userProfile?.bloodGroup
+    ? userProfile.bloodGroup
+    : "Blood group unknown";
+  const address = userProfile?.address
+    ? userProfile.address
+    : "Location unknown";
 
   const promptText = `You are HealthBot, a compassionate AI medical assistant.
 
-Patient name: ${userName}
+Patient Profile:
+- Name: ${userName}
+- Age: ${age}
+- Gender: ${gender}
+- Blood Group: ${bloodGroup}
+- Location/Environment: ${address}
+
 ${mlSummary ? `ML Prediction: ${mlSummary}` : "No ML prediction available yet"}
 
 RULES:
 - Be warm and empathetic
 - Keep response to 2-3 sentences only
+- TAILOR YOUR ADVICE to the patient's age, gender, and environment. (e.g., If they are elderly, suggest extra caution. If female, consider female-specific health factors. If they live in a specific area, keep environmental factors in mind).
 - If ML prediction is available, mention it naturally
 - Ask one follow-up question about symptoms
 - Always say you are an AI not a real doctor
