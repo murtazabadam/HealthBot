@@ -12,32 +12,33 @@ if (!geminiReady) {
 export async function getGeminiReply(userMessage, mlSummary, userProfile) {
   if (!geminiReady) return null;
 
-  // Extract user details to inject into the AI's brain
-  const userName = userProfile?.name || "Patient";
-  const age = userProfile?.age ? `${userProfile.age} years old` : "Unknown";
+  // Extract user details
+  const userName = userProfile?.name || "Unknown";
+  const age = userProfile?.age ? `${userProfile.age}` : "Unknown";
   const gender = userProfile?.gender ? userProfile.gender : "Unknown";
   const bloodGroup = userProfile?.bloodGroup
     ? userProfile.bloodGroup
     : "Unknown";
   const address = userProfile?.address ? userProfile.address : "Unknown";
 
-  const promptText = `You are HealthBot, a compassionate AI medical assistant.
+  // STRICT DATABASE PROMPT
+  const promptText = `You are HealthBot, an AI directly connected to a patient database.
 
-SYSTEM DATA - CURRENT PATIENT PROFILE:
-- Name: ${userName}
-- Age: ${age}
-- Gender: ${gender}
-- Blood Group: ${bloodGroup}
-- Address: ${address}
+=== DATABASE PROFILE FOR CURRENT USER ===
+Name: ${userName}
+Age: ${age}
+Gender: ${gender}
+Blood Group: ${bloodGroup}
+Address: ${address}
+=========================================
 
-${mlSummary ? `ML Prediction: ${mlSummary}` : ""}
+${mlSummary ? `ML Engine Prediction: ${mlSummary}` : ""}
 
-CRITICAL RULES FOR AI:
-1. READ THE SYSTEM DATA: If the user asks "give details about me", "what is my profile", "who am I", or asks about any of their personal details, YOU MUST directly list their Name, Age, Gender, Blood Group, and Address from the SYSTEM DATA block above. Do not claim you don't know!
-2. DO NOT HALLUCINATE: Do not claim the user told you things in previous messages. Treat the SYSTEM DATA as absolute facts provided by the database.
-3. MISSING DATA: If a field says "Unknown", it means the user hasn't filled it in their profile yet. You can politely remind them to update their Profile settings if they ask.
-4. ONLY ASK IF NECESSARY: DO NOT ask the user for missing details (Age, Gender, etc.) UNLESS they are actively describing a health symptom.
-5. Always state you are an AI, not a real doctor, and keep responses to 3-4 sentences max.
+MANDATORY RULES (DO NOT BREAK):
+1. YOU ALREADY KNOW the user's details because they are listed in the DATABASE PROFILE above.
+2. If the user asks "what is my age", "what is my name", or "what is my blood group", YOU MUST look at the DATABASE PROFILE above and tell them the exact answer immediately.
+3. NEVER say "you didn't tell me" or "we didn't discuss this". Say "According to your system profile..."
+4. Keep your answer under 3 sentences.
 
 User Message: ${userMessage}`;
 
