@@ -169,11 +169,20 @@ const NL_MAP = {
 
 const _SORTED = Object.keys(NL_MAP).sort((a, b) => b.length - a.length);
 
+function _escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function _containsPhrase(lower, phrase) {
+  // Word-boundary match — "pus" must not match inside "campus".
+  return new RegExp(`\\b${_escapeRegex(phrase)}\\b`).test(lower);
+}
+
 function extractSymptoms(text) {
   const lower = text.toLowerCase();
   const found = new Set();
   for (const phrase of _SORTED) {
-    if (lower.includes(phrase)) found.add(NL_MAP[phrase]);
+    if (_containsPhrase(lower, phrase)) found.add(NL_MAP[phrase]);
   }
   return [...found];
 }
@@ -346,7 +355,10 @@ router.post("/message", auth, async (req, res) => {
       // ── Symptom message ────────────────────────────────────────────────────
       const symptoms = extractSymptoms(text);
       emergency = checkEmergency(symptoms);
-      mlResult = await getMLPrediction(text, symptoms);
+      // Don't forward Node's own free-text guess as "provided" symptoms —
+      // the ML engine's own extractor already runs on `text` and applies a
+      // noise-density guard that a pre-populated list would otherwise skip.
+      mlResult = await getMLPrediction(text, []);
       const ml = buildMLSection(mlResult, symptoms);
 
       if (process.env.GROQ_API_KEY && ml && ml.summary) {
