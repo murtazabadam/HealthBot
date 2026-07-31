@@ -684,7 +684,7 @@ export function ChatDashboard() {
       text =
         "Here is your pinned Hydration Schedule:\n- 8:00 AM: 2 glasses of water\n- 11:00 AM: 1 glass\n- 1:00 PM: 1 glass\n- 4:00 PM: 1 glass\n- 7:00 PM: 2 glasses.";
     } else if (title === "Emergency Contacts") {
-      text = `🚨 Your Emergency Contacts:\n- Ambulance/Emergency: 112\n- Primary Doctor: +1-555-0198\n- Next of Kin: +1-555-0102\n- Your Registered Location: ${user.address || "Please update address in Profile"}\n\nTip: In a severe emergency, call 112 immediately and provide them with your registered location.`;
+      text = `🚨 Your Emergency Contacts:\n- Ambulance/Emergency: 112\n- Your Registered Location: ${user.address || "Please update address in Profile"}\n\nTip: In a severe emergency, call 112 immediately and provide them with your registered location.`;
     }
 
     setActiveSessionId(Date.now());
@@ -2035,27 +2035,6 @@ export function ChatDashboard() {
               <div
                 className={`border rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl focus-within:border-teal-500/40 transition-all ${isDark ? "bg-slate-900/90 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
               >
-                {/* 🎙️ STRONG GREEN GLOWING MIC BUTTON */}
-                <button
-                  type="button"
-                  onClick={toggleRecording}
-                  className={`relative p-2.5 rounded-full transition-all duration-300 shrink-0 flex items-center justify-center ${
-                    isRecording
-                      ? "text-emerald-400 bg-emerald-500/20 shadow-[0_0_20px_rgba(52,211,153,0.6)]"
-                      : "text-slate-400 hover:text-teal-500"
-                  }`}
-                >
-                  <Mic
-                    size={18}
-                    className={isRecording ? "animate-pulse" : ""}
-                  />
-
-                  {/* Glowing Recording Dot */}
-                  {isRecording && (
-                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_12px_rgba(52,211,153,1)] animate-ping"></span>
-                  )}
-                </button>
-
                 {/* Mute Button (Visible while recording) */}
                 {isRecording && (
                   <button
@@ -2101,12 +2080,36 @@ export function ChatDashboard() {
                     !e.shiftKey &&
                     (e.preventDefault(), sendMessage())
                   }
-                  placeholder={
-                    isRecording ? "Listening..." : "Describe symptoms..."
-                  }
+                  placeholder="Describe symptoms..."
                   style={{ maxHeight: "120px" }}
-                  className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar outline-none transition-all ${isRecording ? "placeholder-emerald-500 text-emerald-400" : "placeholder-slate-400"} ${isDark && !isRecording ? "text-white" : "text-slate-900"}`}
+                  className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar outline-none transition-all placeholder-slate-400 ${isDark ? "text-white" : "text-slate-900"}`}
                 />
+
+                {/* 🎙️ STRONG GREEN GLOWING MIC BUTTON ON RIGHT */}
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  className={`transition-all flex items-center justify-center gap-2 rounded-xl shrink-0 ${
+                    isRecording
+                      ? "bg-emerald-500/10 text-emerald-400 px-3 py-1.5 shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+                      : "p-2 sm:p-2.5 text-slate-400 hover:text-teal-500"
+                  }`}
+                >
+                  {isRecording ? (
+                    <>
+                      <Mic size={18} className="animate-pulse" />
+                      <span className="text-xs font-bold animate-pulse">
+                        Listening...
+                      </span>
+                      <span className="relative flex h-2.5 w-2.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                      </span>
+                    </>
+                  ) : (
+                    <Mic size={18} />
+                  )}
+                </button>
 
                 <button
                   onClick={() => sendMessage()}
