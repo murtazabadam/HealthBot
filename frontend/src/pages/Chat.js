@@ -41,7 +41,6 @@ import {
   Shield,
   Calendar,
   Phone,
-  Check,
   CalendarDays,
   Volume2,
   AlertTriangle,
@@ -774,7 +773,7 @@ export function ChatDashboard() {
       const mlResult = res.data.mlResult;
       const intent = res.data.intent;
 
-      // PROCESS EVERY MESSAGE THROUGH GEMINI (REMOVED intent === "symptoms" restriction)
+      // PROCESS EVERY MESSAGE THROUGH GEMINI
       if (geminiReady) {
         try {
           let mlSummary = "";
@@ -1656,18 +1655,18 @@ export function ChatDashboard() {
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
                           Password Requirements:
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4">
+                        <div className="flex flex-col gap-2.5">
                           {passwordRequirements.map((req, i) => (
                             <div
                               key={i}
-                              className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-500" : "text-slate-400"}`}
+                              className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-400" : "text-red-400"}`}
                             >
                               <div
-                                className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center ${req.met ? "bg-teal-500/20 border-teal-500/50" : "border-slate-300"}`}
+                                className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center text-[10px] font-bold ${req.met ? "bg-teal-500/20 border-teal-500/50" : "bg-red-500/10 border-red-500/40"}`}
                               >
-                                {req.met && <Check size={10} strokeWidth={4} />}
+                                {req.met ? "✓" : "✗"}
                               </div>
-                              <span className="text-[11px] font-medium">
+                              <span className="text-xs font-medium tracking-wide">
                                 {String(req.label)}
                               </span>
                             </div>
@@ -2036,10 +2035,37 @@ export function ChatDashboard() {
               <div
                 className={`border rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl focus-within:border-teal-500/40 transition-all ${isDark ? "bg-slate-900/90 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
               >
+                {/* 🎙️ STRONG GREEN GLOWING MIC BUTTON */}
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  className={`relative p-2.5 rounded-full transition-all duration-300 shrink-0 flex items-center justify-center ${
+                    isRecording
+                      ? "text-emerald-400 bg-emerald-500/20 shadow-[0_0_20px_rgba(52,211,153,0.6)]"
+                      : "text-slate-400 hover:text-teal-500"
+                  }`}
+                >
+                  <Mic
+                    size={18}
+                    className={isRecording ? "animate-pulse" : ""}
+                  />
+
+                  {/* Glowing Recording Dot */}
+                  {isRecording && (
+                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-emerald-400 rounded-full shadow-[0_0_12px_rgba(52,211,153,1)] animate-ping"></span>
+                  )}
+                </button>
+
+                {/* Mute Button (Visible while recording) */}
                 {isRecording && (
                   <button
+                    type="button"
                     onClick={() => setIsMuted(!isMuted)}
-                    className={`p-2 rounded-full transition-all ${isMuted ? "bg-rose-500 text-white" : "bg-teal-500/10 text-teal-500"}`}
+                    className={`p-2 rounded-full transition-all shrink-0 flex items-center justify-center ${
+                      isMuted
+                        ? "text-rose-400 bg-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+                        : "text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+                    }`}
                     title={isMuted ? "Unmute Mic" : "Mute Mic"}
                   >
                     {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
@@ -2054,8 +2080,9 @@ export function ChatDashboard() {
                   accept="image/*"
                 />
                 <button
+                  type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-2 text-slate-400 hover:text-teal-500 transition-colors"
+                  className="p-2 text-slate-400 hover:text-teal-500 transition-colors shrink-0"
                 >
                   <Paperclip size={18} />
                 </button>
@@ -2075,41 +2102,16 @@ export function ChatDashboard() {
                     (e.preventDefault(), sendMessage())
                   }
                   placeholder={
-                    isRecording
-                      ? "Listening to your voice..."
-                      : "Describe symptoms..."
+                    isRecording ? "Listening..." : "Describe symptoms..."
                   }
                   style={{ maxHeight: "120px" }}
-                  className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar outline-none transition-all ${isRecording ? "placeholder-teal-400" : "placeholder-slate-400"} ${isDark ? "text-white" : "text-slate-900"}`}
+                  className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar outline-none transition-all ${isRecording ? "placeholder-emerald-500 text-emerald-400" : "placeholder-slate-400"} ${isDark && !isRecording ? "text-white" : "text-slate-900"}`}
                 />
-
-                <button
-                  onClick={toggleRecording}
-                  className={`transition-all flex items-center justify-center gap-2 rounded-xl ${
-                    isRecording
-                      ? "bg-teal-500/10 text-teal-500 px-3 py-1.5"
-                      : "p-2 text-slate-400 hover:text-teal-500"
-                  }`}
-                >
-                  {isRecording ? (
-                    <>
-                      <span className="relative flex h-2.5 w-2.5 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-500"></span>
-                      </span>
-                      <span className="text-xs font-bold animate-pulse">
-                        Listening...
-                      </span>
-                    </>
-                  ) : (
-                    <Mic size={18} />
-                  )}
-                </button>
 
                 <button
                   onClick={() => sendMessage()}
                   disabled={(!inputText.trim() && !uploadedImage) || loading}
-                  className="bg-teal-500 text-slate-900 p-2 sm:p-2.5 rounded-xl transition-all shadow-lg hover:brightness-110 active:scale-95 disabled:opacity-50"
+                  className="bg-teal-500 text-slate-900 p-2 sm:p-2.5 rounded-xl transition-all shadow-lg hover:brightness-110 active:scale-95 disabled:opacity-50 shrink-0"
                 >
                   <Send size={18} strokeWidth={3} />
                 </button>
