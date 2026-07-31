@@ -44,7 +44,6 @@ import {
   CalendarDays,
   Volume2,
   AlertTriangle,
-  MicOff,
   Pause,
 } from "lucide-react";
 
@@ -59,7 +58,6 @@ export function ChatDashboard() {
 
   // --- NEW VOICE & TTS STATES ---
   const [playingMessageId, setPlayingMessageId] = useState(null);
-  const [isMuted, setIsMuted] = useState(false);
 
   // Real-time Chat & Settings States
   const [activeSessionId, setActiveSessionId] = useState(Date.now());
@@ -221,12 +219,10 @@ export function ChatDashboard() {
 
   // --- NOTIFICATION WATCHER ---
   useEffect(() => {
-    // 1. Request permission on load
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
     }
 
-    // 2. Check reminders every 60 seconds
     const interval = setInterval(() => {
       const now = new Date();
       const currentTime = now.toLocaleTimeString([], {
@@ -253,18 +249,17 @@ export function ChatDashboard() {
           }
         }
       });
-    }, 60000); // Check every 60 seconds
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [reminders]);
 
-  // --- Utility: Format 24h Time to AM/PM ---
   const formatTimeAMPM = (timeStr) => {
     if (!timeStr) return "";
     let [h, m] = timeStr.split(":");
     let hour = parseInt(h, 10);
     const ampm = hour >= 12 ? "PM" : "AM";
-    hour = hour % 12 || 12; // Convert 0 to 12
+    hour = hour % 12 || 12;
     return `${hour}:${m} ${ampm}`;
   };
 
@@ -344,12 +339,10 @@ export function ChatDashboard() {
   const rawFirstName = rawFullName.trim().split(" ")[0];
   const firstName = formatName(rawFirstName);
 
-  // Smart Greeting Logic Check
   const isNewUser = user?.createdAt
     ? Date.now() - new Date(user.createdAt).getTime() < 5 * 60 * 1000
     : chatHistoryList.length === 0;
 
-  // Close sidebar automatically on mobile
   useEffect(() => {
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
   }, []);
@@ -388,7 +381,6 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
-  // --- MOBILE-COMPLIANT TTS LOGIC (PLAY/STOP ONLY) ---
   const speakText = (text, id) => {
     const synth = window.speechSynthesis;
 
@@ -397,14 +389,12 @@ export function ChatDashboard() {
       return;
     }
 
-    // If clicking the same message that is playing, STOP it.
     if (playingMessageId === id) {
       synth.cancel();
       setPlayingMessageId(null);
       return;
     }
 
-    // Start New Playback
     synth.cancel();
     setPlayingMessageId(id);
 
@@ -423,7 +413,6 @@ export function ChatDashboard() {
     };
 
     const voices = synth.getVoices();
-    // Prioritize Google voices, fallback to any male voice, or the first available
     let preferredVoice = voices.find((v) => v.name.includes("Google"));
     if (!preferredVoice) {
       preferredVoice =
@@ -434,46 +423,61 @@ export function ChatDashboard() {
       utterance.voice = preferredVoice;
     }
 
-    // Execute immediately so mobile browsers register the user tap gesture
     synth.speak(utterance);
   };
 
-  // --- ENHANCED MIC LOGIC (Mute functionality) ---
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-  const recognition = SpeechRecognition ? new SpeechRecognition() : null;
-
-  if (recognition) {
-    recognition.continuous = false;
-    recognition.onresult = (event) => {
-      if (isMuted) return; // Mute Check
-      const transcript = event.results[0][0].transcript;
-      setInputText((prev) => (prev ? prev + " " + transcript : transcript));
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
-      }
-      setIsRecording(false);
-      setIsMuted(false);
-    };
-    recognition.onerror = () => {
-      setIsRecording(false);
-      setIsMuted(false);
-    };
-    recognition.onend = () => setIsRecording(false);
-  }
+  // --- REBUILT & BUG-FREE MIC LOGIC ---
+  const recognitionRef = useRef(null);
 
   const toggleRecording = () => {
-    if (!recognition)
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
       return showToast("Speech recognition is not supported in this browser.");
+    }
+
     if (isRecording) {
-      recognition.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       setIsRecording(false);
-      setIsMuted(false);
     } else {
-      recognition.start();
-      setIsRecording(true);
-      setIsMuted(false);
+      // Create a fresh instance every click to prevent "already started" bug
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInputText((prev) => (prev ? prev + " " + transcript : transcript));
+
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "auto";
+          textareaRef.current.style.height = `${Math.min(
+            textareaRef.current.scrollHeight,
+            120,
+          )}px`;
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error", event.error);
+        setIsRecording(false);
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
+      try {
+        recognition.start();
+        recognitionRef.current = recognition;
+        setIsRecording(true);
+      } catch (error) {
+        console.error("Failed to start recording:", error);
+        setIsRecording(false);
+      }
     }
   };
 
@@ -593,7 +597,6 @@ export function ChatDashboard() {
     }
   };
 
-  // --- ACCOUNT DELETION LOGIC (SECURE) ---
   const confirmAccountAction = async (e) => {
     e.preventDefault();
     setAccountAction((prev) => ({ ...prev, loading: true }));
@@ -651,7 +654,6 @@ export function ChatDashboard() {
     handleNavClick("chat");
   };
 
-  // --- DELETE SINGLE CHAT SESSION ---
   const deleteSession = (e, id) => {
     e.stopPropagation();
     if (
@@ -773,7 +775,6 @@ export function ChatDashboard() {
       const mlResult = res.data.mlResult;
       const intent = res.data.intent;
 
-      // PROCESS EVERY MESSAGE THROUGH GEMINI
       if (geminiReady) {
         try {
           let mlSummary = "";
@@ -788,11 +789,9 @@ export function ChatDashboard() {
             mlSummary = `Most likely ${top.disease} at ${top.confidence}% confidence. Severity: ${mlResult.severity}`;
           }
 
-          // Pass the FULL user object to Gemini so it can personalize advice AND answer questions about the profile
           const geminiText = await getGeminiReply(textToSend, mlSummary, user);
 
           if (geminiText) {
-            // Only append the backend ML block if this was actually a medical symptom check
             if (
               isMedical &&
               (botReply.includes("ML Analysis") ||
@@ -800,7 +799,6 @@ export function ChatDashboard() {
             ) {
               botReply = geminiText + "\n\n" + botReply;
             } else {
-              // Otherwise, just use Gemini's natural conversational response
               botReply = geminiText;
             }
           }
@@ -949,14 +947,12 @@ export function ChatDashboard() {
         className={`absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] pointer-events-none ${isDark ? "bg-teal-500/5" : "bg-teal-500/10"}`}
       />
 
-      {/* Global Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-teal-500 text-slate-900 px-5 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-3 z-[200] animate-in slide-in-from-bottom-5">
           <CheckCircle2 size={20} /> {toastMessage}
         </div>
       )}
 
-      {/* EMERGENCY SOS FULL SCREEN MODAL */}
       {emergencyAlert && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-red-900/80 backdrop-blur-md animate-in fade-in zoom-in duration-300">
           <div className="w-full max-w-lg p-8 rounded-3xl shadow-2xl bg-white border-4 border-red-500 text-center relative">
@@ -1005,7 +1001,6 @@ export function ChatDashboard() {
         </div>
       )}
 
-      {/* Custom Reminder Modal */}
       {isReminderModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div
@@ -1085,7 +1080,6 @@ export function ChatDashboard() {
         </div>
       )}
 
-      {/* ACCOUNT DELETION MODAL */}
       {accountAction.isOpen && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div
@@ -1200,9 +1194,7 @@ export function ChatDashboard() {
         <SidebarContent />
       </div>
 
-      {/* Main Content Area - Strict Flex Column */}
       <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative overflow-hidden">
-        {/* HEADER - Strict Flex None */}
         <header
           className={`flex-none z-[90] h-[72px] border-b flex items-center justify-between px-3 sm:px-4 lg:px-8 backdrop-blur-md transition-colors duration-300 ${isDark ? "bg-[#020617]/95 border-slate-800/60 shadow-xl" : "bg-white/95 border-slate-200 shadow-sm"}`}
         >
@@ -1253,14 +1245,11 @@ export function ChatDashboard() {
           </div>
         </header>
 
-        {/* --- DYNAMIC VIEW SWITCHER (Scrollable Area) --- */}
         <div className="flex-1 overflow-y-auto pt-6 pb-6 px-4 lg:px-6 no-scrollbar relative z-0">
-          {/* VIEW: CHAT */}
           {page === "chat" && (
             <div
               className={`max-w-4xl mx-auto flex flex-col space-y-6 pb-12 ${messages.length === 0 ? "h-full justify-center" : ""}`}
             >
-              {/* CLAUDE STYLE GREETING FOR NEW CHAT */}
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
                   <div className="w-20 h-20 bg-teal-500/10 border border-teal-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(45,212,191,0.15)]">
@@ -1325,7 +1314,6 @@ export function ChatDashboard() {
                           )}
                         </div>
 
-                        {/* TTS SPEAKER BUTTONS ONLY */}
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
                           {msg.sender === "bot" && (
@@ -1382,10 +1370,8 @@ export function ChatDashboard() {
             </div>
           )}
 
-          {/* VIEW: FIRST AID */}
           {page === "first-aid" && <FirstAidView isDark={isDark} />}
 
-          {/* VIEW: PROFILE */}
           {page === "profile" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div
@@ -1584,7 +1570,6 @@ export function ChatDashboard() {
                 </div>
               </div>
 
-              {/* Security Card */}
               <div
                 className={`border rounded-3xl p-6 sm:p-8 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 backdrop-blur-xl border-slate-700/50" : "bg-white border-slate-200 shadow-sm"}`}
               >
@@ -1648,7 +1633,6 @@ export function ChatDashboard() {
                         }
                       />
 
-                      {/* REAL-TIME PASSWORD RULES CHECKLIST */}
                       <div
                         className={`p-4 rounded-xl border mt-2 ${isDark ? "bg-slate-900/50 border-slate-800" : "bg-slate-50 border-slate-200"}`}
                       >
@@ -1711,7 +1695,6 @@ export function ChatDashboard() {
                 )}
               </div>
 
-              {/* ACCOUNT MANAGEMENT CARD (Secure Deletion) */}
               <div
                 className={`border rounded-3xl p-6 sm:p-8 mt-6 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 border-rose-900/30" : "bg-white border-rose-100"}`}
               >
@@ -1751,7 +1734,6 @@ export function ChatDashboard() {
             </div>
           )}
 
-          {/* VIEW: CHAT HISTORY */}
           {page === "history" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div className="flex justify-between items-center mb-8">
@@ -1796,7 +1778,6 @@ export function ChatDashboard() {
             </div>
           )}
 
-          {/* VIEW: SAVED ADVICE */}
           {page === "saved" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2
@@ -1830,7 +1811,6 @@ export function ChatDashboard() {
             </div>
           )}
 
-          {/* VIEW: REMINDERS */}
           {page === "reminders" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <div className="flex justify-between items-center mb-8">
@@ -1892,7 +1872,6 @@ export function ChatDashboard() {
             </div>
           )}
 
-          {/* VIEW: FACILITIES */}
           {page === "facilities" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2
@@ -1937,7 +1916,6 @@ export function ChatDashboard() {
             </div>
           )}
 
-          {/* VIEW: SETTINGS */}
           {page === "settings" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
               <h2
@@ -1990,13 +1968,11 @@ export function ChatDashboard() {
           )}
         </div>
 
-        {/* --- INPUT BAR --- */}
         {page === "chat" && (
           <div
             className={`flex-none p-3 sm:p-4 lg:p-6 border-t w-full relative z-10 pb-4 sm:pb-6 transition-colors duration-300 ${isDark ? "bg-[#020617] border-slate-800/40 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]" : "bg-white border-slate-200 shadow-sm"}`}
           >
             <div className="max-w-4xl mx-auto">
-              {/* Auto-Hiding Quick Symptoms */}
               {messages.length === 0 && (
                 <div className="flex overflow-x-auto gap-2 mb-3 no-scrollbar pb-1 justify-center w-full">
                   {["Fever", "Headache", "Fatigue", "Cough"].map((symptom) => (
@@ -2035,22 +2011,6 @@ export function ChatDashboard() {
               <div
                 className={`border rounded-2xl p-1.5 flex items-center gap-1 shadow-2xl focus-within:border-teal-500/40 transition-all ${isDark ? "bg-slate-900/90 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
               >
-                {/* Mute Button (Visible while recording) */}
-                {isRecording && (
-                  <button
-                    type="button"
-                    onClick={() => setIsMuted(!isMuted)}
-                    className={`p-2 rounded-full transition-all shrink-0 flex items-center justify-center ${
-                      isMuted
-                        ? "text-rose-400 bg-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
-                        : "text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 shadow-[0_0_15px_rgba(52,211,153,0.3)]"
-                    }`}
-                    title={isMuted ? "Unmute Mic" : "Mute Mic"}
-                  >
-                    {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
-                  </button>
-                )}
-
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -2080,35 +2040,32 @@ export function ChatDashboard() {
                     !e.shiftKey &&
                     (e.preventDefault(), sendMessage())
                   }
-                  placeholder="Describe symptoms..."
+                  placeholder={
+                    isRecording ? "Listening..." : "Describe symptoms..."
+                  }
                   style={{ maxHeight: "120px" }}
-                  className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar outline-none transition-all placeholder-slate-400 ${isDark ? "text-white" : "text-slate-900"}`}
+                  className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar outline-none transition-all ${isRecording ? "placeholder-emerald-400" : "placeholder-slate-400"} ${isDark ? "text-white" : "text-slate-900"}`}
                 />
 
-                {/* 🎙️ STRONG GREEN GLOWING MIC BUTTON ON RIGHT */}
                 <button
                   type="button"
                   onClick={toggleRecording}
-                  className={`transition-all flex items-center justify-center gap-2 rounded-xl shrink-0 ${
+                  className={`relative p-2 sm:p-2.5 rounded-xl transition-all shrink-0 flex items-center justify-center ${
                     isRecording
-                      ? "bg-emerald-500/10 text-emerald-400 px-3 py-1.5 shadow-[0_0_15px_rgba(52,211,153,0.3)]"
-                      : "p-2 sm:p-2.5 text-slate-400 hover:text-teal-500"
+                      ? "bg-emerald-500/10 text-emerald-500 shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+                      : "text-slate-400 hover:text-teal-500"
                   }`}
                 >
-                  {isRecording ? (
-                    <>
-                      <Mic size={18} className="animate-pulse" />
-                      <span className="text-xs font-bold animate-pulse">
-                        Listening...
-                      </span>
-                      <span className="relative flex h-2.5 w-2.5 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                      </span>
-                    </>
-                  ) : (
-                    <Mic size={18} />
+                  {isRecording && (
+                    <span className="absolute top-1 right-1 flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
                   )}
+                  <Mic
+                    size={18}
+                    className={isRecording ? "animate-pulse" : ""}
+                  />
                 </button>
 
                 <button
@@ -2136,7 +2093,6 @@ export function ChatDashboard() {
   );
 }
 
-// --- First Aid Component ---
 const FirstAidView = ({ isDark }) => {
   const [selected, setSelected] = useState(null);
 
@@ -2339,8 +2295,6 @@ const FirstAidView = ({ isDark }) => {
   );
 };
 
-// --- Helper Components ---
-
 const SidebarBtn = ({ icon: Icon, label, active, onClick, isDark }) => (
   <button
     onClick={onClick}
@@ -2461,7 +2415,6 @@ const SettingToggle = ({ label, desc, checked, onChange, isDark }) => {
   );
 };
 
-// --- Profile Shared Components ---
 const ProfileField = ({
   label,
   icon: Icon,
