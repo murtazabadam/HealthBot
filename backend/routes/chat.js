@@ -3,7 +3,7 @@ const router = express.Router();
 const auth = require("../middleware/auth");
 const Conversation = require("../models/Conversation");
 const User = require("../models/User");
-const { getGeminiResponse } = require("../config/gemini");
+const { getGroqResponse } = require("../config/groq");
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
 async function getMLPrediction(text, symptoms) {
@@ -382,7 +382,7 @@ router.post("/message", auth, async (req, res) => {
       if (process.env.GROQ_API_KEY && ml && ml.summary) {
         try {
           console.log("Calling Groq AI...");
-          const aiText = await getGeminiResponse(
+          const aiText = await getGroqResponse(
             text,
             ml.summary,
             userName,
@@ -414,7 +414,7 @@ router.post("/message", auth, async (req, res) => {
       if (process.env.GROQ_API_KEY) {
         try {
           console.log("Calling Groq AI for conversation...");
-          const aiText = await getGeminiResponse(
+          const aiText = await getGroqResponse(
             text,
             null,
             userName,
