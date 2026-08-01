@@ -188,6 +188,23 @@ function extractSymptoms(text) {
 }
 
 // ── Intent Detection ───────────────────────────────────────────────────────────
+// A message can contain a real symptom word while still not be a symptom
+// REPORT — e.g. "if I eat a burger, will I get stomach pain?" is a
+// hypothetical question, not "I currently have stomach pain." This checks
+// for that framing so such messages get routed to normal conversation
+// instead of the symptom-analysis flow.
+function isHypotheticalQuestion(text) {
+  const lower = text.toLowerCase().trim();
+  const patterns = [
+    /\bif\s+i\b[\s\S]*\b(will|would|could|might|can)\b/, // "if I eat X, will I ..."
+    /\b(will|would|could|might|can)\s+i\s+(get|have|develop|catch)\b/, // "will I get stomach pain"
+    /\bdoes\b[\s\S]*\bcause\b/, // "does eating X cause Y"
+    /\bwhat\s+causes\b/,
+    /\bis\s+it\s+(bad|okay|ok|safe|fine)\s+to\s+eat\b/,
+  ];
+  return patterns.some((p) => p.test(lower));
+}
+
 function detectIntent(text) {
   const lower = text.toLowerCase().trim();
   const greetings = [
@@ -233,7 +250,8 @@ function detectIntent(text) {
     )
   )
     return "farewell";
-  if (extractSymptoms(text).length > 0) return "symptoms";
+  if (extractSymptoms(text).length > 0 && !isHypotheticalQuestion(text))
+    return "symptoms";
   return "conversational"; // everything else handled by Groq with history
 }
 
