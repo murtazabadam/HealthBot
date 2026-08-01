@@ -401,27 +401,5 @@ router.get('/google/callback',
   }
 );
 
-// ── Test Routes (remove before final submission) ───────────────────────────────
-router.get('/test-groq', async (req, res) => {
-  try {
-    const { getGeminiResponse } = require('../config/gemini');
-    const reply = await getGeminiResponse(
-      'I have fever and headache',
-      'Top prediction: Common Cold (45%). Severity: Mild.',
-      'TestUser', []
-    );
-    res.json({ working: !!reply, response: reply || 'null — check GROQ_API_KEY' });
-  } catch (err) {
-    res.json({ working: false, error: err.message });
-  }
-});
-
-router.get('/test-email', async (req, res) => {
-  const { sendOTPEmail } = require('../config/emailService');
-  const sent = await sendOTPEmail(
-    process.env.EMAIL_FROM, 'Test', '123456', 'verification'
-  );
-  res.json({ sent, emailFrom: process.env.EMAIL_FROM || 'NOT SET' });
-});
 
 module.exports = router;

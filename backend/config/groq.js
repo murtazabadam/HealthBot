@@ -23,7 +23,7 @@ function initGroq() {
 
 initGroq();
 
-async function getGeminiResponse(userMessage, mlPrediction, userName, chatHistory = []) {
+async function getGroqResponse(userMessage, mlPrediction, userName, chatHistory = []) {
   if (!groq) return null;
 
   const cacheKey = `${userMessage.toLowerCase().trim()}_${mlPrediction || 'none'}`;
@@ -92,4 +92,4 @@ ${mlPrediction
   }
 }
 
-module.exports = { getGeminiResponse };
+module.exports = { getGroqResponse };
