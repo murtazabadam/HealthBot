@@ -205,6 +205,26 @@ function isHypotheticalQuestion(text) {
   return patterns.some((p) => p.test(lower));
 }
 
+// Catches the narrow but real case of a symptom word attributed to an
+// obviously non-person subject ("this book suffers from fever"). This is a
+// blocklist, not real semantic understanding — it won't catch every
+// possible absurd phrasing, only common everyday objects. Deliberately
+// narrow so it never blocks the very common, valid way people list
+// symptoms tersely with no pronoun at all ("fever, headache, joint pain").
+function hasNonPersonSubject(text) {
+  const lower = text.toLowerCase();
+  const nonPersonNouns = [
+    "book", "chair", "table", "car", "bike", "phone", "computer", "laptop",
+    "wall", "door", "window", "house", "building", "tree", "rock", "shoe",
+    "bag", "pen", "bottle", "cup", "plate", "roof", "tv", "television",
+    "fridge", "fan", "clock", "watch", "shirt", "sofa", "couch",
+  ];
+  const pattern = new RegExp(
+    `\\b(this|that|the|my|our|his|her|their)\\s+(${nonPersonNouns.join("|")})\\b`
+  );
+  return pattern.test(lower);
+}
+
 function detectIntent(text) {
   const lower = text.toLowerCase().trim();
   const greetings = [
@@ -250,7 +270,11 @@ function detectIntent(text) {
     )
   )
     return "farewell";
-  if (extractSymptoms(text).length > 0 && !isHypotheticalQuestion(text))
+  if (
+    extractSymptoms(text).length > 0 &&
+    !isHypotheticalQuestion(text) &&
+    !hasNonPersonSubject(text)
+  )
     return "symptoms";
   return "conversational"; // everything else handled by Groq with history
 }
