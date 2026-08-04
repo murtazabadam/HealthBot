@@ -212,17 +212,41 @@ function isHypotheticalQuestion(text) {
 // narrow so it never blocks the very common, valid way people list
 // symptoms tersely with no pronoun at all ("fever, headache, joint pain").
 function hasNonPersonSubject(text) {
-  const lower = text.toLowerCase();
+  const lower = text.toLowerCase().trim();
   const nonPersonNouns = [
-    "book", "chair", "table", "car", "bike", "phone", "computer", "laptop",
-    "wall", "door", "window", "house", "building", "tree", "rock", "shoe",
-    "bag", "pen", "bottle", "cup", "plate", "roof", "tv", "television",
-    "fridge", "fan", "clock", "watch", "shirt", "sofa", "couch",
+    // household objects / furniture
+    "book", "chair", "table", "wall", "door", "window", "house", "building",
+    "rock", "shoe", "bag", "pen", "bottle", "cup", "plate", "roof", "tv",
+    "television", "fridge", "fan", "clock", "watch", "shirt", "sofa", "couch",
+    "bed", "shelf", "cabinet", "drawer", "mirror", "lamp", "umbrella", "plant",
+    "tree",
+    // electronics / peripherals (deliberately includes "mouse" — the
+    // computer peripheral sense is far more common in a chat message than
+    // the animal, but the animal is also a non-person subject, so either
+    // reading is correctly caught here)
+    "mouse", "keyboard", "monitor", "speaker", "remote", "charger", "router",
+    "printer", "tablet", "camera", "headphone", "headphones", "earphone",
+    "earphones", "laptop", "computer", "phone",
+    // vehicles
+    "car", "bike", "bus", "train", "truck", "scooter", "plane", "boat", "ship",
+    // non-human animals
+    "rat", "dog", "cat", "cow", "goat", "horse", "bird", "fish", "lizard",
+    "snake", "frog", "ant", "bee", "insect", "hamster", "rabbit", "parrot",
+    "chicken", "goose", "duck",
   ];
-  const pattern = new RegExp(
-    `\\b(this|that|the|my|our|his|her|their)\\s+(${nonPersonNouns.join("|")})\\b`
+  const nounsPattern = nonPersonNouns.join("|");
+  // Determiner + noun anywhere in the message: "this book", "my mouse".
+  const determinerPattern = new RegExp(
+    `\\b(this|that|the|my|our|his|her|their|a|an)\\s+(${nounsPattern})\\b`
   );
-  return pattern.test(lower);
+  // Bare noun as the message's own subject, with no determiner at all —
+  // "mouse is having a serious muscle pain", "dog has fever". Anchored to
+  // the start of the message and requires an immediately following verb, so
+  // it won't misfire on the noun appearing later as an object elsewhere.
+  const bareSubjectPattern = new RegExp(
+    `^(${nounsPattern})\\s+(is|are|has|have|having|suffers|suffering|feels|feeling|seems|looks)\\b`
+  );
+  return determinerPattern.test(lower) || bareSubjectPattern.test(lower);
 }
 
 function detectIntent(text) {
