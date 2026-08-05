@@ -3,7 +3,7 @@ const router = express.Router();
 const auth = require("../middleware/auth");
 const Conversation = require("../models/Conversation");
 const User = require("../models/User");
-const { getGroqResponse } = require("../config/groq");
+const { getGroqResponse, isOffTopic } = require("../config/groq");
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
 async function getMLPrediction(text, symptoms) {
@@ -459,7 +459,19 @@ router.post("/message", auth, async (req, res) => {
       // ── Everything else — pass to Groq with full history ──────────────────
       // This covers: follow-up answers, yes/no, self-care questions,
       // medicine questions, greetings with history, unknown text etc.
-      if (process.env.GROQ_API_KEY) {
+      //
+      // Before generating any reply content, check whether this message is
+      // even on-topic at all. If it isn't, the reply below is a fixed
+      // string this code controls directly — the model is never asked to
+      // generate free-form content for an off-topic message in the first
+      // place, so there's nothing for it to leak.
+      const offTopic = process.env.GROQ_API_KEY
+        ? await isOffTopic(text, recentHistory)
+        : false;
+
+      if (offTopic) {
+        botReply = `That's outside what I can help with, ${userName.split(" ")[0]} — I'm a medical symptom assistant, so I can only help with health, symptoms, and wellness questions. Is there anything going on with your health I can help you with?`;
+      } else if (process.env.GROQ_API_KEY) {
         try {
           console.log("Calling Groq AI for conversation...");
           const aiText = await getGroqResponse(

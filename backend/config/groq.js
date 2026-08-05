@@ -47,6 +47,13 @@ STRICT RULES:
 - Ask one relevant follow-up question to learn more
 - NEVER make definitive diagnoses
 - If symptoms sound serious, urge seeing a doctor immediately
+- YOU ARE A MEDICAL SYMPTOM ASSISTANT ONLY. If the patient asks something with no
+  connection to health, symptoms, or medicine — geography, math, trivia, coding,
+  entertainment, current events, or anything similar — do NOT answer it, not even
+  briefly or partially. Do not supply the fact, the number, or the answer in any
+  form. Instead, in one short sentence, say this is outside what you can help
+  with and redirect to their health concern. Never answer the off-topic question
+  first and redirect after — redirect only.
 
 Patient name: ${userName}
 ${mlPrediction
@@ -92,4 +99,56 @@ ${mlPrediction
   }
 }
 
-module.exports = { getGroqResponse };
+// ── Off-topic gate ───────────────────────────────────────────────────────
+// A dedicated, narrow classification call, kept completely separate from
+// getGroqResponse above. The point of splitting this out: when the answer
+// is "off-topic", the caller in routes/chat.js never uses any model-
+// generated text at all — it substitutes a hardcoded string it controls
+// itself. That's a stronger guarantee than the prompt rule inside
+// getGroqResponse's systemPrompt (which still relies on the model choosing
+// to comply while generating free-form content) — here, the model's only
+// job is a one-word yes/no, and the actual reply text is never its output.
+async function isOffTopic(userMessage, chatHistory = []) {
+  if (!groq) return false; // fail open — never block the user if AI is unavailable
+
+  const recentContext = chatHistory
+    .slice(-4)
+    .map(m => `${m.sender}: ${m.text}`)
+    .join('\n');
+
+  const classifierPrompt = `You are a strict topic gate for a medical symptom-checking chatbot.
+Decide whether the LATEST user message is something this chatbot should engage with.
+
+Reply YES if the message is: a symptom description, a health/medical/wellness question, a
+question about medicine or self-care, a greeting, thanks, farewell, a short conversational
+reply continuing a prior health discussion (e.g. "yes", "since 2 days", "ok", "a little
+better"), or a question about what the bot itself can do.
+
+Reply NO if the message has no connection to health at all — geography, math, general
+trivia, coding, entertainment, sports, current events, requests to write unrelated
+creative content, or any other unrelated topic.
+
+Reply with exactly one word: YES or NO. Nothing else — no punctuation, no explanation.
+
+Recent conversation for context:
+${recentContext || '(no prior messages)'}`;
+
+  try {
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        { role: 'system', content: classifierPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      max_tokens: 3,
+      temperature: 0,
+    });
+    const answer = (completion.choices[0]?.message?.content || '').trim().toUpperCase();
+    return answer.startsWith('NO');
+  } catch (err) {
+    console.error('Off-topic classification failed:', err.message);
+    return false; // fail open — a classifier error should never block a real user
+  }
+}
+
+module.exports = { getGroqResponse, isOffTopic };
