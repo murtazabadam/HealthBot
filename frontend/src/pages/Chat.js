@@ -47,8 +47,8 @@ import {
   Pause,
 } from "lucide-react";
 
-// Import the real Gemini frontend service
-import { getGeminiReply, geminiReady } from "../services/gemini";
+
+
 
 // A small, self-contained checklist card shown after a symptom message is
 // sent — the user reviews/edits exactly what was understood before any
@@ -853,27 +853,7 @@ export function ChatDashboard() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      let botReply = res.data.reply;
-      const mlResult = res.data.mlResult;
-
-      if (geminiReady) {
-        try {
-          let mlSummary = "";
-          if (mlResult && mlResult.predictions && mlResult.predictions.length > 0) {
-            const top = mlResult.predictions[0];
-            mlSummary = `Most likely ${top.disease} at ${top.confidence}% confidence. Severity: ${mlResult.severity}`;
-          }
-          const geminiText = await getGeminiReply(msg.originalText, mlSummary, user);
-          if (geminiText) {
-            botReply =
-              botReply.includes("ML Analysis") || botReply.includes("I detected:")
-                ? geminiText + "\n\n" + botReply
-                : geminiText;
-          }
-        } catch (geminiErr) {
-          console.error("Frontend Gemini error:", geminiErr.message);
-        }
-      }
+      const botReply = res.data.reply;
 
       setMessages((prev) => [
         ...prev,
@@ -968,9 +948,7 @@ export function ChatDashboard() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      let botReply = res.data.reply;
-      const mlResult = res.data.mlResult;
-      const intent = res.data.intent;
+      const botReply = res.data.reply;
 
       if (res.data.needsConfirmation) {
         setMessages((prev) => [
@@ -987,38 +965,6 @@ export function ChatDashboard() {
         ]);
         setLoading(false);
         return;
-      }
-
-      if (geminiReady) {
-        try {
-          let mlSummary = "";
-          let isMedical = intent === "symptoms";
-
-          if (
-            mlResult &&
-            mlResult.predictions &&
-            mlResult.predictions.length > 0
-          ) {
-            const top = mlResult.predictions[0];
-            mlSummary = `Most likely ${top.disease} at ${top.confidence}% confidence. Severity: ${mlResult.severity}`;
-          }
-
-          const geminiText = await getGeminiReply(textToSend, mlSummary, user);
-
-          if (geminiText) {
-            if (
-              isMedical &&
-              (botReply.includes("ML Analysis") ||
-                botReply.includes("I detected:"))
-            ) {
-              botReply = geminiText + "\n\n" + botReply;
-            } else {
-              botReply = geminiText;
-            }
-          }
-        } catch (geminiErr) {
-          console.error("Frontend Gemini error:", geminiErr.message);
-        }
       }
 
       setMessages((prev) => [
