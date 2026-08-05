@@ -30,6 +30,12 @@ async function getMLPrediction(text, symptoms) {
 }
 
 // ── NL Map ────────────────────────────────────────────────────────────────────
+function readableSymptom(id) {
+  return id
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 const NL_MAP = {
   "high fever": "high_fever",
   "mild fever": "mild_fever",
@@ -421,6 +427,28 @@ router.post("/message", auth, async (req, res) => {
       // ── Symptom message ────────────────────────────────────────────────────
       const symptoms = extractSymptoms(text);
       emergency = checkEmergency(symptoms);
+
+      if (!emergency) {
+        // Human-in-the-loop confirmation gate: never send free-text-derived
+        // symptoms straight to prediction. Show what was understood and let
+        // the user confirm/edit it first — this is what actually guarantees
+        // "I have vomiting" vs "this book has a fever" get handled correctly,
+        // structurally, rather than by chasing every possible bad phrasing
+        // with more regex rules.
+        if (!conv) conv = new Conversation({ userId: req.user.id, messages: [] });
+        conv.messages.push({ sender: "user", text });
+        await conv.save();
+
+        return res.json({
+          needsConfirmation: true,
+          originalText: text,
+          detectedSymptoms: symptoms.map((id) => ({ id, label: readableSymptom(id) })),
+          intent,
+          emergency: false,
+        });
+      }
+
+      // Emergency messages skip confirmation entirely — respond immediately.
       // Don't forward Node's own free-text guess as "provided" symptoms —
       // the ML engine's own extractor already runs on `text` and applies a
       // noise-density guard that a pre-populated list would otherwise skip.
@@ -522,6 +550,61 @@ router.delete("/history", auth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
+});
+
+// ── Confirm Symptoms Route ───────────────────────────────────────────────────
+// Runs only after the user has reviewed and confirmed the detected symptom
+// list. Because this list is now human-verified (not raw free-text guessing),
+// it's safe to forward it to the ML engine as trusted "provided" symptoms —
+// unlike the initial /message flow, which deliberately never does that.
+router.post("/confirm-symptoms", auth, async (req, res) => {
+  try {
+    const { symptoms, originalText } = req.body;
+    if (!Array.isArray(symptoms) || symptoms.length === 0) {
+      return res.status(400).json({ message: "At least one symptom is required" });
+    }
+
+    const user = await User.findById(req.user.id);
+    const userName = user ? user.name : "there";
+    const text = originalText || symptoms.map(readableSymptom).join(", ");
+
+    let conv = await Conversation.findOne({ userId: req.user.id });
+    const recentHistory = conv ? conv.messages.slice(-12) : [];
+
+    const mlResult = await getMLPrediction(text, symptoms);
+    const ml = buildMLSection(mlResult, symptoms);
+
+    let botReply;
+    if (process.env.GROQ_API_KEY && ml && ml.summary) {
+      try {
+        const aiText = await getGroqResponse(text, ml.summary, userName, recentHistory);
+        botReply = aiText ? `${aiText}\n\n${ml.block}` : ml.block;
+      } catch (err) {
+        console.error("Groq failed:", err.message);
+        botReply = ml.block;
+      }
+    } else {
+      botReply = ml
+        ? ml.block
+        : `I need more symptom details, ${userName.split(" ")[0]}. Please describe what you are feeling in more detail.`;
+    }
+
+    if (!conv) conv = new Conversation({ userId: req.user.id, messages: [] });
+    conv.messages.push({ sender: "bot", text: botReply });
+    await conv.save();
+
+    res.json({ reply: botReply, mlResult, intent: "symptoms", emergency: false });
+  } catch (err) {
+    console.error("Confirm-symptoms error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── Symptom Options Route ────────────────────────────────────────────────────
+// Backs the "add another symptom" search in the confirmation checklist.
+router.get("/symptom-options", auth, (req, res) => {
+  const ids = [...new Set(Object.values(NL_MAP))].sort();
+  res.json(ids.map((id) => ({ id, label: readableSymptom(id) })));
 });
 
 module.exports = router;
