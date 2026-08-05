@@ -50,6 +50,100 @@ import {
 // Import the real Gemini frontend service
 import { getGeminiReply, geminiReady } from "../services/gemini";
 
+// --- MURTAZA'S SYMPTOM CONFIRMATION COMPONENT ---
+function SymptomConfirmationCard({ msg, options, isDark, onRemove, onAdd, onConfirm }) {
+  const [search, setSearch] = useState("");
+  const suggestions =
+    search.trim().length > 0
+      ? options
+          .filter(
+            (o) =>
+              o.label.toLowerCase().includes(search.toLowerCase()) &&
+              !msg.detectedSymptoms.some((s) => s.id === o.id),
+          )
+          .slice(0, 6)
+      : [];
+
+  return (
+    <div
+      className={`p-4 rounded-2xl text-xs lg:text-sm shadow-lg w-full max-w-md ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200" : "bg-slate-50 border border-slate-200 text-slate-800"}`}
+    >
+      <p className="font-semibold mb-3">We detected:</p>
+
+      {msg.detectedSymptoms.length === 0 && (
+        <p className="text-slate-500 italic mb-3">
+          No symptoms recognised yet — add one below.
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2 mb-3">
+        {msg.detectedSymptoms.map((s) => (
+          <span
+            key={s.id}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? "bg-teal-500/15 text-teal-300 border border-teal-500/30" : "bg-teal-50 text-teal-700 border border-teal-200"}`}
+          >
+            {s.label}
+            {!msg.resolved && (
+              <button
+                onClick={() => onRemove(msg.id, s.id)}
+                className="hover:text-rose-400"
+                aria-label={`Remove ${s.label}`}
+              >
+                <X size={12} />
+              </button>
+            )}
+          </span>
+        ))}
+      </div>
+
+      {!msg.resolved && (
+        <>
+          <div className="relative mb-3">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Add another symptom..."
+              className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"}`}
+            />
+            {suggestions.length > 0 && (
+              <div
+                className={`absolute z-10 mt-1 w-full rounded-lg border shadow-lg overflow-hidden ${isDark ? "bg-[#0B1120] border-slate-700" : "bg-white border-slate-200"}`}
+              >
+                {suggestions.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      onAdd(msg.id, s);
+                      setSearch("");
+                    }}
+                    className={`w-full text-left px-3 py-2 text-xs hover:bg-teal-500/10 flex items-center gap-2`}
+                  >
+                    <Plus size={12} className="text-teal-500" /> {s.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => onConfirm(msg)}
+            disabled={msg.detectedSymptoms.length === 0}
+            className="w-full flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 font-bold py-2 rounded-xl transition-all text-xs"
+          >
+            <CheckCircle2 size={16} /> Confirm & Analyze
+          </button>
+        </>
+      )}
+
+      {msg.resolved && (
+        <p className="text-teal-500 text-xs font-medium flex items-center gap-1.5">
+          <CheckCircle2 size={14} /> Confirmed — analyzing...
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function ChatDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [page, setPage] = useState("chat");
@@ -707,6 +801,106 @@ export function ChatDashboard() {
     }
   };
 
+  const [symptomOptions, setSymptomOptions] = useState([]);
+
+  useEffect(() => {
+    if (!token) return;
+    axios
+      .get("https://healthbot-backend-ezxv.onrender.com/api/chat/symptom-options", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setSymptomOptions(res.data || []))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const removeConfirmSymptom = (msgId, symptomId) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId
+          ? { ...m, detectedSymptoms: m.detectedSymptoms.filter((s) => s.id !== symptomId) }
+          : m,
+      ),
+    );
+  };
+
+  const addConfirmSymptom = (msgId, symptom) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId && !m.detectedSymptoms.some((s) => s.id === symptom.id)
+          ? { ...m, detectedSymptoms: [...m.detectedSymptoms, symptom] }
+          : m,
+      ),
+    );
+  };
+
+  const confirmSymptoms = async (msg) => {
+    if (!msg.detectedSymptoms.length || loading) return;
+    setMessages((prev) =>
+      prev.map((m) => (m.id === msg.id ? { ...m, resolved: true } : m)),
+    );
+    setLoading(true);
+    try {
+      const res = await axios.post(
+        "https://healthbot-backend-ezxv.onrender.com/api/chat/confirm-symptoms",
+        {
+          symptoms: msg.detectedSymptoms.map((s) => s.id),
+          originalText: msg.originalText,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      let botReply = res.data.reply;
+      const mlResult = res.data.mlResult;
+
+      if (geminiReady) {
+        try {
+          let mlSummary = "";
+          if (mlResult && mlResult.predictions && mlResult.predictions.length > 0) {
+            const top = mlResult.predictions[0];
+            mlSummary = `Most likely ${top.disease} at ${top.confidence}% confidence. Severity: ${mlResult.severity}`;
+          }
+          const geminiText = await getGeminiReply(msg.originalText, mlSummary, user);
+          if (geminiText) {
+            botReply =
+              botReply.includes("ML Analysis") || botReply.includes("I detected:")
+                ? geminiText + "\n\n" + botReply
+                : geminiText;
+          }
+        } catch (geminiErr) {
+          console.error("Frontend Gemini error:", geminiErr.message);
+        }
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: "bot",
+          text: botReply,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } catch (err) {
+      if (err.response && err.response.status === 401) {
+        localStorage.clear();
+        window.location.href = "/login";
+        return;
+      }
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 2,
+          sender: "bot",
+          text: "⚠️ Connection error. Please try again later.",
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sendMessage = async (textOverride = null) => {
     const textToSend = textOverride || inputText;
     if ((!textToSend.trim() && !uploadedImage) || loading) return;
@@ -774,6 +968,24 @@ export function ChatDashboard() {
       let botReply = res.data.reply;
       const mlResult = res.data.mlResult;
       const intent = res.data.intent;
+
+      // Handle Murtaza's Symptom Confirmation Card
+      if (res.data.needsConfirmation) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + 1,
+            sender: "bot",
+            type: "confirmation",
+            originalText: res.data.originalText,
+            detectedSymptoms: res.data.detectedSymptoms,
+            resolved: false,
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
+        setLoading(false);
+        return;
+      }
 
       if (geminiReady) {
         try {
@@ -1297,26 +1509,37 @@ export function ChatDashboard() {
                       <div
                         className={`flex flex-col gap-1.5 ${msg.sender === "user" ? "items-end" : ""}`}
                       >
-                        <div
-                          className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none"}`}
-                        >
-                          {msg.image && (
-                            <img
-                              src={msg.image}
-                              alt="Upload"
-                              className="max-w-full rounded-lg mb-3 border border-white/10 shadow-lg"
-                            />
-                          )}
-                          {msg.text && (
-                            <div className="whitespace-pre-wrap">
-                              {msg.text}
-                            </div>
-                          )}
-                        </div>
+                        {msg.type === "confirmation" ? (
+                          <SymptomConfirmationCard
+                            msg={msg}
+                            options={symptomOptions}
+                            isDark={isDark}
+                            onRemove={removeConfirmSymptom}
+                            onAdd={addConfirmSymptom}
+                            onConfirm={confirmSymptoms}
+                          />
+                        ) : (
+                          <div
+                            className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none"}`}
+                          >
+                            {msg.image && (
+                              <img
+                                src={msg.image}
+                                alt="Upload"
+                                className="max-w-full rounded-lg mb-3 border border-white/10 shadow-lg"
+                              />
+                            )}
+                            {msg.text && (
+                              <div className="whitespace-pre-wrap">
+                                {msg.text}
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
-                          {msg.sender === "bot" && (
+                          {msg.sender === "bot" && msg.type !== "confirmation" && (
                             <div className="flex items-center gap-1 ml-1">
                               <button
                                 onClick={() => speakText(msg.text, msg.id)}
@@ -2040,9 +2263,7 @@ export function ChatDashboard() {
                     !e.shiftKey &&
                     (e.preventDefault(), sendMessage())
                   }
-                  placeholder={
-                    isRecording ? "Listening..." : "Describe symptoms..."
-                  }
+                  placeholder={isRecording ? "Listening..." : "Describe symptoms..."}
                   style={{ maxHeight: "120px" }}
                   className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar outline-none transition-all ${isRecording ? "placeholder-emerald-400" : "placeholder-slate-400"} ${isDark ? "text-white" : "text-slate-900"}`}
                 />
@@ -2062,10 +2283,7 @@ export function ChatDashboard() {
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
                   )}
-                  <Mic
-                    size={18}
-                    className={isRecording ? "animate-pulse" : ""}
-                  />
+                  <Mic size={18} className={isRecording ? "animate-pulse" : ""} />
                 </button>
 
                 <button
