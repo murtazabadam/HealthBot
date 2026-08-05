@@ -50,7 +50,10 @@ import {
 // Import the real Gemini frontend service
 import { getGeminiReply, geminiReady } from "../services/gemini";
 
-// --- MURTAZA'S SYMPTOM CONFIRMATION COMPONENT ---
+// A small, self-contained checklist card shown after a symptom message is
+// sent — the user reviews/edits exactly what was understood before any
+// prediction runs. Kept as its own component since it needs local state for
+// the "add another symptom" search box.
 function SymptomConfirmationCard({ msg, options, isDark, onRemove, onAdd, onConfirm }) {
   const [search, setSearch] = useState("");
   const suggestions =
@@ -810,7 +813,7 @@ export function ChatDashboard() {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setSymptomOptions(res.data || []))
-      .catch(() => {});
+      .catch(() => {}); // non-critical — "add symptom" search just won't have suggestions
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -969,7 +972,6 @@ export function ChatDashboard() {
       const mlResult = res.data.mlResult;
       const intent = res.data.intent;
 
-      // Handle Murtaza's Symptom Confirmation Card
       if (res.data.needsConfirmation) {
         setMessages((prev) => [
           ...prev,
@@ -2263,7 +2265,9 @@ export function ChatDashboard() {
                     !e.shiftKey &&
                     (e.preventDefault(), sendMessage())
                   }
-                  placeholder={isRecording ? "Listening..." : "Describe symptoms..."}
+                  placeholder={
+                    isRecording ? "Listening..." : "Describe symptoms..."
+                  }
                   style={{ maxHeight: "120px" }}
                   className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar outline-none transition-all ${isRecording ? "placeholder-emerald-400" : "placeholder-slate-400"} ${isDark ? "text-white" : "text-slate-900"}`}
                 />
@@ -2283,7 +2287,10 @@ export function ChatDashboard() {
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
                   )}
-                  <Mic size={18} className={isRecording ? "animate-pulse" : ""} />
+                  <Mic
+                    size={18}
+                    className={isRecording ? "animate-pulse" : ""}
+                  />
                 </button>
 
                 <button
