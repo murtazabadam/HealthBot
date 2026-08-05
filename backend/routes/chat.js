@@ -184,13 +184,31 @@ function _containsPhrase(lower, phrase) {
   return new RegExp(`\\b${_escapeRegex(phrase)}\\b`).test(lower);
 }
 
+// Long, unrelated text (a pasted paragraph, an article, etc.) needs a
+// meaningful ratio of recognized symptom terms before it's trusted — a
+// couple of coincidental real-word matches inside 150+ words of unrelated
+// text should not be treated as a genuine symptom report. This mirrors the
+// same guard already used in the Python ML engine, ported here because the
+// confirmation checklist displays Node's extraction directly, before the
+// ML engine ever gets a chance to apply its own guard.
+const SHORT_TEXT_WORD_LIMIT = 40;
+const MIN_SYMPTOM_DENSITY = 0.03;
+
 function extractSymptoms(text) {
   const lower = text.toLowerCase();
   const found = new Set();
   for (const phrase of _SORTED) {
     if (_containsPhrase(lower, phrase)) found.add(NL_MAP[phrase]);
   }
-  return [...found];
+  let result = [...found];
+
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  if (wordCount > SHORT_TEXT_WORD_LIMIT) {
+    const density = result.length / wordCount;
+    if (density < MIN_SYMPTOM_DENSITY) result = [];
+  }
+
+  return result;
 }
 
 // ── Intent Detection ───────────────────────────────────────────────────────────
@@ -211,12 +229,25 @@ function isHypotheticalQuestion(text) {
   return patterns.some((p) => p.test(lower));
 }
 
-// Catches the narrow but real case of a symptom word attributed to an
-// obviously non-person subject ("this book suffers from fever"). This is a
-// blocklist, not real semantic understanding — it won't catch every
-// possible absurd phrasing, only common everyday objects. Deliberately
-// narrow so it never blocks the very common, valid way people list
-// symptoms tersely with no pronoun at all ("fever, headache, joint pain").
+// Catches a symptom word attributed to a subject that clearly isn't a
+// person. Two different checks, deliberately different designs:
+//
+// 1. Determiner + noun ("this book", "my mouse") — a blocklist of common
+//    everyday objects/animals. Kept as a blocklist because it fires on a
+//    noun appearing ANYWHERE in the message, so it must stay conservative
+//    to avoid false positives on real sentences that just happen to
+//    mention an object in passing ("I hit my head on the door").
+//
+// 2. Bare subject at the very start of the message ("amoeba is having...",
+//    "sparrow has fever") — an ALLOWLIST of person-referring words instead
+//    of a blocklist of non-person ones. A blocklist here kept failing on
+//    every new organism/object someone tried ("mouse", then "amoeba", then
+//    "sparrow") because it can only ever cover words already thought of.
+//    Anchoring to the message's actual grammatical subject makes the
+//    allowlist safe: if the very first word is followed immediately by
+//    "is/has/having" and that word isn't a recognized person-referring
+//    term, it's flagged — regardless of whether it's a known object, a
+//    known animal, or something never seen before.
 function hasNonPersonSubject(text) {
   const lower = text.toLowerCase().trim();
   const nonPersonNouns = [
@@ -226,10 +257,7 @@ function hasNonPersonSubject(text) {
     "television", "fridge", "fan", "clock", "watch", "shirt", "sofa", "couch",
     "bed", "shelf", "cabinet", "drawer", "mirror", "lamp", "umbrella", "plant",
     "tree",
-    // electronics / peripherals (deliberately includes "mouse" — the
-    // computer peripheral sense is far more common in a chat message than
-    // the animal, but the animal is also a non-person subject, so either
-    // reading is correctly caught here)
+    // electronics / peripherals
     "mouse", "keyboard", "monitor", "speaker", "remote", "charger", "router",
     "printer", "tablet", "camera", "headphone", "headphones", "earphone",
     "earphones", "laptop", "computer", "phone",
@@ -241,18 +269,29 @@ function hasNonPersonSubject(text) {
     "chicken", "goose", "duck",
   ];
   const nounsPattern = nonPersonNouns.join("|");
-  // Determiner + noun anywhere in the message: "this book", "my mouse".
   const determinerPattern = new RegExp(
     `\\b(this|that|the|my|our|his|her|their|a|an)\\s+(${nounsPattern})\\b`
   );
-  // Bare noun as the message's own subject, with no determiner at all —
-  // "mouse is having a serious muscle pain", "dog has fever". Anchored to
-  // the start of the message and requires an immediately following verb, so
-  // it won't misfire on the noun appearing later as an object elsewhere.
-  const bareSubjectPattern = new RegExp(
-    `^(${nounsPattern})\\s+(is|are|has|have|having|suffers|suffering|feels|feeling|seems|looks)\\b`
+  if (determinerPattern.test(lower)) return true;
+
+  const personSubjectWords = [
+    "i", "you", "he", "she", "they", "we", "it", // "it" left deliberately
+    // permissive — too many legitimate uses ("it hurts") to safely flag
+    "patient", "person", "someone", "somebody", "anyone",
+    "man", "woman", "boy", "girl", "guy", "kid", "child", "baby", "friend",
+    "doctor", "nurse", "mother", "father", "mom", "dad", "brother", "sister",
+    "wife", "husband", "son", "daughter", "grandma", "grandpa",
+    "grandmother", "grandfather", "uncle", "aunt", "cousin", "colleague",
+    "neighbor", "neighbour",
+  ];
+  const bareSubjectMatch = lower.match(
+    /^([a-z']+)\s+(is|are|has|have|having|suffers|suffering|feels|feeling|seems|looks)\b/
   );
-  return determinerPattern.test(lower) || bareSubjectPattern.test(lower);
+  if (bareSubjectMatch && !personSubjectWords.includes(bareSubjectMatch[1])) {
+    return true;
+  }
+
+  return false;
 }
 
 function detectIntent(text) {
