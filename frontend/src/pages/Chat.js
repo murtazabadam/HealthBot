@@ -44,6 +44,7 @@ import {
   Volume2,
   AlertTriangle,
   Pause,
+  Mail,
 } from "lucide-react";
 
 function SymptomConfirmationCard({
@@ -159,7 +160,8 @@ function BmiCalculatorCard({ isDark }) {
 
     let bmi = 0;
     if (unit === "metric") {
-      const heightM = h / 100;
+      // Smart detection: If user enters 1.71 instead of 171, handle it correctly.
+      const heightM = h < 3 ? h : h / 100;
       bmi = w / (heightM * heightM);
     } else {
       bmi = (w / (h * h)) * 703;
@@ -170,10 +172,10 @@ function BmiCalculatorCard({ isDark }) {
     if (bmi < 18.5) {
       category = "Underweight";
       color = "text-blue-400";
-    } else if (bmi >= 18.5 && bmi <= 24.9) {
+    } else if (bmi < 25) {
       category = "Normal weight";
       color = "text-emerald-400";
-    } else if (bmi >= 25 && bmi <= 29.9) {
+    } else if (bmi < 30) {
       category = "Overweight";
       color = "text-amber-400";
     } else {
@@ -198,13 +200,19 @@ function BmiCalculatorCard({ isDark }) {
         </h4>
         <div className="flex bg-slate-700/30 p-1 rounded-lg text-[10px] font-bold">
           <button
-            onClick={() => setUnit("metric")}
+            onClick={() => {
+              setUnit("metric");
+              setResult(null);
+            }}
             className={`px-2 py-1 rounded-md transition-all ${unit === "metric" ? "bg-teal-500 text-slate-900" : "text-slate-400"}`}
           >
             Metric (kg/cm)
           </button>
           <button
-            onClick={() => setUnit("imperial")}
+            onClick={() => {
+              setUnit("imperial");
+              setResult(null);
+            }}
             className={`px-2 py-1 rounded-md transition-all ${unit === "imperial" ? "bg-teal-500 text-slate-900" : "text-slate-400"}`}
           >
             Imperial (lbs/in)
@@ -911,22 +919,7 @@ export function ChatDashboard() {
     }
 
     let text = "";
-    if (title === "Target Heart Rate Zones") {
-      text =
-        "❤️ Target Heart Rate Zones:\n\nFormula (Maximum Heart Rate):\n$$\\text{MHR} = 220 - \\text{age}$$\n\n- Moderate Intensity Zone ($50-70\\%$ of MHR): Ideal for general endurance and fat burning.\n- Vigorous Intensity Zone ($70-85\\%$ of MHR): Ideal for cardiovascular fitness and athletic conditioning.";
-    } else if (title === "Body Fat Percentage") {
-      text =
-        "📉 Body Fat Percentage Reference Ranges:\n\n- Essential Fat: Men: $2 - 5\\%$, Women: $10 - 13\\%$\n- Athletes: Men: $6 - 13\\%$, Women: $14 - 20\\%$\n- Fitness: Men: $14 - 17\\%$, Women: $21 - 24\\%$\n- Acceptable: Men: $18 - 24\\%$, Women: $25 - 31\\%$\n- Obesity: Men: $\\ge 25\\%$, Women: $\\ge 32\\%$";
-    } else if (title === "Waist-to-Hip Ratio (WHR)") {
-      text =
-        "📏 Waist-to-Hip Ratio (WHR) Health Risk Assessment:\n\nFormula:\n$$\\text{WHR} = \\frac{\\text{Waist Circumference}}{\\text{Hip Circumference}}$$\n\n- Low Risk: Men $< 0.90$, Women $< 0.80$\n- Moderate Risk: Men $0.90 - 0.99$, Women $0.80 - 0.84$\n- High Risk: Men $\\ge 1.0$, Women $\\ge 0.85$";
-    } else if (title === "Cold Remedies") {
-      text =
-        "Here are your saved Cold Remedies:\n1. Drink plenty of warm fluids (tea, broth).\n2. Get at least 8 hours of sleep.\n3. Take Vitamin C and Zinc supplements.\n4. Use a humidifier at night.";
-    } else if (title === "Hydration Schedule") {
-      text =
-        "Here is your pinned Hydration Schedule:\n- 8:00 AM: 2 glasses of water\n- 11:00 AM: 1 glass\n- 1:00 PM: 1 glass\n- 4:00 PM: 1 glass\n- 7:00 PM: 2 glasses.";
-    } else if (title === "Emergency Contacts") {
+    if (title === "Emergency Contacts") {
       text = `🚨 Your Emergency Contacts:\n- Ambulance/Emergency: 108\n- Your Registered Location: ${user.address || "Please update address in Profile"}\n\nTip: In a severe emergency, call 108 immediately and provide them with your registered location.`;
     }
 
@@ -1800,7 +1793,7 @@ export function ChatDashboard() {
 
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                      <Calendar className="h-3 w-3" /> Email Address
+                      <Mail className="h-3 w-3" /> Email Address
                     </label>
                     <p
                       className={`text-sm py-3 px-4 rounded-xl flex items-center gap-2 ${isDark ? "bg-slate-800/30 text-slate-400" : "bg-slate-50 text-slate-500 border border-slate-200"}`}
@@ -2131,41 +2124,6 @@ export function ChatDashboard() {
                   icon={Activity}
                   isDark={isDark}
                   onClick={() => loadSavedAdvice("BMI Calculator")}
-                />
-                <SavedCard
-                  title="Target Heart Rate Zones"
-                  date="Statistical Measure"
-                  icon={Activity}
-                  isDark={isDark}
-                  onClick={() => loadSavedAdvice("Target Heart Rate Zones")}
-                />
-                <SavedCard
-                  title="Body Fat Percentage"
-                  date="Statistical Measure"
-                  icon={Activity}
-                  isDark={isDark}
-                  onClick={() => loadSavedAdvice("Body Fat Percentage")}
-                />
-                <SavedCard
-                  title="Waist-to-Hip Ratio (WHR)"
-                  date="Statistical Measure"
-                  icon={Activity}
-                  isDark={isDark}
-                  onClick={() => loadSavedAdvice("Waist-to-Hip Ratio (WHR)")}
-                />
-                <SavedCard
-                  title="Cold Remedies"
-                  date="Oct 24, 2026"
-                  icon={HeartPulse}
-                  isDark={isDark}
-                  onClick={() => loadSavedAdvice("Cold Remedies")}
-                />
-                <SavedCard
-                  title="Hydration Schedule"
-                  date="Oct 20, 2026"
-                  icon={Clock}
-                  isDark={isDark}
-                  onClick={() => loadSavedAdvice("Hydration Schedule")}
                 />
                 <SavedCard
                   title="Emergency Contacts"
