@@ -45,8 +45,6 @@ import {
   AlertTriangle,
   Pause,
   Mail,
-  Calculator,
-  ChevronDown,
 } from "lucide-react";
 
 function SymptomConfirmationCard({
