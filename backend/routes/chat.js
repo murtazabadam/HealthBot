@@ -4,6 +4,7 @@ const auth = require("../middleware/auth");
 const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const { getGroqResponse, isOffTopic } = require("../config/groq");
+const nodemailer = require("nodemailer"); // Added for Email Summary feature
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
 async function getMLPrediction(text, symptoms) {
@@ -31,9 +32,7 @@ async function getMLPrediction(text, symptoms) {
 
 // ── NL Map ────────────────────────────────────────────────────────────────────
 function readableSymptom(id) {
-  return id
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 const NL_MAP = {
@@ -180,7 +179,6 @@ function _escapeRegex(str) {
 }
 
 function _containsPhrase(lower, phrase) {
-  // Word-boundary match — "pus" must not match inside "campus".
   return new RegExp(`\\b${_escapeRegex(phrase)}\\b`).test(lower);
 }
 
@@ -194,63 +192,108 @@ function extractSymptoms(text) {
 }
 
 // ── Intent Detection ───────────────────────────────────────────────────────────
-// A message can contain a real symptom word while still not be a symptom
-// REPORT — e.g. "if I eat a burger, will I get stomach pain?" is a
-// hypothetical question, not "I currently have stomach pain." This checks
-// for that framing so such messages get routed to normal conversation
-// instead of the symptom-analysis flow.
 function isHypotheticalQuestion(text) {
   const lower = text.toLowerCase().trim();
   const patterns = [
-    /\bif\s+i\b[\s\S]*\b(will|would|could|might|can)\b/, // "if I eat X, will I ..."
-    /\b(will|would|could|might|can)\s+i\s+(get|have|develop|catch)\b/, // "will I get stomach pain"
-    /\bdoes\b[\s\S]*\bcause\b/, // "does eating X cause Y"
+    /\bif\s+i\b[\s\S]*\b(will|would|could|might|can)\b/,
+    /\b(will|would|could|might|can)\s+i\s+(get|have|develop|catch)\b/,
+    /\bdoes\b[\s\S]*\bcause\b/,
     /\bwhat\s+causes\b/,
     /\bis\s+it\s+(bad|okay|ok|safe|fine)\s+to\s+eat\b/,
   ];
   return patterns.some((p) => p.test(lower));
 }
 
-// Catches the narrow but real case of a symptom word attributed to an
-// obviously non-person subject ("this book suffers from fever"). This is a
-// blocklist, not real semantic understanding — it won't catch every
-// possible absurd phrasing, only common everyday objects. Deliberately
-// narrow so it never blocks the very common, valid way people list
-// symptoms tersely with no pronoun at all ("fever, headache, joint pain").
 function hasNonPersonSubject(text) {
   const lower = text.toLowerCase().trim();
   const nonPersonNouns = [
-    // household objects / furniture
-    "book", "chair", "table", "wall", "door", "window", "house", "building",
-    "rock", "shoe", "bag", "pen", "bottle", "cup", "plate", "roof", "tv",
-    "television", "fridge", "fan", "clock", "watch", "shirt", "sofa", "couch",
-    "bed", "shelf", "cabinet", "drawer", "mirror", "lamp", "umbrella", "plant",
+    "book",
+    "chair",
+    "table",
+    "wall",
+    "door",
+    "window",
+    "house",
+    "building",
+    "rock",
+    "shoe",
+    "bag",
+    "pen",
+    "bottle",
+    "cup",
+    "plate",
+    "roof",
+    "tv",
+    "television",
+    "fridge",
+    "fan",
+    "clock",
+    "watch",
+    "shirt",
+    "sofa",
+    "couch",
+    "bed",
+    "shelf",
+    "cabinet",
+    "drawer",
+    "mirror",
+    "lamp",
+    "umbrella",
+    "plant",
     "tree",
-    // electronics / peripherals (deliberately includes "mouse" — the
-    // computer peripheral sense is far more common in a chat message than
-    // the animal, but the animal is also a non-person subject, so either
-    // reading is correctly caught here)
-    "mouse", "keyboard", "monitor", "speaker", "remote", "charger", "router",
-    "printer", "tablet", "camera", "headphone", "headphones", "earphone",
-    "earphones", "laptop", "computer", "phone",
-    // vehicles
-    "car", "bike", "bus", "train", "truck", "scooter", "plane", "boat", "ship",
-    // non-human animals
-    "rat", "dog", "cat", "cow", "goat", "horse", "bird", "fish", "lizard",
-    "snake", "frog", "ant", "bee", "insect", "hamster", "rabbit", "parrot",
-    "chicken", "goose", "duck",
+    "mouse",
+    "keyboard",
+    "monitor",
+    "speaker",
+    "remote",
+    "charger",
+    "router",
+    "printer",
+    "tablet",
+    "camera",
+    "headphone",
+    "headphones",
+    "earphone",
+    "earphones",
+    "laptop",
+    "computer",
+    "phone",
+    "car",
+    "bike",
+    "bus",
+    "train",
+    "truck",
+    "scooter",
+    "plane",
+    "boat",
+    "ship",
+    "rat",
+    "dog",
+    "cat",
+    "cow",
+    "goat",
+    "horse",
+    "bird",
+    "fish",
+    "lizard",
+    "snake",
+    "frog",
+    "ant",
+    "bee",
+    "insect",
+    "hamster",
+    "rabbit",
+    "parrot",
+    "chicken",
+    "goose",
+    "duck",
   ];
   const nounsPattern = nonPersonNouns.join("|");
-  // Determiner + noun anywhere in the message: "this book", "my mouse".
   const determinerPattern = new RegExp(
-    `\\b(this|that|the|my|our|his|her|their|a|an)\\s+(${nounsPattern})\\b`
+    `\\b(this|that|the|my|our|his|her|their|a|an)\\s+(${nounsPattern})\\b`,
   );
-  // Bare noun as the message's own subject, with no determiner at all —
-  // "mouse is having a serious muscle pain", "dog has fever". Anchored to
-  // the start of the message and requires an immediately following verb, so
-  // it won't misfire on the noun appearing later as an object elsewhere.
   const bareSubjectPattern = new RegExp(
-    `^(${nounsPattern})\\s+(is|are|has|have|having|suffers|suffering|feels|feeling|seems|looks)\\b`
+    `^(${nounsPattern})\\s+(is|are|has|have|having|suffers|suffering|feels|feeling|seems|looks)\\b`,
   );
   return determinerPattern.test(lower) || bareSubjectPattern.test(lower);
 }
@@ -306,7 +349,7 @@ function detectIntent(text) {
     !hasNonPersonSubject(text)
   )
     return "symptoms";
-  return "conversational"; // everything else handled by Groq with history
+  return "conversational";
 }
 
 // ── Emergency Check ────────────────────────────────────────────────────────────
@@ -353,7 +396,6 @@ function buildMLSection(mlResult, symptoms) {
   const top = mlResult.predictions[0];
 
   if (mlResult.low_confidence && symptoms.length < 2) {
-    // Suggest follow-up symptoms, excluding ones the user already mentioned
     const suggestionPool = [
       {
         label: "Fever or chills",
@@ -410,7 +452,7 @@ function buildMLSection(mlResult, symptoms) {
 // ── Message Route ──────────────────────────────────────────────────────────────
 router.post("/message", auth, async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, saveHistory = true } = req.body;
     const user = await User.findById(req.user.id);
     const userName = user ? user.name : "there";
     const intent = detectIntent(text);
@@ -418,40 +460,39 @@ router.post("/message", auth, async (req, res) => {
     let mlResult = null;
     let emergency = false;
 
-    // Always load history — needed for Groq context
-    let conv = await Conversation.findOne({ userId: req.user.id });
-    const recentHistory = conv ? conv.messages.slice(-12) : [];
+    // Load history ONLY if saveHistory is true (Incognito Mode logic)
+    let conv = null;
+    let recentHistory = [];
+    if (saveHistory) {
+      conv = await Conversation.findOne({ userId: req.user.id });
+      recentHistory = conv ? conv.messages.slice(-12) : [];
+    }
     const hasConversation = recentHistory.length > 0;
 
     if (intent === "symptoms") {
-      // ── Symptom message ────────────────────────────────────────────────────
       const symptoms = extractSymptoms(text);
       emergency = checkEmergency(symptoms);
 
       if (!emergency) {
-        // Human-in-the-loop confirmation gate: never send free-text-derived
-        // symptoms straight to prediction. Show what was understood and let
-        // the user confirm/edit it first — this is what actually guarantees
-        // "I have vomiting" vs "this book has a fever" get handled correctly,
-        // structurally, rather than by chasing every possible bad phrasing
-        // with more regex rules.
-        if (!conv) conv = new Conversation({ userId: req.user.id, messages: [] });
-        conv.messages.push({ sender: "user", text });
-        await conv.save();
+        if (saveHistory) {
+          if (!conv)
+            conv = new Conversation({ userId: req.user.id, messages: [] });
+          conv.messages.push({ sender: "user", text });
+          await conv.save();
+        }
 
         return res.json({
           needsConfirmation: true,
           originalText: text,
-          detectedSymptoms: symptoms.map((id) => ({ id, label: readableSymptom(id) })),
+          detectedSymptoms: symptoms.map((id) => ({
+            id,
+            label: readableSymptom(id),
+          })),
           intent,
           emergency: false,
         });
       }
 
-      // Emergency messages skip confirmation entirely — respond immediately.
-      // Don't forward Node's own free-text guess as "provided" symptoms —
-      // the ML engine's own extractor already runs on `text` and applies a
-      // noise-density guard that a pre-populated list would otherwise skip.
       mlResult = await getMLPrediction(text, []);
       const ml = buildMLSection(mlResult, symptoms);
 
@@ -481,18 +522,8 @@ router.post("/message", auth, async (req, res) => {
       ) &&
       !hasConversation
     ) {
-      // ── Simple intents with no history — use fast fallback ────────────────
       botReply = getFallbackReply(intent, userName);
     } else {
-      // ── Everything else — pass to Groq with full history ──────────────────
-      // This covers: follow-up answers, yes/no, self-care questions,
-      // medicine questions, greetings with history, unknown text etc.
-      //
-      // Before generating any reply content, check whether this message is
-      // even on-topic at all. If it isn't, the reply below is a fixed
-      // string this code controls directly — the model is never asked to
-      // generate free-form content for an off-topic message in the first
-      // place, so there's nothing for it to leak.
       const offTopic = process.env.GROQ_API_KEY
         ? await isOffTopic(text, recentHistory)
         : false;
@@ -519,11 +550,13 @@ router.post("/message", auth, async (req, res) => {
       }
     }
 
-    // ── Save to database ───────────────────────────────────────────────────────
-    if (!conv) conv = new Conversation({ userId: req.user.id, messages: [] });
-    conv.messages.push({ sender: "user", text });
-    conv.messages.push({ sender: "bot", text: botReply });
-    await conv.save();
+    // ── Save to database ONLY if saveHistory is true ───────────────────────────
+    if (saveHistory) {
+      if (!conv) conv = new Conversation({ userId: req.user.id, messages: [] });
+      conv.messages.push({ sender: "user", text });
+      conv.messages.push({ sender: "bot", text: botReply });
+      await conv.save();
+    }
 
     res.json({ reply: botReply, mlResult, intent, emergency });
   } catch (err) {
@@ -553,23 +586,25 @@ router.delete("/history", auth, async (req, res) => {
 });
 
 // ── Confirm Symptoms Route ───────────────────────────────────────────────────
-// Runs only after the user has reviewed and confirmed the detected symptom
-// list. Because this list is now human-verified (not raw free-text guessing),
-// it's safe to forward it to the ML engine as trusted "provided" symptoms —
-// unlike the initial /message flow, which deliberately never does that.
 router.post("/confirm-symptoms", auth, async (req, res) => {
   try {
-    const { symptoms, originalText } = req.body;
+    const { symptoms, originalText, saveHistory = true } = req.body;
     if (!Array.isArray(symptoms) || symptoms.length === 0) {
-      return res.status(400).json({ message: "At least one symptom is required" });
+      return res
+        .status(400)
+        .json({ message: "At least one symptom is required" });
     }
 
     const user = await User.findById(req.user.id);
     const userName = user ? user.name : "there";
     const text = originalText || symptoms.map(readableSymptom).join(", ");
 
-    let conv = await Conversation.findOne({ userId: req.user.id });
-    const recentHistory = conv ? conv.messages.slice(-12) : [];
+    let conv = null;
+    let recentHistory = [];
+    if (saveHistory) {
+      conv = await Conversation.findOne({ userId: req.user.id });
+      recentHistory = conv ? conv.messages.slice(-12) : [];
+    }
 
     const mlResult = await getMLPrediction(text, symptoms);
     const ml = buildMLSection(mlResult, symptoms);
@@ -577,7 +612,12 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
     let botReply;
     if (process.env.GROQ_API_KEY && ml && ml.summary) {
       try {
-        const aiText = await getGroqResponse(text, ml.summary, userName, recentHistory);
+        const aiText = await getGroqResponse(
+          text,
+          ml.summary,
+          userName,
+          recentHistory,
+        );
         botReply = aiText ? `${aiText}\n\n${ml.block}` : ml.block;
       } catch (err) {
         console.error("Groq failed:", err.message);
@@ -589,11 +629,18 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
         : `I need more symptom details, ${userName.split(" ")[0]}. Please describe what you are feeling in more detail.`;
     }
 
-    if (!conv) conv = new Conversation({ userId: req.user.id, messages: [] });
-    conv.messages.push({ sender: "bot", text: botReply });
-    await conv.save();
+    if (saveHistory) {
+      if (!conv) conv = new Conversation({ userId: req.user.id, messages: [] });
+      conv.messages.push({ sender: "bot", text: botReply });
+      await conv.save();
+    }
 
-    res.json({ reply: botReply, mlResult, intent: "symptoms", emergency: false });
+    res.json({
+      reply: botReply,
+      mlResult,
+      intent: "symptoms",
+      emergency: false,
+    });
   } catch (err) {
     console.error("Confirm-symptoms error:", err);
     res.status(500).json({ message: "Server error" });
@@ -601,10 +648,49 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
 });
 
 // ── Symptom Options Route ────────────────────────────────────────────────────
-// Backs the "add another symptom" search in the confirmation checklist.
 router.get("/symptom-options", auth, (req, res) => {
   const ids = [...new Set(Object.values(NL_MAP))].sort();
   res.json(ids.map((id) => ({ id, label: readableSymptom(id) })));
+});
+
+// ── Email Summary Route ──────────────────────────────────────────────────────
+router.post("/email-summary", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const { messages } = req.body;
+
+    if (!messages || messages.length === 0) {
+      return res.status(400).json({ message: "No messages to send" });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const chatText = messages
+      .map(
+        (m) =>
+          `${m.sender === "user" ? "You" : "HealthBot"}: ${m.text || "Attachment"}`,
+      )
+      .join("\n\n");
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "🩺 Your HealthBot Consultation Summary",
+      text: `Hello ${user.name},\n\nHere is the summary of your recent HealthBot consultation:\n\n--------------------------------\n\n${chatText}\n\n--------------------------------\n\nStay healthy!\n- The HealthBot Team`,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ message: "Email sent successfully!" });
+  } catch (err) {
+    console.error("Email error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 module.exports = router;

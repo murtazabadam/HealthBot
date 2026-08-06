@@ -50,8 +50,17 @@ import {
 // Import the real Gemini frontend service
 import { getGeminiReply, geminiReady } from "../services/gemini";
 
-// --- MURTAZA'S SYMPTOM CONFIRMATION COMPONENT ---
-function SymptomConfirmationCard({ msg, options, isDark, onRemove, onAdd, onConfirm }) {
+// A small, self-contained checklist card shown after a symptom message is
+// sent — the user reviews/edits exactly what was understood before any
+// prediction runs.
+function SymptomConfirmationCard({
+  msg,
+  options,
+  isDark,
+  onRemove,
+  onAdd,
+  onConfirm,
+}) {
   const [search, setSearch] = useState("");
   const suggestions =
     search.trim().length > 0
@@ -205,6 +214,9 @@ export function ChatDashboard() {
 
   // Danger Zone States
   const [emergencyAlert, setEmergencyAlert] = useState(false);
+
+  // Email state
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // --- Theme Logic ---
   const isDark = appSettings.darkMode;
@@ -801,14 +813,35 @@ export function ChatDashboard() {
     }
   };
 
+  // --- NEW EMAIL SUMMARY FUNCTION ---
+  const handleEmailSummary = async () => {
+    if (messages.length === 0) return showToast("No chat history to send.");
+    setSendingEmail(true);
+    try {
+      await axios.post(
+        "https://healthbot-backend-ezxv.onrender.com/api/chat/email-summary",
+        { messages },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      showToast("Chat summary sent to your email! 📧");
+    } catch (err) {
+      showToast("Failed to send email. Please try again.");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   const [symptomOptions, setSymptomOptions] = useState([]);
 
   useEffect(() => {
     if (!token) return;
     axios
-      .get("https://healthbot-backend-ezxv.onrender.com/api/chat/symptom-options", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      .get(
+        "https://healthbot-backend-ezxv.onrender.com/api/chat/symptom-options",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      )
       .then((res) => setSymptomOptions(res.data || []))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -818,7 +851,12 @@ export function ChatDashboard() {
     setMessages((prev) =>
       prev.map((m) =>
         m.id === msgId
-          ? { ...m, detectedSymptoms: m.detectedSymptoms.filter((s) => s.id !== symptomId) }
+          ? {
+              ...m,
+              detectedSymptoms: m.detectedSymptoms.filter(
+                (s) => s.id !== symptomId,
+              ),
+            }
           : m,
       ),
     );
@@ -846,6 +884,8 @@ export function ChatDashboard() {
         {
           symptoms: msg.detectedSymptoms.map((s) => s.id),
           originalText: msg.originalText,
+          // Tell backend to respect user's history preference
+          saveHistory: appSettings.saveHistory,
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -856,14 +896,23 @@ export function ChatDashboard() {
       if (geminiReady) {
         try {
           let mlSummary = "";
-          if (mlResult && mlResult.predictions && mlResult.predictions.length > 0) {
+          if (
+            mlResult &&
+            mlResult.predictions &&
+            mlResult.predictions.length > 0
+          ) {
             const top = mlResult.predictions[0];
             mlSummary = `Most likely ${top.disease} at ${top.confidence}% confidence. Severity: ${mlResult.severity}`;
           }
-          const geminiText = await getGeminiReply(msg.originalText, mlSummary, user);
+          const geminiText = await getGeminiReply(
+            msg.originalText,
+            mlSummary,
+            user,
+          );
           if (geminiText) {
             botReply =
-              botReply.includes("ML Analysis") || botReply.includes("I detected:")
+              botReply.includes("ML Analysis") ||
+              botReply.includes("I detected:")
                 ? geminiText + "\n\n" + botReply
                 : geminiText;
           }
@@ -878,7 +927,10 @@ export function ChatDashboard() {
           id: Date.now() + 1,
           sender: "bot",
           text: botReply,
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
         },
       ]);
     } catch (err) {
@@ -893,7 +945,10 @@ export function ChatDashboard() {
           id: Date.now() + 2,
           sender: "bot",
           text: "⚠️ Connection error. Please try again later.",
-          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
         },
       ]);
     } finally {
@@ -961,7 +1016,12 @@ export function ChatDashboard() {
     try {
       const res = await axios.post(
         "https://healthbot-backend-ezxv.onrender.com/api/chat/message",
-        { text: textToSend, image: currentImg },
+        {
+          text: textToSend,
+          image: currentImg,
+          // Tell backend to respect user's history preference
+          saveHistory: appSettings.saveHistory,
+        },
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
@@ -980,7 +1040,10 @@ export function ChatDashboard() {
             originalText: res.data.originalText,
             detectedSymptoms: res.data.detectedSymptoms,
             resolved: false,
-            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            time: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
           },
         ]);
         setLoading(false);
@@ -1492,6 +1555,19 @@ export function ChatDashboard() {
                     </span>
                   </div>
 
+                  {messages.length > 0 && (
+                    <div className="flex justify-end mt-2 mb-4">
+                      <button
+                        onClick={handleEmailSummary}
+                        disabled={sendingEmail}
+                        className={`text-[10px] px-3 py-1.5 rounded-lg font-bold uppercase tracking-widest flex items-center gap-1.5 transition-all ${isDark ? "bg-slate-800 text-teal-400 hover:bg-slate-700" : "bg-slate-100 text-teal-600 hover:bg-slate-200"}`}
+                      >
+                        <Mail size={12} />
+                        {sendingEmail ? "Sending..." : "Email This Chat"}
+                      </button>
+                    </div>
+                  )}
+
                   {messages.map((msg) => (
                     <div
                       key={msg.id}
@@ -1539,31 +1615,32 @@ export function ChatDashboard() {
 
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
-                          {msg.sender === "bot" && msg.type !== "confirmation" && (
-                            <div className="flex items-center gap-1 ml-1">
-                              <button
-                                onClick={() => speakText(msg.text, msg.id)}
-                                className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md ${playingMessageId === msg.id ? "text-teal-400 bg-teal-500/10 sm:bg-transparent" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
-                                title={
-                                  playingMessageId === msg.id
-                                    ? "Stop playing"
-                                    : "Play message"
-                                }
-                              >
-                                {playingMessageId === msg.id ? (
-                                  <Pause
-                                    size={18}
-                                    className="sm:w-3.5 sm:h-3.5"
-                                  />
-                                ) : (
-                                  <Volume2
-                                    size={18}
-                                    className="sm:w-3.5 sm:h-3.5"
-                                  />
-                                )}
-                              </button>
-                            </div>
-                          )}
+                          {msg.sender === "bot" &&
+                            msg.type !== "confirmation" && (
+                              <div className="flex items-center gap-1 ml-1">
+                                <button
+                                  onClick={() => speakText(msg.text, msg.id)}
+                                  className={`p-2.5 sm:p-1.5 transition-colors rounded-lg sm:rounded-md ${playingMessageId === msg.id ? "text-teal-400 bg-teal-500/10 sm:bg-transparent" : isDark ? "hover:text-teal-400 hover:bg-slate-800" : "hover:text-teal-600 hover:bg-slate-200"}`}
+                                  title={
+                                    playingMessageId === msg.id
+                                      ? "Stop playing"
+                                      : "Play message"
+                                  }
+                                >
+                                  {playingMessageId === msg.id ? (
+                                    <Pause
+                                      size={18}
+                                      className="sm:w-3.5 sm:h-3.5"
+                                    />
+                                  ) : (
+                                    <Volume2
+                                      size={18}
+                                      className="sm:w-3.5 sm:h-3.5"
+                                    />
+                                  )}
+                                </button>
+                              </div>
+                            )}
                         </span>
                       </div>
                     </div>
@@ -2170,11 +2247,20 @@ export function ChatDashboard() {
                   className={`h-[1px] w-full ${isDark ? "bg-slate-800" : "bg-slate-100"}`}
                 />
                 <SettingToggle
-                  label="SMS Alerts"
+                  label={
+                    <div className="flex items-center gap-2">
+                      SMS Alerts
+                      <span className="text-[9px] bg-teal-500/20 text-teal-400 px-2 py-0.5 rounded uppercase font-bold tracking-widest border border-teal-500/30">
+                        Coming Soon
+                      </span>
+                    </div>
+                  }
                   desc="Get urgent reminders via text."
-                  checked={appSettings.smsAlerts}
+                  checked={false}
                   isDark={isDark}
-                  onChange={() => handleSettingChange("smsAlerts")}
+                  onChange={() =>
+                    showToast("SMS Alerts are coming in the next update!")
+                  }
                 />
                 <div
                   className={`h-[1px] w-full ${isDark ? "bg-slate-800" : "bg-slate-100"}`}
@@ -2263,7 +2349,9 @@ export function ChatDashboard() {
                     !e.shiftKey &&
                     (e.preventDefault(), sendMessage())
                   }
-                  placeholder={isRecording ? "Listening..." : "Describe symptoms..."}
+                  placeholder={
+                    isRecording ? "Listening..." : "Describe symptoms..."
+                  }
                   style={{ maxHeight: "120px" }}
                   className={`flex-1 bg-transparent border-none focus:ring-0 text-xs sm:text-sm py-3 resize-none no-scrollbar outline-none transition-all ${isRecording ? "placeholder-emerald-400" : "placeholder-slate-400"} ${isDark ? "text-white" : "text-slate-900"}`}
                 />
@@ -2283,7 +2371,10 @@ export function ChatDashboard() {
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
                   )}
-                  <Mic size={18} className={isRecording ? "animate-pulse" : ""} />
+                  <Mic
+                    size={18}
+                    className={isRecording ? "animate-pulse" : ""}
+                  />
                 </button>
 
                 <button
