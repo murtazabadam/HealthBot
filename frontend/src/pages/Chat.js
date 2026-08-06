@@ -46,9 +46,6 @@ import {
   Pause,
 } from "lucide-react";
 
-// A small, self-contained checklist card shown after a symptom message is
-// sent — the user reviews/edits exactly what was understood before any
-// prediction runs.
 function SymptomConfirmationCard({
   msg,
   options,
@@ -149,16 +146,142 @@ function SymptomConfirmationCard({
   );
 }
 
+function BmiCalculatorCard({ isDark }) {
+  const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState("");
+  const [unit, setUnit] = useState("metric");
+  const [result, setResult] = useState(null);
+
+  const calculateBMI = () => {
+    const w = parseFloat(weight);
+    const h = parseFloat(height);
+    if (!w || !h || w <= 0 || h <= 0) return;
+
+    let bmi = 0;
+    if (unit === "metric") {
+      const heightM = h / 100;
+      bmi = w / (heightM * heightM);
+    } else {
+      bmi = (w / (h * h)) * 703;
+    }
+
+    let category = "";
+    let color = "";
+    if (bmi < 18.5) {
+      category = "Underweight";
+      color = "text-blue-400";
+    } else if (bmi >= 18.5 && bmi <= 24.9) {
+      category = "Normal weight";
+      color = "text-emerald-400";
+    } else if (bmi >= 25 && bmi <= 29.9) {
+      category = "Overweight";
+      color = "text-amber-400";
+    } else {
+      category = "Obesity";
+      color = "text-rose-400";
+    }
+
+    setResult({
+      bmi: bmi.toFixed(1),
+      category,
+      color,
+    });
+  };
+
+  return (
+    <div
+      className={`p-5 rounded-2xl text-xs lg:text-sm shadow-xl w-full max-w-md ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200" : "bg-slate-50 border border-slate-200 text-slate-800"}`}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="font-bold text-base flex items-center gap-2">
+          🧮 Interactive BMI Calculator
+        </h4>
+        <div className="flex bg-slate-700/30 p-1 rounded-lg text-[10px] font-bold">
+          <button
+            onClick={() => setUnit("metric")}
+            className={`px-2 py-1 rounded-md transition-all ${unit === "metric" ? "bg-teal-500 text-slate-900" : "text-slate-400"}`}
+          >
+            Metric (kg/cm)
+          </button>
+          <button
+            onClick={() => setUnit("imperial")}
+            className={`px-2 py-1 rounded-md transition-all ${unit === "imperial" ? "bg-teal-500 text-slate-900" : "text-slate-400"}`}
+          >
+            Imperial (lbs/in)
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            Weight ({unit === "metric" ? "kg" : "lbs"})
+          </label>
+          <input
+            type="number"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            placeholder={unit === "metric" ? "e.g. 70" : "e.g. 154"}
+            className={`w-full px-3 py-2.5 rounded-xl border outline-none text-sm ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+            Height ({unit === "metric" ? "cm" : "inches"})
+          </label>
+          <input
+            type="number"
+            value={height}
+            onChange={(e) => setHeight(e.target.value)}
+            placeholder={unit === "metric" ? "e.g. 175" : "e.g. 69"}
+            className={`w-full px-3 py-2.5 rounded-xl border outline-none text-sm ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
+          />
+        </div>
+      </div>
+
+      <button
+        onClick={calculateBMI}
+        className="w-full bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-2.5 rounded-xl transition-all shadow-lg text-xs uppercase tracking-wider mb-4"
+      >
+        Calculate BMI
+      </button>
+
+      {result && (
+        <div
+          className={`p-4 rounded-xl border animate-in fade-in zoom-in duration-300 ${isDark ? "bg-[#0B1120] border-slate-700/80" : "bg-white border-slate-200"}`}
+        >
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">
+              Your BMI
+            </span>
+            <span className={`text-xl font-black ${result.color}`}>
+              {result.bmi}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">
+              Category
+            </span>
+            <span
+              className={`text-xs font-extrabold px-2.5 py-1 rounded-full bg-slate-800/50 ${result.color}`}
+            >
+              {result.category}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ChatDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [page, setPage] = useState("chat");
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
-  // --- NEW VOICE & TTS STATES ---
   const [playingMessageId, setPlayingMessageId] = useState(null);
 
-  // Real-time Chat & Settings States
   const [activeSessionId, setActiveSessionId] = useState(Date.now());
   const [chatHistoryList, setChatHistoryList] = useState(() =>
     JSON.parse(localStorage.getItem("chatHistory") || "[]"),
@@ -174,7 +297,6 @@ export function ChatDashboard() {
     JSON.parse(localStorage.getItem("user") || "{}"),
   );
 
-  // Profile Editing States
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
     name: user.name || "",
@@ -186,7 +308,6 @@ export function ChatDashboard() {
   });
   const [toastMessage, setToastMessage] = useState("");
 
-  // Security & Password States
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -199,7 +320,6 @@ export function ChatDashboard() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Account Management States (Secure Modal - Delete Only)
   const [accountAction, setAccountAction] = useState({
     isOpen: false,
     email: "",
@@ -208,18 +328,14 @@ export function ChatDashboard() {
   });
   const [showAccountActionPw, setShowAccountActionPw] = useState(false);
 
-  // Danger Zone States
   const [emergencyAlert, setEmergencyAlert] = useState(false);
 
-  // --- Theme Logic ---
   const isDark = appSettings.darkMode;
 
-  // Sync global body background color
   useEffect(() => {
     document.body.style.backgroundColor = isDark ? "#020617" : "#ffffff";
   }, [isDark]);
 
-  // --- Auto-Sync Profile Data from Backend on Load ---
   useEffect(() => {
     const fetchLatestProfile = async () => {
       if (!token) return;
@@ -307,7 +423,6 @@ export function ChatDashboard() {
     },
   ]);
 
-  // Modal State
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [editingReminderId, setEditingReminderId] = useState(null);
   const [reminderForm, setReminderForm] = useState({
@@ -316,7 +431,6 @@ export function ChatDashboard() {
     time: "",
   });
 
-  // --- NOTIFICATION WATCHER WITH EMAIL TRIGGER ---
   useEffect(() => {
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
@@ -347,7 +461,6 @@ export function ChatDashboard() {
             });
           }
 
-          // Automatically send reminder email if enabled in settings
           if (appSettings.emailNotif && token) {
             try {
               await axios.post(
@@ -538,7 +651,6 @@ export function ChatDashboard() {
     synth.speak(utterance);
   };
 
-  // --- REBUILT & BUG-FREE MIC LOGIC ---
   const recognitionRef = useRef(null);
 
   const toggleRecording = () => {
@@ -788,24 +900,18 @@ export function ChatDashboard() {
       hour: "2-digit",
       minute: "2-digit",
     });
-    let text = "";
 
     if (title === "BMI Calculator") {
-      text =
-        "🧮 Body Mass Index (BMI) Calculator:\n\nFormula:\n$$\\text{BMI} = \\frac{\\text{weight (kg)}}{\\text{height (m)}^2}$$\n\nCategories:\n- Underweight: $< 18.5$\n- Normal weight: $18.5 - 24.9$\n- Overweight: $25 - 29.9$\n- Obesity: $\\ge 30$\n\nTip: You can reply with your height and weight, and I can help calculate your BMI!";
-    } else if (title === "Blood Pressure Classifications") {
-      text =
-        "🩸 Blood Pressure Normal Ranges & Classifications:\n\n- Normal: $< 120 / 80$ mmHg\n- Elevated: $120-129$ / $< 80$ mmHg\n- Stage 1 Hypertension: $130-139$ / $80-89$ mmHg\n- Stage 2 Hypertension: $\\ge 140$ / $\\ge 90$ mmHg\n- Hypertensive Crisis: $> 180$ / and/or $> 120$ mmHg";
-    } else if (title === "Body Temperature Ranges") {
-      text =
-        "🌡️ Body Temperature Reference Ranges:\n\n- Normal Range: $97.0^\\circ\\text{F} - 99.0^\\circ\\text{F}$ ($36.1^\\circ\\text{C} - 37.2^\\circ\\text{C}$)\n- Average Normal: $98.6^\\circ\\text{F}$ ($37.0^\\circ\\text{C}$)\n- Low Grade Fever: $99.5^\\circ\\text{F} - 100.3^\\circ\\text{F}$ ($37.5^\\circ\\text{C} - 37.9^\\circ\\text{C}$)\n- Fever: $\\ge 100.4^\\circ\\text{F}$ ($38.0^\\circ\\text{C}$)\n- High Fever: $> 103.0^\\circ\\text{F}$ ($39.4^\\circ\\text{C}$)";
-    } else if (title === "Fasting & Random Blood Sugar") {
-      text =
-        "🧪 Blood Sugar (Glucose) Reference Ranges:\n\n1. Fasting Blood Glucose:\n- Normal: $< 100$ mg/dL ($5.6$ mmol/L)\n- Prediabetes: $100 - 125$ mg/dL ($5.6 - 6.9$ mmol/L)\n- Diabetes: $\\ge 126$ mg/dL ($7.0$ mmol/L)\n\n2. Random Blood Sugar:\n- Normal (Non-diabetic): $< 140$ mg/dL ($7.8$ mmol/L)\n- Suggestive of Diabetes: $\\ge 200$ mg/dL with symptoms.";
-    } else if (title === "Daily Water Intake") {
-      text =
-        "💧 Daily Water Intake Guidelines:\n\n- Recommended Baseline (Total Fluids):\n  - Men: $\\approx 3.7$ liters ($125$ oz / $\\sim 15$ cups)\n  - Women: $\\approx 2.7$ liters ($91$ oz / $\\sim 11$ cups)\n- General Rule of Thumb: $8 - 10$ glasses ($2 - 2.5$ liters) of pure water daily, adjusted for activity and weather.";
-    } else if (title === "Target Heart Rate Zones") {
+      setActiveSessionId(Date.now());
+      setMessages([
+        { id: Date.now(), sender: "bot", type: "bmi_calculator", time: now },
+      ]);
+      handleNavClick("chat");
+      return;
+    }
+
+    let text = "";
+    if (title === "Target Heart Rate Zones") {
       text =
         "❤️ Target Heart Rate Zones:\n\nFormula (Maximum Heart Rate):\n$$\\text{MHR} = 220 - \\text{age}$$\n\n- Moderate Intensity Zone ($50-70\\%$ of MHR): Ideal for general endurance and fat burning.\n- Vigorous Intensity Zone ($70-85\\%$ of MHR): Ideal for cardiovascular fitness and athletic conditioning.";
     } else if (title === "Body Fat Percentage") {
@@ -855,8 +961,7 @@ export function ChatDashboard() {
       )
       .then((res) => setSymptomOptions(res.data || []))
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token]);
 
   const removeConfirmSymptom = (msgId, symptomId) => {
     setMessages((prev) =>
@@ -895,7 +1000,6 @@ export function ChatDashboard() {
         {
           symptoms: msg.detectedSymptoms.map((s) => s.id),
           originalText: msg.originalText,
-          // Tell backend to respect user's history preference
           saveHistory: appSettings.saveHistory,
         },
         { headers: { Authorization: `Bearer ${token}` } },
@@ -1001,13 +1105,11 @@ export function ChatDashboard() {
         {
           text: textToSend,
           image: currentImg,
-          // Tell backend to respect user's history preference
           saveHistory: appSettings.saveHistory,
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      // Handle Murtaza's Symptom Confirmation Card
       if (res.data.needsConfirmation) {
         setMessages((prev) => [
           ...prev,
@@ -1404,7 +1506,6 @@ export function ChatDashboard() {
         </div>
       )}
 
-      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 z-[100] transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${isSidebarOpen ? "translate-x-0 w-72" : "-translate-x-full lg:w-0"}`}
       >
@@ -1529,6 +1630,8 @@ export function ChatDashboard() {
                             onAdd={addConfirmSymptom}
                             onConfirm={confirmSymptoms}
                           />
+                        ) : msg.type === "bmi_calculator" ? (
+                          <BmiCalculatorCard isDark={isDark} />
                         ) : (
                           <div
                             className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none"}`}
@@ -1551,7 +1654,8 @@ export function ChatDashboard() {
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
                           {msg.sender === "bot" &&
-                            msg.type !== "confirmation" && (
+                            msg.type !== "confirmation" &&
+                            msg.type !== "bmi_calculator" && (
                               <div className="flex items-center gap-1 ml-1">
                                 <button
                                   onClick={() => speakText(msg.text, msg.id)}
@@ -2023,42 +2127,10 @@ export function ChatDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <SavedCard
                   title="BMI Calculator"
-                  date="Statistical Measure"
+                  date="Interactive Tool"
                   icon={Activity}
                   isDark={isDark}
                   onClick={() => loadSavedAdvice("BMI Calculator")}
-                />
-                <SavedCard
-                  title="Blood Pressure Classifications"
-                  date="Statistical Measure"
-                  icon={HeartPulse}
-                  isDark={isDark}
-                  onClick={() =>
-                    loadSavedAdvice("Blood Pressure Classifications")
-                  }
-                />
-                <SavedCard
-                  title="Body Temperature Ranges"
-                  date="Statistical Measure"
-                  icon={Flame}
-                  isDark={isDark}
-                  onClick={() => loadSavedAdvice("Body Temperature Ranges")}
-                />
-                <SavedCard
-                  title="Fasting & Random Blood Sugar"
-                  date="Statistical Measure"
-                  icon={Activity}
-                  isDark={isDark}
-                  onClick={() =>
-                    loadSavedAdvice("Fasting & Random Blood Sugar")
-                  }
-                />
-                <SavedCard
-                  title="Daily Water Intake"
-                  date="Statistical Measure"
-                  icon={Droplet}
-                  isDark={isDark}
-                  onClick={() => loadSavedAdvice("Daily Water Intake")}
                 />
                 <SavedCard
                   title="Target Heart Rate Zones"
