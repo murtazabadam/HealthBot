@@ -275,12 +275,17 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                 <div className="flex items-center">
                   <input
                     type="number"
+                    min="0"
+                    onKeyDown={(e) => {
+                      if (["-", "+", "e", "E"].includes(e.key))
+                        e.preventDefault();
+                    }}
                     value={height}
                     onChange={(e) => setHeight(e.target.value)}
                     placeholder={
                       unit === "metric" ? "e.g. 171" : "e.g. 5.6 for 5'6\""
                     }
-                    className="w-full bg-transparent border-none outline-none text-base font-semibold text-slate-200 placeholder-slate-600"
+                    className="w-full bg-transparent border-none outline-none text-base font-semibold text-slate-200 placeholder-slate-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <span className="text-teal-500 font-bold text-sm ml-2 shrink-0">
                     {unit === "metric" ? "cm" : "ft.in"}
@@ -304,10 +309,15 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                 <div className="flex items-center">
                   <input
                     type="number"
+                    min="0"
+                    onKeyDown={(e) => {
+                      if (["-", "+", "e", "E"].includes(e.key))
+                        e.preventDefault();
+                    }}
                     value={weight}
                     onChange={(e) => setWeight(e.target.value)}
                     placeholder={unit === "metric" ? "e.g. 73" : "e.g. 160"}
-                    className="w-full bg-transparent border-none outline-none text-base font-semibold text-slate-200 placeholder-slate-600"
+                    className="w-full bg-transparent border-none outline-none text-base font-semibold text-slate-200 placeholder-slate-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <span className="text-teal-500 font-bold text-sm ml-2 shrink-0">
                     {unit === "metric" ? "kg" : "lbs"}
@@ -1410,10 +1420,6 @@ export function ChatDashboard() {
     <div
       className={`fixed inset-0 flex font-sans overflow-hidden selection:bg-teal-500/30 transition-colors duration-300 ${isDark ? "bg-[#020617] text-slate-200" : "bg-white text-slate-900"}`}
     >
-      <div
-        className={`absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] pointer-events-none ${isDark ? "bg-teal-500/5" : "bg-teal-500/10"}`}
-      />
-
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-teal-500 text-slate-900 px-5 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-3 z-[200] animate-in slide-in-from-bottom-5">
           <CheckCircle2 size={20} /> {toastMessage}
@@ -1661,6 +1667,9 @@ export function ChatDashboard() {
       </div>
 
       <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative overflow-hidden bg-transparent">
+        <div
+          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[70%] h-[70%] rounded-full blur-[120px] pointer-events-none z-[-1] ${isDark ? "bg-teal-500/5" : "bg-teal-500/10"}`}
+        />
         <header
           className={`flex-none z-[90] h-[72px] border-b flex items-center justify-between px-3 sm:px-4 lg:px-8 backdrop-blur-md transition-colors duration-300 ${isDark ? "bg-[#020617]/95 border-slate-800/60 shadow-xl" : "bg-white/95 border-slate-200 shadow-sm"}`}
         >
@@ -1711,13 +1720,13 @@ export function ChatDashboard() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto pt-6 pb-6 px-4 lg:px-6 no-scrollbar relative z-0">
+        <div className="flex-1 overflow-y-auto pt-6 pb-6 px-4 lg:px-6 no-scrollbar relative z-0 flex flex-col">
           {page === "chat" && (
             <div
-              className={`max-w-4xl mx-auto flex flex-col space-y-6 pb-12 ${messages.length === 0 ? "h-full justify-center" : ""}`}
+              className={`max-w-4xl mx-auto flex flex-col space-y-6 pb-12 w-full flex-1 ${messages.length === 0 ? "justify-center" : ""}`}
             >
               {messages.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
+                <div className="flex flex-col items-center justify-center mt-auto mb-auto animate-in fade-in zoom-in duration-500 pb-20">
                   <div className="w-20 h-20 bg-teal-500/10 border border-teal-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(45,212,191,0.15)]">
                     <Activity className="h-10 w-10 text-teal-400" />
                   </div>
