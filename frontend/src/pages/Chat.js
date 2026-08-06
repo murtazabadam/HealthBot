@@ -159,28 +159,29 @@ function BmiCalculatorCard({ isDark }) {
   const calculateBMI = () => {
     const w = parseFloat(weight);
     const h = parseFloat(height);
-    if (!w || !h || w <= 0 || h <= 0) return;
+    if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) return;
 
-    let weightKg = weightUnit === "kg" ? w : w * 0.453592;
+    let weightKg = weightUnit === "kg" ? w : w * 0.45359237;
     let heightM = 0;
 
     if (heightUnit === "cm") {
-      heightM = h < 3 ? h : h / 100;
+      heightM = h / 100;
     } else {
-      // Smart Imperial Detection: If user types "5.9", convert to 5 ft 9 inches (69 inches)
+      // Smart Imperial Detection for Inches
       let actualInches = h;
       if (h < 10) {
+        // User typed something like 5.9 (5 feet, 9 inches)
         const strH = height.toString();
         if (strH.includes(".")) {
           const parts = strH.split(".");
-          const feet = parseInt(parts[0], 10);
-          const inches = parseInt(parts[1], 10);
+          const feet = parseInt(parts[0], 10) || 0;
+          const inches = parseInt(parts[1], 10) || 0;
           actualInches = feet * 12 + inches;
         } else {
-          actualInches = h * 12; // Typed just feet (e.g. 5)
+          actualInches = h * 12; // Typed just feet (e.g., 5 -> 60 inches)
         }
       }
-      heightM = actualInches * 0.0254; // Convert actual inches to meters
+      heightM = actualInches * 0.0254; // Convert inches to meters
     }
 
     const bmi = weightKg / (heightM * heightM);
@@ -198,13 +199,13 @@ function BmiCalculatorCard({ isDark }) {
       status = "Attention";
       message =
         "You are underweight. Consider consulting a doctor or dietitian.";
-    } else if (bmi < 25) {
+    } else if (bmi >= 18.5 && bmi <= 24.9) {
       category = "Normal Weight";
       colorClass = "text-teal-400";
       bgClass = "bg-teal-400";
       status = "Healthy";
       message = "You have a normal body weight. Great job!";
-    } else if (bmi < 30) {
+    } else if (bmi >= 25.0 && bmi <= 29.9) {
       category = "Overweight";
       colorClass = "text-amber-500";
       bgClass = "bg-amber-500";
@@ -247,32 +248,30 @@ function BmiCalculatorCard({ isDark }) {
       </p>
 
       {/* Height Input Group */}
-      <div className="flex gap-3 sm:gap-4 mb-4">
+      <div className="flex gap-3 sm:gap-4 mb-4 items-end">
         <div
-          className={`w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-teal-400 shadow-[0_0_15px_rgba(45,212,191,0.05)] ${isDark ? "bg-[#111827] border-teal-500/20" : "bg-teal-50 border-teal-200"}`}
+          className={`w-14 h-14 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-teal-400 shadow-[0_0_15px_rgba(45,212,191,0.05)] ${isDark ? "bg-[#111827] border-teal-500/20" : "bg-teal-50 border-teal-200"}`}
         >
-          <User size={20} className="sm:w-6 sm:h-6" strokeWidth={1.5} />
+          <User size={24} strokeWidth={1.5} />
         </div>
         <div className="flex-1 min-w-0">
           <label
-            className={`text-[10px] sm:text-xs font-bold mb-1.5 block ${isDark ? "text-slate-300" : "text-slate-700"}`}
+            className={`text-xs font-bold mb-1.5 block ${isDark ? "text-slate-400" : "text-slate-600"}`}
           >
             Height
           </label>
           <div
-            className={`flex items-center rounded-xl border h-12 sm:h-14 overflow-hidden focus-within:border-teal-400 transition-colors ${isDark ? "bg-[#111827] border-slate-700" : "bg-slate-50 border-slate-200"}`}
+            className={`flex items-center rounded-xl border h-14 overflow-hidden focus-within:border-teal-400 transition-colors ${isDark ? "bg-[#111827] border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
             <input
               type="number"
               value={height}
               onChange={(e) => setHeight(e.target.value)}
-              placeholder={
-                heightUnit === "in" ? "e.g. 5.9 for 5'9\"" : "Enter height"
-              }
-              className={`flex-1 min-w-0 bg-transparent px-3 sm:px-4 h-full outline-none text-xs sm:text-sm w-full ${isDark ? "text-white placeholder-slate-600" : "text-slate-900 placeholder-slate-400"}`}
+              placeholder={heightUnit === "in" ? "e.g. 5.9 or 69" : "e.g. 175"}
+              className={`flex-1 min-w-0 bg-transparent px-4 h-full outline-none text-sm w-full ${isDark ? "text-white placeholder-slate-600" : "text-slate-900 placeholder-slate-400"}`}
             />
             <div
-              className={`relative shrink-0 flex items-center h-full border-l ${isDark ? "border-slate-700/50" : "border-slate-200"}`}
+              className={`h-full border-l flex items-center ${isDark ? "border-slate-700/50 bg-[#0B1120]" : "border-slate-200 bg-slate-100"}`}
             >
               <select
                 value={heightUnit}
@@ -280,7 +279,7 @@ function BmiCalculatorCard({ isDark }) {
                   setHeightUnit(e.target.value);
                   setResult(null);
                 }}
-                className={`bg-transparent h-full px-2 sm:px-3 pr-6 outline-none text-xs sm:text-sm font-bold appearance-none cursor-pointer ${isDark ? "text-teal-400" : "text-teal-600"}`}
+                className={`bg-transparent h-full px-4 outline-none text-sm font-bold appearance-none cursor-pointer text-center ${isDark ? "text-teal-400" : "text-teal-600"}`}
               >
                 <option value="cm" className="text-slate-900">
                   cm
@@ -289,40 +288,36 @@ function BmiCalculatorCard({ isDark }) {
                   in
                 </option>
               </select>
-              <ChevronDown
-                size={14}
-                className={`absolute right-1.5 pointer-events-none ${isDark ? "text-teal-400" : "text-teal-600"}`}
-              />
             </div>
           </div>
         </div>
       </div>
 
       {/* Weight Input Group */}
-      <div className="flex gap-3 sm:gap-4 mb-6">
+      <div className="flex gap-3 sm:gap-4 mb-6 items-end">
         <div
-          className={`w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-teal-400 shadow-[0_0_15px_rgba(45,212,191,0.05)] ${isDark ? "bg-[#111827] border-teal-500/20" : "bg-teal-50 border-teal-200"}`}
+          className={`w-14 h-14 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-teal-400 shadow-[0_0_15px_rgba(45,212,191,0.05)] ${isDark ? "bg-[#111827] border-teal-500/20" : "bg-teal-50 border-teal-200"}`}
         >
-          <Activity size={20} className="sm:w-6 sm:h-6" strokeWidth={1.5} />
+          <Activity size={24} strokeWidth={1.5} />
         </div>
         <div className="flex-1 min-w-0">
           <label
-            className={`text-[10px] sm:text-xs font-bold mb-1.5 block ${isDark ? "text-slate-300" : "text-slate-700"}`}
+            className={`text-xs font-bold mb-1.5 block ${isDark ? "text-slate-400" : "text-slate-600"}`}
           >
             Weight
           </label>
           <div
-            className={`flex items-center rounded-xl border h-12 sm:h-14 overflow-hidden focus-within:border-teal-400 transition-colors ${isDark ? "bg-[#111827] border-slate-700" : "bg-slate-50 border-slate-200"}`}
+            className={`flex items-center rounded-xl border h-14 overflow-hidden focus-within:border-teal-400 transition-colors ${isDark ? "bg-[#111827] border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
             <input
               type="number"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
-              placeholder="Enter weight"
-              className={`flex-1 min-w-0 bg-transparent px-3 sm:px-4 h-full outline-none text-xs sm:text-sm w-full ${isDark ? "text-white placeholder-slate-600" : "text-slate-900 placeholder-slate-400"}`}
+              placeholder={weightUnit === "lbs" ? "e.g. 154" : "e.g. 70"}
+              className={`flex-1 min-w-0 bg-transparent px-4 h-full outline-none text-sm w-full ${isDark ? "text-white placeholder-slate-600" : "text-slate-900 placeholder-slate-400"}`}
             />
             <div
-              className={`relative shrink-0 flex items-center h-full border-l ${isDark ? "border-slate-700/50" : "border-slate-200"}`}
+              className={`h-full border-l flex items-center ${isDark ? "border-slate-700/50 bg-[#0B1120]" : "border-slate-200 bg-slate-100"}`}
             >
               <select
                 value={weightUnit}
@@ -330,7 +325,7 @@ function BmiCalculatorCard({ isDark }) {
                   setWeightUnit(e.target.value);
                   setResult(null);
                 }}
-                className={`bg-transparent h-full px-2 sm:px-3 pr-6 outline-none text-xs sm:text-sm font-bold appearance-none cursor-pointer ${isDark ? "text-teal-400" : "text-teal-600"}`}
+                className={`bg-transparent h-full px-4 outline-none text-sm font-bold appearance-none cursor-pointer text-center ${isDark ? "text-teal-400" : "text-teal-600"}`}
               >
                 <option value="kg" className="text-slate-900">
                   kg
@@ -339,10 +334,6 @@ function BmiCalculatorCard({ isDark }) {
                   lbs
                 </option>
               </select>
-              <ChevronDown
-                size={14}
-                className={`absolute right-1.5 pointer-events-none ${isDark ? "text-teal-400" : "text-teal-600"}`}
-              />
             </div>
           </div>
         </div>
@@ -351,9 +342,9 @@ function BmiCalculatorCard({ isDark }) {
       {/* Calculate Button */}
       <button
         onClick={calculateBMI}
-        className="w-full bg-teal-400 hover:bg-teal-300 text-slate-900 font-bold py-3 sm:py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(45,212,191,0.2)] flex items-center justify-center gap-2 mb-6"
+        className="w-full bg-teal-400 hover:bg-teal-300 text-slate-900 font-bold py-3.5 sm:py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(45,212,191,0.2)] flex items-center justify-center gap-2 mb-6 text-sm"
       >
-        <Calculator size={18} className="sm:w-5 sm:h-5" /> Calculate BMI
+        Calculate BMI
       </button>
 
       {/* Results Section */}
