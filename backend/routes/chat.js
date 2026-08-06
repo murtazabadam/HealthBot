@@ -4,7 +4,7 @@ const auth = require("../middleware/auth");
 const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const { getGroqResponse, isOffTopic } = require("../config/groq");
-const nodemailer = require("nodemailer"); // Added for Email Summary feature
+const nodemailer = require("nodemailer");
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
 async function getMLPrediction(text, symptoms) {
@@ -364,7 +364,7 @@ function checkEmergency(symptoms) {
   return combos.some((combo) => combo.every((s) => symptoms.includes(s)));
 }
 
-// ── Fallback (only for greetings/bye/thanks when no history) ──────────────────
+// ── Fallback ──────────────────────────────────────────────────────────────────
 function getFallbackReply(intent, userName) {
   const name = userName ? userName.split(" ")[0] : "there";
   const h = new Date().getHours();
@@ -653,15 +653,11 @@ router.get("/symptom-options", auth, (req, res) => {
   res.json(ids.map((id) => ({ id, label: readableSymptom(id) })));
 });
 
-// ── Email Summary Route ──────────────────────────────────────────────────────
-router.post("/email-summary", auth, async (req, res) => {
+// ── Email Reminder Route (Replaced Email Summary) ─────────────────────────────
+router.post("/email-reminder", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    const { messages } = req.body;
-
-    if (!messages || messages.length === 0) {
-      return res.status(400).json({ message: "No messages to send" });
-    }
+    const { reminderName, time } = req.body;
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -671,22 +667,15 @@ router.post("/email-summary", auth, async (req, res) => {
       },
     });
 
-    const chatText = messages
-      .map(
-        (m) =>
-          `${m.sender === "user" ? "You" : "HealthBot"}: ${m.text || "Attachment"}`,
-      )
-      .join("\n\n");
-
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: user.email,
-      subject: "🩺 Your HealthBot Consultation Summary",
-      text: `Hello ${user.name},\n\nHere is the summary of your recent HealthBot consultation:\n\n--------------------------------\n\n${chatText}\n\n--------------------------------\n\nStay healthy!\n- The HealthBot Team`,
+      subject: `⏰ HealthBot Reminder: ${reminderName}`,
+      text: `Hello ${user.name},\n\nThis is your friendly HealthBot reminder!\n\nIt is time for: ${reminderName}\nScheduled at: ${time}\n\nStay healthy!\n- The HealthBot Team`,
     };
 
     await transporter.sendMail(mailOptions);
-    res.json({ message: "Email sent successfully!" });
+    res.json({ message: "Reminder email sent successfully!" });
   } catch (err) {
     console.error("Email error:", err);
     res.status(500).json({ message: "Server error" });
