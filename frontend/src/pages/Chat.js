@@ -30,7 +30,6 @@ import {
   Flame,
   Wind,
   Droplet,
-  Mail,
   Store,
   Edit3,
   Save,
@@ -317,16 +316,7 @@ export function ChatDashboard() {
     time: "",
   });
 
-  const formatTimeAMPM = (timeStr) => {
-    if (!timeStr) return "";
-    let [h, m] = timeStr.split(":");
-    let hour = parseInt(h, 10);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    hour = hour % 12 || 12;
-    return `${hour}:${m} ${ampm}`;
-  };
-
-  // --- NOTIFICATION WATCHER WITH AUTOMATIC EMAIL INTEGRATION ---
+  // --- NOTIFICATION WATCHER WITH EMAIL TRIGGER ---
   useEffect(() => {
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
@@ -341,13 +331,12 @@ export function ChatDashboard() {
       });
       const today = now.toISOString().split("T")[0];
 
-      reminders.forEach((reminder) => {
+      reminders.forEach(async (reminder) => {
         if (
           reminder.date === today &&
           reminder.time === currentTime &&
           reminder.active
         ) {
-          // Send Local Browser Notification
           if (
             "Notification" in window &&
             Notification.permission === "granted"
@@ -358,34 +347,33 @@ export function ChatDashboard() {
             });
           }
 
-          // Trigger Backend Email Reminder (If setting is enabled)
+          // Automatically send reminder email if enabled in settings
           if (appSettings.emailNotif && token) {
-            axios
-              .post(
+            try {
+              await axios.post(
                 "https://healthbot-backend-ezxv.onrender.com/api/chat/email-reminder",
-                {
-                  reminderName: reminder.name,
-                  time: formatTimeAMPM(reminder.time),
-                },
+                { reminderName: reminder.name, time: reminder.time },
                 { headers: { Authorization: `Bearer ${token}` } },
-              )
-              .catch((err) =>
-                console.error("Failed to send email reminder", err),
               );
+            } catch (err) {
+              console.error("Failed to send automatic reminder email", err);
+            }
           }
-
-          // Mark reminder as inactive so it doesn't fire multiple times in the same minute
-          setReminders((prev) =>
-            prev.map((r) =>
-              r.id === reminder.id ? { ...r, active: false } : r,
-            ),
-          );
         }
       });
     }, 60000);
 
     return () => clearInterval(interval);
   }, [reminders, appSettings.emailNotif, token]);
+
+  const formatTimeAMPM = (timeStr) => {
+    if (!timeStr) return "";
+    let [h, m] = timeStr.split(":");
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12;
+    return `${hour}:${m} ${ampm}`;
+  };
 
   const openAddReminderModal = () => {
     setEditingReminderId(null);
@@ -422,7 +410,6 @@ export function ChatDashboard() {
                 name: reminderForm.name,
                 date: reminderForm.date,
                 time: reminderForm.time,
-                active: true, // Re-activate if edited
               }
             : r,
         ),
@@ -803,14 +790,38 @@ export function ChatDashboard() {
     });
     let text = "";
 
-    if (title === "Cold Remedies") {
+    if (title === "BMI Calculator") {
+      text =
+        "🧮 Body Mass Index (BMI) Calculator:\n\nFormula:\n$$\\text{BMI} = \\frac{\\text{weight (kg)}}{\\text{height (m)}^2}$$\n\nCategories:\n- Underweight: $< 18.5$\n- Normal weight: $18.5 - 24.9$\n- Overweight: $25 - 29.9$\n- Obesity: $\\ge 30$\n\nTip: You can reply with your height and weight, and I can help calculate your BMI!";
+    } else if (title === "Blood Pressure Classifications") {
+      text =
+        "🩸 Blood Pressure Normal Ranges & Classifications:\n\n- Normal: $< 120 / 80$ mmHg\n- Elevated: $120-129$ / $< 80$ mmHg\n- Stage 1 Hypertension: $130-139$ / $80-89$ mmHg\n- Stage 2 Hypertension: $\\ge 140$ / $\\ge 90$ mmHg\n- Hypertensive Crisis: $> 180$ / and/or $> 120$ mmHg";
+    } else if (title === "Body Temperature Ranges") {
+      text =
+        "🌡️ Body Temperature Reference Ranges:\n\n- Normal Range: $97.0^\\circ\\text{F} - 99.0^\\circ\\text{F}$ ($36.1^\\circ\\text{C} - 37.2^\\circ\\text{C}$)\n- Average Normal: $98.6^\\circ\\text{F}$ ($37.0^\\circ\\text{C}$)\n- Low Grade Fever: $99.5^\\circ\\text{F} - 100.3^\\circ\\text{F}$ ($37.5^\\circ\\text{C} - 37.9^\\circ\\text{C}$)\n- Fever: $\\ge 100.4^\\circ\\text{F}$ ($38.0^\\circ\\text{C}$)\n- High Fever: $> 103.0^\\circ\\text{F}$ ($39.4^\\circ\\text{C}$)";
+    } else if (title === "Fasting & Random Blood Sugar") {
+      text =
+        "🧪 Blood Sugar (Glucose) Reference Ranges:\n\n1. Fasting Blood Glucose:\n- Normal: $< 100$ mg/dL ($5.6$ mmol/L)\n- Prediabetes: $100 - 125$ mg/dL ($5.6 - 6.9$ mmol/L)\n- Diabetes: $\\ge 126$ mg/dL ($7.0$ mmol/L)\n\n2. Random Blood Sugar:\n- Normal (Non-diabetic): $< 140$ mg/dL ($7.8$ mmol/L)\n- Suggestive of Diabetes: $\\ge 200$ mg/dL with symptoms.";
+    } else if (title === "Daily Water Intake") {
+      text =
+        "💧 Daily Water Intake Guidelines:\n\n- Recommended Baseline (Total Fluids):\n  - Men: $\\approx 3.7$ liters ($125$ oz / $\\sim 15$ cups)\n  - Women: $\\approx 2.7$ liters ($91$ oz / $\\sim 11$ cups)\n- General Rule of Thumb: $8 - 10$ glasses ($2 - 2.5$ liters) of pure water daily, adjusted for activity and weather.";
+    } else if (title === "Target Heart Rate Zones") {
+      text =
+        "❤️ Target Heart Rate Zones:\n\nFormula (Maximum Heart Rate):\n$$\\text{MHR} = 220 - \\text{age}$$\n\n- Moderate Intensity Zone ($50-70\\%$ of MHR): Ideal for general endurance and fat burning.\n- Vigorous Intensity Zone ($70-85\\%$ of MHR): Ideal for cardiovascular fitness and athletic conditioning.";
+    } else if (title === "Body Fat Percentage") {
+      text =
+        "📉 Body Fat Percentage Reference Ranges:\n\n- Essential Fat: Men: $2 - 5\\%$, Women: $10 - 13\\%$\n- Athletes: Men: $6 - 13\\%$, Women: $14 - 20\\%$\n- Fitness: Men: $14 - 17\\%$, Women: $21 - 24\\%$\n- Acceptable: Men: $18 - 24\\%$, Women: $25 - 31\\%$\n- Obesity: Men: $\\ge 25\\%$, Women: $\\ge 32\\%$";
+    } else if (title === "Waist-to-Hip Ratio (WHR)") {
+      text =
+        "📏 Waist-to-Hip Ratio (WHR) Health Risk Assessment:\n\nFormula:\n$$\\text{WHR} = \\frac{\\text{Waist Circumference}}{\\text{Hip Circumference}}$$\n\n- Low Risk: Men $< 0.90$, Women $< 0.80$\n- Moderate Risk: Men $0.90 - 0.99$, Women $0.80 - 0.84$\n- High Risk: Men $\\ge 1.0$, Women $\\ge 0.85$";
+    } else if (title === "Cold Remedies") {
       text =
         "Here are your saved Cold Remedies:\n1. Drink plenty of warm fluids (tea, broth).\n2. Get at least 8 hours of sleep.\n3. Take Vitamin C and Zinc supplements.\n4. Use a humidifier at night.";
     } else if (title === "Hydration Schedule") {
       text =
         "Here is your pinned Hydration Schedule:\n- 8:00 AM: 2 glasses of water\n- 11:00 AM: 1 glass\n- 1:00 PM: 1 glass\n- 4:00 PM: 1 glass\n- 7:00 PM: 2 glasses.";
     } else if (title === "Emergency Contacts") {
-      text = `🚨 Your Emergency Contacts:\n- Ambulance/Emergency: 112\n- Your Registered Location: ${user.address || "Please update address in Profile"}\n\nTip: In a severe emergency, call 112 immediately and provide them with your registered location.`;
+      text = `🚨 Your Emergency Contacts:\n- Ambulance/Emergency: 108\n- Your Registered Location: ${user.address || "Please update address in Profile"}\n\nTip: In a severe emergency, call 108 immediately and provide them with your registered location.`;
     }
 
     setActiveSessionId(Date.now());
@@ -1180,10 +1191,10 @@ export function ChatDashboard() {
 
             <div className="flex flex-col gap-3">
               <a
-                href="tel:112"
+                href="tel:108"
                 className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-xl text-lg flex items-center justify-center gap-2 shadow-lg transition-all"
               >
-                <PhoneCall size={24} /> Call 112 (Emergency)
+                <PhoneCall size={24} /> Call 108 (Ambulance)
               </a>
               <button
                 onClick={() => {
@@ -1685,7 +1696,7 @@ export function ChatDashboard() {
 
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                      <Mail className="h-3 w-3" /> Email Address
+                      <Calendar className="h-3 w-3" /> Email Address
                     </label>
                     <p
                       className={`text-sm py-3 px-4 rounded-xl flex items-center gap-2 ${isDark ? "bg-slate-800/30 text-slate-400" : "bg-slate-50 text-slate-500 border border-slate-200"}`}
@@ -2011,9 +2022,69 @@ export function ChatDashboard() {
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <SavedCard
+                  title="BMI Calculator"
+                  date="Statistical Measure"
+                  icon={Activity}
+                  isDark={isDark}
+                  onClick={() => loadSavedAdvice("BMI Calculator")}
+                />
+                <SavedCard
+                  title="Blood Pressure Classifications"
+                  date="Statistical Measure"
+                  icon={HeartPulse}
+                  isDark={isDark}
+                  onClick={() =>
+                    loadSavedAdvice("Blood Pressure Classifications")
+                  }
+                />
+                <SavedCard
+                  title="Body Temperature Ranges"
+                  date="Statistical Measure"
+                  icon={Flame}
+                  isDark={isDark}
+                  onClick={() => loadSavedAdvice("Body Temperature Ranges")}
+                />
+                <SavedCard
+                  title="Fasting & Random Blood Sugar"
+                  date="Statistical Measure"
+                  icon={Activity}
+                  isDark={isDark}
+                  onClick={() =>
+                    loadSavedAdvice("Fasting & Random Blood Sugar")
+                  }
+                />
+                <SavedCard
+                  title="Daily Water Intake"
+                  date="Statistical Measure"
+                  icon={Droplet}
+                  isDark={isDark}
+                  onClick={() => loadSavedAdvice("Daily Water Intake")}
+                />
+                <SavedCard
+                  title="Target Heart Rate Zones"
+                  date="Statistical Measure"
+                  icon={Activity}
+                  isDark={isDark}
+                  onClick={() => loadSavedAdvice("Target Heart Rate Zones")}
+                />
+                <SavedCard
+                  title="Body Fat Percentage"
+                  date="Statistical Measure"
+                  icon={Activity}
+                  isDark={isDark}
+                  onClick={() => loadSavedAdvice("Body Fat Percentage")}
+                />
+                <SavedCard
+                  title="Waist-to-Hip Ratio (WHR)"
+                  date="Statistical Measure"
+                  icon={Activity}
+                  isDark={isDark}
+                  onClick={() => loadSavedAdvice("Waist-to-Hip Ratio (WHR)")}
+                />
+                <SavedCard
                   title="Cold Remedies"
                   date="Oct 24, 2026"
-                  icon={Activity}
+                  icon={HeartPulse}
                   isDark={isDark}
                   onClick={() => loadSavedAdvice("Cold Remedies")}
                 />
@@ -2162,7 +2233,7 @@ export function ChatDashboard() {
                 />
                 <SettingToggle
                   label="Email Notifications"
-                  desc="Receive weekly health summaries."
+                  desc="Receive reminder alerts via email."
                   checked={appSettings.emailNotif}
                   isDark={isDark}
                   onChange={() => handleSettingChange("emailNotif")}
@@ -2343,7 +2414,7 @@ const FirstAidView = ({ isDark }) => {
       short: "Cardiopulmonary Resuscitation",
       steps: [
         "Check the scene for safety, then check the person for responsiveness.",
-        "Call emergency services (e.g., 911 or 112) immediately.",
+        "Call emergency services (e.g., 911 or 108) immediately.",
         "Place the heel of your hand on the center of the person's chest.",
         "Place your other hand on top and interlock your fingers.",
         "Push hard and fast (at least 2 inches deep, 100-120 compressions per minute).",
@@ -2477,10 +2548,10 @@ const FirstAidView = ({ isDark }) => {
           <p className="text-slate-500">Emergency step-by-step instructions.</p>
         </div>
         <a
-          href="tel:112"
+          href="tel:108"
           className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-rose-500/20 active:scale-95"
         >
-          <PhoneCall size={20} /> Emergency SOS
+          <PhoneCall size={20} /> Emergency SOS (108)
         </a>
       </div>
 
