@@ -190,6 +190,7 @@ function BmiCalculatorCard({ isDark }) {
     let status = "";
     let message = "";
 
+    // FIXED LOGIC: Removed gaps between 24.9 and 25.0
     if (bmi < 18.5) {
       category = "Underweight";
       colorClass = "text-blue-500";
@@ -197,13 +198,13 @@ function BmiCalculatorCard({ isDark }) {
       status = "Attention";
       message =
         "You are underweight. Consider consulting a doctor or dietitian.";
-    } else if (bmi >= 18.5 && bmi <= 24.9) {
+    } else if (bmi < 25.0) {
       category = "Normal Weight";
       colorClass = "text-teal-400";
       bgClass = "bg-teal-400";
       status = "Healthy";
       message = "You have a normal body weight. Great job!";
-    } else if (bmi >= 25.0 && bmi <= 29.9) {
+    } else if (bmi < 30.0) {
       category = "Overweight";
       colorClass = "text-amber-500";
       bgClass = "bg-amber-500";
@@ -238,198 +239,211 @@ function BmiCalculatorCard({ isDark }) {
         BMI Calculator
       </h2>
       <p
-        className={`text-xs sm:text-sm mb-6 leading-relaxed ${isDark ? "text-slate-400" : "text-slate-500"}`}
+        className={`text-xs sm:text-sm mb-4 leading-relaxed ${isDark ? "text-slate-400" : "text-slate-500"}`}
       >
         Calculate your Body Mass Index and
         <br />
         know your health status
       </p>
 
-      {/* Height Input Group */}
-      <div className="flex gap-3 sm:gap-4 mb-4 items-end">
-        <div
-          className={`w-14 h-14 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-teal-400 shadow-[0_0_15px_rgba(45,212,191,0.05)] ${isDark ? "bg-[#111827] border-teal-500/20" : "bg-teal-50 border-teal-200"}`}
-        >
-          <User size={24} strokeWidth={1.5} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <label
-            className={`text-xs font-bold mb-1.5 block ${isDark ? "text-slate-400" : "text-slate-600"}`}
-          >
-            Height
-          </label>
-          <div
-            className={`flex items-center rounded-xl border h-14 overflow-hidden focus-within:border-teal-400 transition-colors ${isDark ? "bg-[#111827] border-slate-700" : "bg-slate-50 border-slate-200"}`}
-          >
-            <input
-              type="number"
-              value={height}
-              onChange={(e) => setHeight(e.target.value)}
-              placeholder={heightUnit === "in" ? "e.g. 5.9 or 69" : "e.g. 175"}
-              className={`flex-1 min-w-0 bg-transparent px-4 h-full outline-none text-sm w-full ${isDark ? "text-white placeholder-slate-600" : "text-slate-900 placeholder-slate-400"}`}
-            />
-            <div
-              className={`h-full border-l flex items-center ${isDark ? "border-slate-700/50 bg-[#0B1120]" : "border-slate-200 bg-slate-100"}`}
-            >
-              <select
-                value={heightUnit}
-                onChange={(e) => {
-                  setHeightUnit(e.target.value);
-                  setResult(null);
-                }}
-                className={`bg-transparent h-full px-4 outline-none text-sm font-bold appearance-none cursor-pointer text-center ${isDark ? "text-teal-400" : "text-teal-600"}`}
+      {/* Dynamic Area - Fixed Height prevents jumping */}
+      <div className="min-h-[220px] flex flex-col justify-center">
+        {!result ? (
+          <div className="animate-in fade-in zoom-in duration-300">
+            {/* Height Input Group */}
+            <div className="flex gap-3 sm:gap-4 mb-4 items-end">
+              <div
+                className={`w-14 h-14 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-teal-400 shadow-[0_0_15px_rgba(45,212,191,0.05)] ${isDark ? "bg-[#111827] border-teal-500/20" : "bg-teal-50 border-teal-200"}`}
               >
-                <option value="cm" className="text-slate-900">
-                  cm
-                </option>
-                <option value="in" className="text-slate-900">
-                  in
-                </option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Weight Input Group */}
-      <div className="flex gap-3 sm:gap-4 mb-6 items-end">
-        <div
-          className={`w-14 h-14 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-teal-400 shadow-[0_0_15px_rgba(45,212,191,0.05)] ${isDark ? "bg-[#111827] border-teal-500/20" : "bg-teal-50 border-teal-200"}`}
-        >
-          <Activity size={24} strokeWidth={1.5} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <label
-            className={`text-xs font-bold mb-1.5 block ${isDark ? "text-slate-400" : "text-slate-600"}`}
-          >
-            Weight
-          </label>
-          <div
-            className={`flex items-center rounded-xl border h-14 overflow-hidden focus-within:border-teal-400 transition-colors ${isDark ? "bg-[#111827] border-slate-700" : "bg-slate-50 border-slate-200"}`}
-          >
-            <input
-              type="number"
-              value={weight}
-              onChange={(e) => setWeight(e.target.value)}
-              placeholder={weightUnit === "lbs" ? "e.g. 154" : "e.g. 70"}
-              className={`flex-1 min-w-0 bg-transparent px-4 h-full outline-none text-sm w-full ${isDark ? "text-white placeholder-slate-600" : "text-slate-900 placeholder-slate-400"}`}
-            />
-            <div
-              className={`h-full border-l flex items-center ${isDark ? "border-slate-700/50 bg-[#0B1120]" : "border-slate-200 bg-slate-100"}`}
-            >
-              <select
-                value={weightUnit}
-                onChange={(e) => {
-                  setWeightUnit(e.target.value);
-                  setResult(null);
-                }}
-                className={`bg-transparent h-full px-4 outline-none text-sm font-bold appearance-none cursor-pointer text-center ${isDark ? "text-teal-400" : "text-teal-600"}`}
-              >
-                <option value="kg" className="text-slate-900">
-                  kg
-                </option>
-                <option value="lbs" className="text-slate-900">
-                  lbs
-                </option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Calculate Button */}
-      <button
-        onClick={calculateBMI}
-        className="w-full bg-teal-400 hover:bg-teal-300 text-slate-900 font-bold py-3.5 sm:py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(45,212,191,0.2)] flex items-center justify-center gap-2 mb-6 text-sm"
-      >
-        Calculate BMI
-      </button>
-
-      {/* Results Section */}
-      {result && (
-        <div
-          className={`border rounded-2xl p-4 sm:p-5 animate-in fade-in zoom-in duration-300 shadow-xl ${isDark ? "bg-[#111827] border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
-        >
-          <div className="flex items-center gap-4 sm:gap-6">
-            {/* SVG Glowing Dial */}
-            <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0">
-              <svg
-                className="w-full h-full transform -rotate-90"
-                viewBox="0 0 100 100"
-              >
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke={isDark ? "#1F2937" : "#E2E8F0"}
-                  strokeWidth="6"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="6"
-                  strokeDasharray="263.89"
-                  strokeDashoffset={
-                    263.89 - 263.89 * (Math.min(result.bmiNum, 40) / 40)
-                  }
-                  className={`transition-all duration-1000 ease-out ${result.textColor}`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div
-                  className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border flex items-center justify-center shadow-inner ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}
+                <User size={24} strokeWidth={1.5} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <label
+                  className={`text-xs font-bold mb-1.5 block ${isDark ? "text-slate-400" : "text-slate-600"}`}
                 >
-                  <Activity className={result.textColor} size={20} />
+                  Height
+                </label>
+                <div
+                  className={`flex items-center rounded-xl border h-14 overflow-hidden focus-within:border-teal-400 transition-colors ${isDark ? "bg-[#111827] border-slate-700" : "bg-slate-50 border-slate-200"}`}
+                >
+                  <input
+                    type="number"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                    placeholder={
+                      heightUnit === "inches"
+                        ? "e.g. 5.9 for 5'9\""
+                        : "e.g. 175"
+                    }
+                    className={`flex-1 min-w-0 bg-transparent px-4 h-full outline-none text-sm w-full ${isDark ? "text-white placeholder-slate-600" : "text-slate-900 placeholder-slate-400"}`}
+                  />
+                  <div
+                    className={`h-full border-l flex items-center ${isDark ? "border-slate-700/50 bg-[#0B1120]" : "border-slate-200 bg-slate-100"}`}
+                  >
+                    <select
+                      value={heightUnit}
+                      onChange={(e) => {
+                        setHeightUnit(e.target.value);
+                        setResult(null);
+                      }}
+                      className={`bg-transparent h-full px-2 sm:px-4 outline-none text-xs sm:text-sm font-bold appearance-none cursor-pointer text-center ${isDark ? "text-teal-400" : "text-teal-600"}`}
+                    >
+                      <option value="cm" className="text-slate-900">
+                        cm
+                      </option>
+                      <option value="inches" className="text-slate-900">
+                        inches
+                      </option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div>
-              <p
-                className={`text-[10px] sm:text-xs mb-0.5 sm:mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
-              >
-                Your BMI
-              </p>
-              <h3
-                className={`text-3xl sm:text-4xl font-black mb-0.5 sm:mb-1 tracking-tighter ${result.textColor}`}
-              >
-                {result.bmi}
-              </h3>
-              <p
-                className={`text-xs sm:text-sm font-bold ${result.textColor} mb-1.5 sm:mb-2`}
-              >
-                {result.category}
-              </p>
+            {/* Weight Input Group */}
+            <div className="flex gap-3 sm:gap-4 mb-6 items-end">
               <div
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${isDark ? "bg-slate-800/80 border-slate-700" : "bg-white border-slate-200"}`}
+                className={`w-14 h-14 shrink-0 rounded-2xl flex flex-col items-center justify-center border text-teal-400 shadow-[0_0_15px_rgba(45,212,191,0.05)] ${isDark ? "bg-[#111827] border-teal-500/20" : "bg-teal-50 border-teal-200"}`}
               >
-                <div
-                  className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${result.bgColor} shadow-[0_0_8px_currentColor]`}
-                ></div>
-                <span
-                  className={`text-[9px] sm:text-[10px] font-medium ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                <Activity size={24} strokeWidth={1.5} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <label
+                  className={`text-xs font-bold mb-1.5 block ${isDark ? "text-slate-400" : "text-slate-600"}`}
                 >
-                  {result.status}
-                </span>
+                  Weight
+                </label>
+                <div
+                  className={`flex items-center rounded-xl border h-14 overflow-hidden focus-within:border-teal-400 transition-colors ${isDark ? "bg-[#111827] border-slate-700" : "bg-slate-50 border-slate-200"}`}
+                >
+                  <input
+                    type="number"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    placeholder={weightUnit === "lbs" ? "e.g. 154" : "e.g. 70"}
+                    className={`flex-1 min-w-0 bg-transparent px-4 h-full outline-none text-sm w-full ${isDark ? "text-white placeholder-slate-600" : "text-slate-900 placeholder-slate-400"}`}
+                  />
+                  <div
+                    className={`h-full border-l flex items-center ${isDark ? "border-slate-700/50 bg-[#0B1120]" : "border-slate-200 bg-slate-100"}`}
+                  >
+                    <select
+                      value={weightUnit}
+                      onChange={(e) => {
+                        setWeightUnit(e.target.value);
+                        setResult(null);
+                      }}
+                      className={`bg-transparent h-full px-2 sm:px-4 outline-none text-xs sm:text-sm font-bold appearance-none cursor-pointer text-center ${isDark ? "text-teal-400" : "text-teal-600"}`}
+                    >
+                      <option value="kg" className="text-slate-900">
+                        kg
+                      </option>
+                      <option value="lbs" className="text-slate-900">
+                        lbs
+                      </option>
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-          <div
-            className={`mt-4 sm:mt-5 text-center border-t pt-4 sm:pt-5 ${isDark ? "border-slate-700/50" : "border-slate-200"}`}
-          >
-            <p
-              className={`text-xs sm:text-sm leading-relaxed ${isDark ? "text-slate-300" : "text-slate-600"}`}
+
+            <button
+              onClick={calculateBMI}
+              className="w-full bg-teal-400 hover:bg-teal-300 text-slate-900 font-bold py-3.5 sm:py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(45,212,191,0.2)] flex items-center justify-center gap-2 text-sm"
             >
-              {result.message}
-            </p>
+              Calculate BMI
+            </button>
           </div>
-        </div>
-      )}
+        ) : (
+          <div
+            className={`border rounded-2xl p-4 sm:p-5 animate-in fade-in zoom-in duration-300 shadow-xl ${isDark ? "bg-[#111827] border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
+          >
+            <div className="flex items-center gap-4 sm:gap-6">
+              {/* SVG Glowing Dial */}
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0">
+                <svg
+                  className="w-full h-full transform -rotate-90"
+                  viewBox="0 0 100 100"
+                >
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="none"
+                    stroke={isDark ? "#1F2937" : "#E2E8F0"}
+                    strokeWidth="6"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="6"
+                    strokeDasharray="263.89"
+                    strokeDashoffset={
+                      263.89 - 263.89 * (Math.min(result.bmiNum, 40) / 40)
+                    }
+                    className={`transition-all duration-1000 ease-out ${result.textColor}`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div
+                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border flex items-center justify-center shadow-inner ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}
+                  >
+                    <Activity className={result.textColor} size={20} />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p
+                  className={`text-[10px] sm:text-xs mb-0.5 sm:mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+                >
+                  Your BMI
+                </p>
+                <h3
+                  className={`text-3xl sm:text-4xl font-black mb-0.5 sm:mb-1 tracking-tighter ${result.textColor}`}
+                >
+                  {result.bmi}
+                </h3>
+                <p
+                  className={`text-xs sm:text-sm font-bold ${result.textColor} mb-1.5 sm:mb-2`}
+                >
+                  {result.category}
+                </p>
+                <div
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${isDark ? "bg-slate-800/80 border-slate-700" : "bg-white border-slate-200"}`}
+                >
+                  <div
+                    className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${result.bgColor} shadow-[0_0_8px_currentColor]`}
+                  ></div>
+                  <span
+                    className={`text-[9px] sm:text-[10px] font-medium ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                  >
+                    {result.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div
+              className={`mt-4 sm:mt-5 text-center border-t pt-4 sm:pt-5 mb-4 ${isDark ? "border-slate-700/50" : "border-slate-200"}`}
+            >
+              <p
+                className={`text-xs sm:text-sm leading-relaxed ${isDark ? "text-slate-300" : "text-slate-600"}`}
+              >
+                {result.message}
+              </p>
+            </div>
+            <button
+              onClick={() => setResult(null)}
+              className={`w-full font-bold py-2.5 rounded-xl transition-all text-sm border ${isDark ? "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}
+            >
+              Recalculate
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* BMI Categories Table */}
       <div
