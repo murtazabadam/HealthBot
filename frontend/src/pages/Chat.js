@@ -45,6 +45,8 @@ import {
   AlertTriangle,
   Pause,
   Mail,
+  Calculator,
+  ChevronDown,
 } from "lucide-react";
 
 function SymptomConfirmationCard({
@@ -150,7 +152,8 @@ function SymptomConfirmationCard({
 function BmiCalculatorCard({ isDark }) {
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
-  const [unit, setUnit] = useState("metric");
+  const [weightUnit, setWeightUnit] = useState("kg");
+  const [heightUnit, setHeightUnit] = useState("cm");
   const [result, setResult] = useState(null);
 
   const calculateBMI = () => {
@@ -158,126 +161,328 @@ function BmiCalculatorCard({ isDark }) {
     const h = parseFloat(height);
     if (!w || !h || w <= 0 || h <= 0) return;
 
-    let bmi = 0;
-    if (unit === "metric") {
-      // Smart detection: If user enters 1.71 instead of 171, handle it correctly.
-      const heightM = h < 3 ? h : h / 100;
-      bmi = w / (heightM * heightM);
+    let weightKg = weightUnit === "kg" ? w : w * 0.453592;
+    let heightM = 0;
+
+    if (heightUnit === "cm") {
+      heightM = h < 3 ? h : h / 100;
     } else {
-      bmi = (w / (h * h)) * 703;
+      heightM = h * 0.0254; // Inches to meters
     }
 
+    const bmi = weightKg / (heightM * heightM);
+
     let category = "";
-    let color = "";
+    let colorClass = "";
+    let bgClass = "";
+    let status = "";
+    let message = "";
+
     if (bmi < 18.5) {
       category = "Underweight";
-      color = "text-blue-400";
+      colorClass = "text-blue-500";
+      bgClass = "bg-blue-500";
+      status = "Attention";
+      message =
+        "You are underweight. Consider consulting a doctor or dietitian.";
     } else if (bmi < 25) {
-      category = "Normal weight";
-      color = "text-emerald-400";
+      category = "Normal Weight";
+      colorClass = "text-teal-400";
+      bgClass = "bg-teal-400";
+      status = "Healthy";
+      message = "You have a normal body weight. Great job!";
     } else if (bmi < 30) {
       category = "Overweight";
-      color = "text-amber-400";
+      colorClass = "text-amber-500";
+      bgClass = "bg-amber-500";
+      status = "Attention";
+      message =
+        "You are overweight. Regular exercise and a balanced diet can help.";
     } else {
-      category = "Obesity";
-      color = "text-rose-400";
+      category = "Obese";
+      colorClass = "text-rose-500";
+      bgClass = "bg-rose-500";
+      status = "Warning";
+      message =
+        "You are in the obese category. Please consult a healthcare provider.";
     }
 
     setResult({
+      bmiNum: bmi,
       bmi: bmi.toFixed(1),
       category,
-      color,
+      textColor: colorClass,
+      bgColor: bgClass,
+      status,
+      message,
     });
   };
 
   return (
     <div
-      className={`p-5 rounded-2xl text-xs lg:text-sm shadow-xl w-full max-w-md ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200" : "bg-slate-50 border border-slate-200 text-slate-800"}`}
+      className={`border rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl font-sans transition-colors duration-300 ${isDark ? "bg-[#0B1120] border-slate-800 text-slate-50" : "bg-white border-slate-200 text-slate-900"}`}
     >
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="font-bold text-base flex items-center gap-2">
-          🧮 Interactive BMI Calculator
-        </h4>
-        <div className="flex bg-slate-700/30 p-1 rounded-lg text-[10px] font-bold">
-          <button
-            onClick={() => {
-              setUnit("metric");
-              setResult(null);
-            }}
-            className={`px-2 py-1 rounded-md transition-all ${unit === "metric" ? "bg-teal-500 text-slate-900" : "text-slate-400"}`}
+      <h2 className="text-3xl font-bold text-teal-400 mb-2 tracking-tight">
+        BMI Calculator
+      </h2>
+      <p
+        className={`text-sm mb-8 leading-relaxed ${isDark ? "text-slate-400" : "text-slate-500"}`}
+      >
+        Calculate your Body Mass Index and
+        <br />
+        know your health status
+      </p>
+
+      {/* Height Input Group */}
+      <div className="flex gap-4 mb-5">
+        <div
+          className={`w-14 rounded-2xl flex flex-col items-center justify-center border text-teal-400 shadow-[0_0_15px_rgba(45,212,191,0.05)] ${isDark ? "bg-[#111827] border-teal-500/20" : "bg-teal-50 border-teal-200"}`}
+        >
+          <User size={24} strokeWidth={1.5} />
+        </div>
+        <div className="flex-1">
+          <label
+            className={`text-xs font-bold mb-1.5 block ${isDark ? "text-slate-300" : "text-slate-700"}`}
           >
-            Metric (kg/cm)
-          </button>
-          <button
-            onClick={() => {
-              setUnit("imperial");
-              setResult(null);
-            }}
-            className={`px-2 py-1 rounded-md transition-all ${unit === "imperial" ? "bg-teal-500 text-slate-900" : "text-slate-400"}`}
+            Height
+          </label>
+          <div
+            className={`flex items-center rounded-xl border h-14 overflow-hidden focus-within:border-teal-400 transition-colors ${isDark ? "bg-[#111827] border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
-            Imperial (lbs/in)
-          </button>
+            <input
+              type="number"
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              placeholder="Enter height"
+              className={`flex-1 bg-transparent px-4 h-full outline-none text-sm w-full ${isDark ? "text-white placeholder-slate-600" : "text-slate-900 placeholder-slate-400"}`}
+            />
+            <div
+              className={`relative flex items-center h-full border-l ${isDark ? "border-slate-700/50" : "border-slate-200"}`}
+            >
+              <select
+                value={heightUnit}
+                onChange={(e) => {
+                  setHeightUnit(e.target.value);
+                  setResult(null);
+                }}
+                className={`bg-transparent h-full px-4 pr-8 outline-none text-sm font-bold appearance-none cursor-pointer ${isDark ? "text-teal-400" : "text-teal-600"}`}
+              >
+                <option value="cm" className="text-slate-900">
+                  cm
+                </option>
+                <option value="in" className="text-slate-900">
+                  in
+                </option>
+              </select>
+              <ChevronDown
+                size={14}
+                className={`absolute right-3 pointer-events-none ${isDark ? "text-teal-400" : "text-teal-600"}`}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-            Weight ({unit === "metric" ? "kg" : "lbs"})
-          </label>
-          <input
-            type="number"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            placeholder={unit === "metric" ? "e.g. 70" : "e.g. 154"}
-            className={`w-full px-3 py-2.5 rounded-xl border outline-none text-sm ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
-          />
+      {/* Weight Input Group */}
+      <div className="flex gap-4 mb-8">
+        <div
+          className={`w-14 rounded-2xl flex flex-col items-center justify-center border text-teal-400 shadow-[0_0_15px_rgba(45,212,191,0.05)] ${isDark ? "bg-[#111827] border-teal-500/20" : "bg-teal-50 border-teal-200"}`}
+        >
+          <Activity size={24} strokeWidth={1.5} />
         </div>
-        <div>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-            Height ({unit === "metric" ? "cm" : "inches"})
+        <div className="flex-1">
+          <label
+            className={`text-xs font-bold mb-1.5 block ${isDark ? "text-slate-300" : "text-slate-700"}`}
+          >
+            Weight
           </label>
-          <input
-            type="number"
-            value={height}
-            onChange={(e) => setHeight(e.target.value)}
-            placeholder={unit === "metric" ? "e.g. 175" : "e.g. 69"}
-            className={`w-full px-3 py-2.5 rounded-xl border outline-none text-sm ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
-          />
+          <div
+            className={`flex items-center rounded-xl border h-14 overflow-hidden focus-within:border-teal-400 transition-colors ${isDark ? "bg-[#111827] border-slate-700" : "bg-slate-50 border-slate-200"}`}
+          >
+            <input
+              type="number"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              placeholder="Enter weight"
+              className={`flex-1 bg-transparent px-4 h-full outline-none text-sm w-full ${isDark ? "text-white placeholder-slate-600" : "text-slate-900 placeholder-slate-400"}`}
+            />
+            <div
+              className={`relative flex items-center h-full border-l ${isDark ? "border-slate-700/50" : "border-slate-200"}`}
+            >
+              <select
+                value={weightUnit}
+                onChange={(e) => {
+                  setWeightUnit(e.target.value);
+                  setResult(null);
+                }}
+                className={`bg-transparent h-full px-4 pr-8 outline-none text-sm font-bold appearance-none cursor-pointer ${isDark ? "text-teal-400" : "text-teal-600"}`}
+              >
+                <option value="kg" className="text-slate-900">
+                  kg
+                </option>
+                <option value="lbs" className="text-slate-900">
+                  lbs
+                </option>
+              </select>
+              <ChevronDown
+                size={14}
+                className={`absolute right-3 pointer-events-none ${isDark ? "text-teal-400" : "text-teal-600"}`}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
+      {/* Calculate Button */}
       <button
         onClick={calculateBMI}
-        className="w-full bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-2.5 rounded-xl transition-all shadow-lg text-xs uppercase tracking-wider mb-4"
+        className="w-full bg-teal-400 hover:bg-teal-300 text-slate-900 font-bold py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(45,212,191,0.2)] flex items-center justify-center gap-2 mb-8"
       >
-        Calculate BMI
+        <Calculator size={20} /> Calculate BMI
       </button>
 
+      {/* Results Section */}
       {result && (
         <div
-          className={`p-4 rounded-xl border animate-in fade-in zoom-in duration-300 ${isDark ? "bg-[#0B1120] border-slate-700/80" : "bg-white border-slate-200"}`}
+          className={`border rounded-2xl p-6 mb-6 animate-in fade-in zoom-in duration-300 shadow-xl ${isDark ? "bg-[#111827] border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
         >
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">
-              Your BMI
-            </span>
-            <span className={`text-xl font-black ${result.color}`}>
-              {result.bmi}
-            </span>
+          <div className="flex items-center gap-6">
+            {/* SVG Glowing Dial */}
+            <div className="relative w-28 h-28 shrink-0">
+              <svg
+                className="w-full h-full transform -rotate-90"
+                viewBox="0 0 100 100"
+              >
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  stroke={isDark ? "#1F2937" : "#E2E8F0"}
+                  strokeWidth="6"
+                />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="6"
+                  strokeDasharray="263.89"
+                  strokeDashoffset={
+                    263.89 - 263.89 * (Math.min(result.bmiNum, 40) / 40)
+                  }
+                  className={`transition-all duration-1000 ease-out ${result.textColor}`}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div
+                  className={`w-12 h-12 rounded-xl border flex items-center justify-center shadow-inner ${isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}
+                >
+                  <Activity className={result.textColor} size={24} />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p
+                className={`text-xs mb-1 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+              >
+                Your BMI
+              </p>
+              <h3
+                className={`text-4xl font-black mb-1 tracking-tighter ${result.textColor}`}
+              >
+                {result.bmi}
+              </h3>
+              <p className={`text-sm font-bold ${result.textColor} mb-2`}>
+                {result.category}
+              </p>
+              <div
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${isDark ? "bg-slate-800/80 border-slate-700" : "bg-white border-slate-200"}`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${result.bgColor} shadow-[0_0_8px_currentColor]`}
+                ></div>
+                <span
+                  className={`text-[10px] font-medium ${isDark ? "text-slate-300" : "text-slate-600"}`}
+                >
+                  {result.status}
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-slate-400 uppercase tracking-widest font-bold">
-              Category
-            </span>
-            <span
-              className={`text-xs font-extrabold px-2.5 py-1 rounded-full bg-slate-800/50 ${result.color}`}
+          <div
+            className={`mt-6 text-center border-t pt-5 ${isDark ? "border-slate-700/50" : "border-slate-200"}`}
+          >
+            <p
+              className={`text-sm leading-relaxed ${isDark ? "text-slate-300" : "text-slate-600"}`}
             >
-              {result.category}
-            </span>
+              {result.message}
+            </p>
           </div>
         </div>
       )}
+
+      {/* Categories Reference Table */}
+      <div
+        className={`border-t pt-6 ${isDark ? "border-slate-800" : "border-slate-200"}`}
+      >
+        <h4
+          className={`text-sm font-bold mb-4 ${isDark ? "text-white" : "text-slate-900"}`}
+        >
+          BMI Categories
+        </h4>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
+              <span className={isDark ? "text-slate-300" : "text-slate-700"}>
+                Underweight
+              </span>
+            </div>
+            <span
+              className={`${isDark ? "text-slate-400" : "text-slate-500"} font-mono tracking-wider`}
+            >
+              &lt; 18.5
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.6)]"></div>
+              <span className={isDark ? "text-slate-200" : "text-slate-900"}>
+                Normal Weight
+              </span>
+            </div>
+            <span className="text-teal-500 font-mono font-bold tracking-wider">
+              18.5 - 24.9
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></div>
+              <span className={isDark ? "text-slate-300" : "text-slate-700"}>
+                Overweight
+              </span>
+            </div>
+            <span className="text-amber-500 font-mono tracking-wider">
+              25.0 - 29.9
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"></div>
+              <span className={isDark ? "text-slate-300" : "text-slate-700"}>
+                Obese
+              </span>
+            </div>
+            <span className="text-rose-500 font-mono tracking-wider">
+              ≥ 30.0
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
