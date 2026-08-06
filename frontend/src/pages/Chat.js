@@ -485,7 +485,7 @@ export function ChatDashboard() {
   const isDark = appSettings.darkMode;
 
   useEffect(() => {
-    document.body.style.backgroundColor = isDark ? "#0B1120" : "#ffffff";
+    document.body.style.backgroundColor = isDark ? "#020617" : "#ffffff";
   }, [isDark]);
 
   useEffect(() => {
@@ -1399,7 +1399,7 @@ export function ChatDashboard() {
 
   return (
     <div
-      className={`fixed inset-0 flex font-sans overflow-hidden selection:bg-teal-500/30 transition-colors duration-300 ${isDark ? "bg-[#0B1120] text-slate-200" : "bg-white text-slate-900"}`}
+      className={`fixed inset-0 flex font-sans overflow-hidden selection:bg-teal-500/30 transition-colors duration-300 ${isDark ? "bg-[#020617] text-slate-200" : "bg-white text-slate-900"}`}
     >
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-teal-500 text-slate-900 px-5 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-3 z-[200] animate-in slide-in-from-bottom-5">
@@ -1649,7 +1649,7 @@ export function ChatDashboard() {
 
       <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative overflow-hidden bg-transparent z-0">
         {/* Ambient Background Glow centered in the chat area */}
-        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] pointer-events-none z-[-1] ${isDark ? "bg-teal-500/15" : "bg-teal-500/10"}`} />
+        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] pointer-events-none z-[-1] ${isDark ? "bg-teal-500/5" : "bg-teal-500/10"}`} />
         
         <header
           className={`flex-none z-[90] h-[72px] border-b flex items-center justify-between px-3 sm:px-4 lg:px-8 backdrop-blur-md transition-colors duration-300 ${isDark ? "bg-[#0B1120]/95 border-slate-800/60 shadow-xl" : "bg-white/95 border-slate-200 shadow-sm"}`}
@@ -1707,9 +1707,9 @@ export function ChatDashboard() {
               className={`max-w-4xl mx-auto flex flex-col space-y-6 pb-12 ${messages.length === 0 ? "h-full justify-center" : ""}`}
             >
               {messages.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
-                  <div className="w-20 h-20 sm:w-28 sm:h-28 bg-teal-500/10 border border-teal-500/30 rounded-full flex items-center justify-center mb-6 shadow-[0_0_50px_rgba(45,212,191,0.4)]">
-                    <Activity className="h-10 w-10 sm:h-14 sm:w-14 text-teal-400" />
+                <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20 relative z-10">
+                  <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-full flex items-center justify-center mb-6 transition-all shadow-xl ${isDark ? "bg-[#0B1120] border-2 border-teal-400/80 shadow-[0_0_40px_rgba(45,212,191,0.3)]" : "bg-teal-50 border-2 border-teal-500/40"}`}>
+                    <Activity className="h-10 w-10 sm:h-14 sm:w-14 text-teal-400 drop-shadow-md" strokeWidth={2.5} />
                   </div>
                   <h2
                     className={`text-3xl md:text-4xl font-bold mb-3 text-center tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}
