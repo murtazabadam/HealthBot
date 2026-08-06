@@ -212,9 +212,6 @@ export function ChatDashboard() {
   // Danger Zone States
   const [emergencyAlert, setEmergencyAlert] = useState(false);
 
-  // Email state
-  const [sendingEmail, setSendingEmail] = useState(false);
-
   // --- Theme Logic ---
   const isDark = appSettings.darkMode;
 
@@ -320,7 +317,16 @@ export function ChatDashboard() {
     time: "",
   });
 
-  // --- NOTIFICATION WATCHER ---
+  const formatTimeAMPM = (timeStr) => {
+    if (!timeStr) return "";
+    let [h, m] = timeStr.split(":");
+    let hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12;
+    return `${hour}:${m} ${ampm}`;
+  };
+
+  // --- NOTIFICATION WATCHER WITH AUTOMATIC EMAIL INTEGRATION ---
   useEffect(() => {
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
@@ -341,6 +347,7 @@ export function ChatDashboard() {
           reminder.time === currentTime &&
           reminder.active
         ) {
+          // Send Local Browser Notification
           if (
             "Notification" in window &&
             Notification.permission === "granted"
@@ -350,21 +357,35 @@ export function ChatDashboard() {
               icon: "/favicon.ico",
             });
           }
+
+          // Trigger Backend Email Reminder (If setting is enabled)
+          if (appSettings.emailNotif && token) {
+            axios
+              .post(
+                "https://healthbot-backend-ezxv.onrender.com/api/chat/email-reminder",
+                {
+                  reminderName: reminder.name,
+                  time: formatTimeAMPM(reminder.time),
+                },
+                { headers: { Authorization: `Bearer ${token}` } },
+              )
+              .catch((err) =>
+                console.error("Failed to send email reminder", err),
+              );
+          }
+
+          // Mark reminder as inactive so it doesn't fire multiple times in the same minute
+          setReminders((prev) =>
+            prev.map((r) =>
+              r.id === reminder.id ? { ...r, active: false } : r,
+            ),
+          );
         }
       });
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [reminders]);
-
-  const formatTimeAMPM = (timeStr) => {
-    if (!timeStr) return "";
-    let [h, m] = timeStr.split(":");
-    let hour = parseInt(h, 10);
-    const ampm = hour >= 12 ? "PM" : "AM";
-    hour = hour % 12 || 12;
-    return `${hour}:${m} ${ampm}`;
-  };
+  }, [reminders, appSettings.emailNotif, token]);
 
   const openAddReminderModal = () => {
     setEditingReminderId(null);
@@ -401,6 +422,7 @@ export function ChatDashboard() {
                 name: reminderForm.name,
                 date: reminderForm.date,
                 time: reminderForm.time,
+                active: true, // Re-activate if edited
               }
             : r,
         ),
@@ -546,7 +568,6 @@ export function ChatDashboard() {
       }
       setIsRecording(false);
     } else {
-      // Create a fresh instance every click to prevent "already started" bug
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = false;
@@ -807,24 +828,6 @@ export function ChatDashboard() {
       localStorage.removeItem("chatHistory");
       handleNewChat();
       showToast("History Cleared");
-    }
-  };
-
-  // --- NEW EMAIL SUMMARY FUNCTION ---
-  const handleEmailSummary = async () => {
-    if (messages.length === 0) return showToast("No chat history to send.");
-    setSendingEmail(true);
-    try {
-      await axios.post(
-        "https://healthbot-backend-ezxv.onrender.com/api/chat/email-summary",
-        { messages },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      showToast("Chat summary sent to your email! 📧");
-    } catch (err) {
-      showToast("Failed to send email. Please try again.");
-    } finally {
-      setSendingEmail(false);
     }
   };
 
@@ -1488,19 +1491,6 @@ export function ChatDashboard() {
                       Session Started Today
                     </span>
                   </div>
-
-                  {messages.length > 0 && (
-                    <div className="flex justify-end mt-2 mb-4">
-                      <button
-                        onClick={handleEmailSummary}
-                        disabled={sendingEmail}
-                        className={`text-[10px] px-3 py-1.5 rounded-lg font-bold uppercase tracking-widest flex items-center gap-1.5 transition-all ${isDark ? "bg-slate-800 text-teal-400 hover:bg-slate-700" : "bg-slate-100 text-teal-600 hover:bg-slate-200"}`}
-                      >
-                        <Mail size={12} />
-                        {sendingEmail ? "Sending..." : "Email This Chat"}
-                      </button>
-                    </div>
-                  )}
 
                   {messages.map((msg) => (
                     <div
