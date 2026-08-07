@@ -1708,8 +1708,9 @@ export function ChatDashboard() {
             >
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20 relative z-10">
-                  <div className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center mb-6 transition-all shadow-2xl ${isDark ? "bg-[#020617] border-[3px] border-teal-400 shadow-[0_0_50px_rgba(45,212,191,0.4)]" : "bg-teal-50 border-2 border-teal-500/40"}`}>
-                    <Activity className="h-12 w-12 sm:h-16 sm:w-16 text-teal-400 drop-shadow-lg" strokeWidth={2.5} />
+                  {/* HIGH-CONTRAST LOGO: Solid Teal Circle forces visibility on all Laptop Monitors */}
+                  <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-full flex items-center justify-center mb-6 transition-all shadow-[0_0_50px_rgba(45,212,191,0.4)] ${isDark ? "bg-teal-500" : "bg-teal-100"}`}>
+                    <Activity className={`h-10 w-10 sm:h-14 sm:w-14 ${isDark ? "text-[#020617]" : "text-teal-600"}`} strokeWidth={3} />
                   </div>
                   <h2
                     className={`text-3xl md:text-4xl font-bold mb-3 text-center tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}
