@@ -180,23 +180,44 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
     let category = "";
     let color = "";
     let indicatorColor = "";
+    let advice = [];
 
     if (bmi < 18.5) {
       category = "Underweight";
       color = "text-blue-400";
       indicatorColor = "bg-blue-400";
+      advice = [
+        "Focus on nutrient-dense foods like nuts, avocados, and healthy proteins.",
+        "Incorporate strength training to safely build muscle mass.",
+        "Consider consulting a dietitian for a healthy weight-gain plan.",
+      ];
     } else if (bmi < 25.0) {
       category = "Normal Weight";
       color = "text-teal-400";
       indicatorColor = "bg-teal-400";
+      advice = [
+        "Great job! Keep maintaining your current healthy lifestyle.",
+        "Continue eating a balanced diet rich in fruits and vegetables.",
+        "Aim for at least 150 minutes of moderate exercise per week.",
+      ];
     } else if (bmi < 30.0) {
       category = "Overweight";
       color = "text-amber-400";
       indicatorColor = "bg-amber-400";
+      advice = [
+        "Focus on portion control and reducing intake of processed sugars.",
+        "Incorporate more physical activity, like brisk walking or cycling.",
+        "Stay hydrated and aim for 7-8 hours of quality sleep per night.",
+      ];
     } else {
       category = "Obesity";
       color = "text-rose-400";
       indicatorColor = "bg-rose-400";
+      advice = [
+        "Consult a healthcare provider for a personalized, safe health plan.",
+        "Start with low-impact exercises like swimming or walking to protect joints.",
+        "Focus on whole, unprocessed foods and practice mindful eating habits.",
+      ];
     }
 
     setResult({
@@ -204,6 +225,7 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
       category,
       color,
       indicatorColor,
+      advice,
     });
   };
 
@@ -277,11 +299,14 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                     type="number"
                     min="0"
                     onKeyDown={(e) => {
-                      if (["-", "+", "e", "E"].includes(e.key)) e.preventDefault();
+                      if (["-", "+", "e", "E"].includes(e.key))
+                        e.preventDefault();
                     }}
                     value={height}
                     onChange={(e) => setHeight(e.target.value)}
-                    placeholder={unit === "metric" ? "e.g. 171" : "e.g. 5.6 for 5'6\""}
+                    placeholder={
+                      unit === "metric" ? "e.g. 171" : "e.g. 5.6 for 5'6\""
+                    }
                     className="w-full bg-transparent border-none outline-none text-base font-semibold text-slate-200 placeholder-slate-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <span className="text-teal-500 font-bold text-sm ml-2 shrink-0">
@@ -308,7 +333,8 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                     type="number"
                     min="0"
                     onKeyDown={(e) => {
-                      if (["-", "+", "e", "E"].includes(e.key)) e.preventDefault();
+                      if (["-", "+", "e", "E"].includes(e.key))
+                        e.preventDefault();
                     }}
                     value={weight}
                     onChange={(e) => setWeight(e.target.value)}
@@ -332,10 +358,13 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
 
           {result && (
             <div
-              className={`mt-6 p-6 rounded-2xl border animate-in fade-in zoom-in duration-300 flex flex-col sm:flex-row items-center justify-between gap-6 ${isDark ? "bg-[#0B1120] border-slate-800" : "bg-white border-slate-200 shadow-sm"}`}
+              className={`mt-6 p-6 rounded-2xl border animate-in fade-in zoom-in duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 ${isDark ? "bg-[#0B1120] border-slate-800" : "bg-white border-slate-200 shadow-sm"}`}
             >
-              <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              <div className="relative w-32 h-32 flex items-center justify-center shrink-0 mx-auto sm:mx-0">
+                <svg
+                  className="w-full h-full transform -rotate-90"
+                  viewBox="0 0 100 100"
+                >
                   <circle
                     cx="50"
                     cy="50"
@@ -352,7 +381,9 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                     stroke="currentColor"
                     strokeWidth="8"
                     strokeDasharray="283"
-                    strokeDashoffset={283 - (283 * Math.min(result.bmi, 40)) / 40}
+                    strokeDashoffset={
+                      283 - (283 * Math.min(result.bmi, 40)) / 40
+                    }
                     className={`${result.color} transition-all duration-1000 ease-out`}
                     strokeLinecap="round"
                   />
@@ -367,27 +398,39 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                 </div>
               </div>
 
-              <div className="flex-1 text-center sm:text-left">
+              <div className="flex-1 text-left w-full">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/50 mb-3 border border-slate-700/50">
-                  <span className={`w-2 h-2 rounded-full animate-pulse ${result.indicatorColor}`} />
-                  <span className={`text-xs font-bold uppercase tracking-wider ${result.color}`}>
+                  <span
+                    className={`w-2 h-2 rounded-full animate-pulse ${result.indicatorColor}`}
+                  />
+                  <span
+                    className={`text-xs font-bold uppercase tracking-wider ${result.color}`}
+                  >
                     {result.category}
                   </span>
                 </div>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  {result.category === "Normal Weight"
-                    ? "You have a normal body weight. Great job! Keep maintaining your healthy lifestyle."
-                    : result.category === "Underweight"
-                      ? "You are considered underweight. It may be beneficial to consult a healthcare provider."
-                      : "Your BMI indicates you are above the normal weight range. Consider a balanced diet and regular exercise."}
-                </p>
+
+                <div className="text-sm text-slate-400 leading-relaxed mt-2 space-y-2">
+                  <p className="font-semibold text-slate-300">
+                    Actionable Advice:
+                  </p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    {result.advice.map((item, idx) => (
+                      <li key={idx}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        <div className={`p-6 border-t ${isDark ? "bg-slate-900/30 border-slate-800/80" : "bg-slate-50 border-slate-200"}`}>
-          <h4 className={`text-sm font-bold mb-4 ${isDark ? "text-white" : "text-slate-900"}`}>
+        <div
+          className={`p-6 border-t ${isDark ? "bg-slate-900/30 border-slate-800/80" : "bg-slate-50 border-slate-200"}`}
+        >
+          <h4
+            className={`text-sm font-bold mb-4 ${isDark ? "text-white" : "text-slate-900"}`}
+          >
             BMI Categories
           </h4>
           <div className="space-y-3">
@@ -401,7 +444,9 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
             <div className="flex justify-between items-center text-sm">
               <div className="flex items-center gap-3">
                 <span className="w-2.5 h-2.5 rounded-full bg-teal-400" />
-                <span className="text-slate-400 font-medium">Normal Weight</span>
+                <span className="text-slate-400 font-medium">
+                  Normal Weight
+                </span>
               </div>
               <span className="font-mono text-slate-300">18.5 - 24.9</span>
             </div>
@@ -1649,8 +1694,10 @@ export function ChatDashboard() {
 
       <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative overflow-hidden bg-transparent z-0">
         {/* Ambient Background Glow centered in the chat area */}
-        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] rounded-full blur-[100px] pointer-events-none z-[-1] ${isDark ? "bg-teal-500/15" : "bg-teal-500/20"}`} />
-        
+        <div
+          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] rounded-full blur-[100px] pointer-events-none z-[-1] ${isDark ? "bg-teal-500/15" : "bg-teal-500/20"}`}
+        />
+
         <header
           className={`flex-none z-[90] h-[72px] border-b flex items-center justify-between px-3 sm:px-4 lg:px-8 backdrop-blur-md transition-colors duration-300 ${isDark ? "bg-[#020617]/95 border-slate-800/60 shadow-xl" : "bg-white/95 border-slate-200 shadow-sm"}`}
         >
@@ -1709,8 +1756,13 @@ export function ChatDashboard() {
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20 relative z-10">
                   {/* HIGH-CONTRAST LOGO: Solid Teal Circle forces visibility on all Laptop Monitors */}
-                  <div className={`w-20 h-20 sm:w-28 sm:h-28 rounded-full flex items-center justify-center mb-6 transition-all shadow-[0_0_50px_rgba(45,212,191,0.4)] ${isDark ? "bg-teal-500" : "bg-teal-100"}`}>
-                    <Activity className={`h-10 w-10 sm:h-14 sm:w-14 ${isDark ? "text-[#020617]" : "text-teal-600"}`} strokeWidth={3} />
+                  <div
+                    className={`w-20 h-20 sm:w-28 sm:h-28 rounded-full flex items-center justify-center mb-6 transition-all shadow-[0_0_50px_rgba(45,212,191,0.4)] ${isDark ? "bg-teal-500" : "bg-teal-100"}`}
+                  >
+                    <Activity
+                      className={`h-10 w-10 sm:h-14 sm:w-14 ${isDark ? "text-[#020617]" : "text-teal-600"}`}
+                      strokeWidth={3}
+                    />
                   </div>
                   <h2
                     className={`text-3xl md:text-4xl font-bold mb-3 text-center tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}
