@@ -150,6 +150,8 @@ function SymptomConfirmationCard({
 const BmiCalculatorView = ({ isDark, onBack }) => {
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState("");
   const [unit, setUnit] = useState("metric");
   const [result, setResult] = useState(null);
 
@@ -187,36 +189,44 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
       color = "text-blue-400";
       indicatorColor = "bg-blue-400";
       advice = [
-        "Focus on nutrient-dense foods like nuts, avocados, and healthy proteins.",
-        "Incorporate strength training to safely build muscle mass.",
-        "Consider consulting a dietitian for a healthy weight-gain plan.",
+        "Eat nutrient-rich, calorie-dense foods.",
+        "Increase protein intake.",
+        "Eat small, frequent meals.",
+        "Include strength training to build muscle.",
+        "Consult a doctor if the weight loss is unexplained.",
       ];
     } else if (bmi < 25.0) {
       category = "Normal Weight";
       color = "text-teal-400";
       indicatorColor = "bg-teal-400";
       advice = [
-        "Great job! Keep maintaining your current healthy lifestyle.",
-        "Continue eating a balanced diet rich in fruits and vegetables.",
-        "Aim for at least 150 minutes of moderate exercise per week.",
+        "Maintain a balanced diet.",
+        "Exercise 30–45 minutes, 5 days a week.",
+        "Stay hydrated.",
+        "Get 7–9 hours of sleep.",
       ];
     } else if (bmi < 30.0) {
       category = "Overweight";
       color = "text-amber-400";
       indicatorColor = "bg-amber-400";
       advice = [
-        "Focus on portion control and reducing intake of processed sugars.",
-        "Incorporate more physical activity, like brisk walking or cycling.",
-        "Stay hydrated and aim for 7-8 hours of quality sleep per night.",
+        "Reduce sugary drinks and junk food.",
+        "Eat more fruits, vegetables, and lean protein.",
+        "Walk or exercise at least 30 minutes daily.",
+        "Aim to lose weight gradually (about 0.5–1 kg per week).",
+        "Consult a doctor if you have diabetes, high blood pressure, or other medical conditions.",
       ];
     } else {
       category = "Obesity";
       color = "text-rose-400";
       indicatorColor = "bg-rose-400";
       advice = [
-        "Consult a healthcare provider for a personalized, safe health plan.",
-        "Start with low-impact exercises like swimming or walking to protect joints.",
-        "Focus on whole, unprocessed foods and practice mindful eating habits.",
+        "Follow a healthy, calorie-controlled diet.",
+        "Exercise regularly (150–300 minutes per week, as appropriate).",
+        "Limit processed foods, sweets, and sugary drinks.",
+        "Increase fiber and protein intake.",
+        "Consult a healthcare professional or dietitian for a personalized weight-loss plan.",
+        "Monitor your BMI and weight regularly.",
       ];
     }
 
@@ -262,6 +272,8 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                   setResult(null);
                   setHeight("");
                   setWeight("");
+                  setAge("");
+                  setGender("");
                 }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${unit === "metric" ? "bg-teal-500 text-slate-900 shadow-sm" : "text-slate-500 hover:text-teal-500"}`}
               >
@@ -273,6 +285,8 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                   setResult(null);
                   setHeight("");
                   setWeight("");
+                  setAge("");
+                  setGender("");
                 }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${unit === "imperial" ? "bg-teal-500 text-slate-900 shadow-sm" : "text-slate-500 hover:text-teal-500"}`}
               >
@@ -281,7 +295,77 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
             </div>
           </div>
 
-          <div className="space-y-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div
+              className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
+            >
+              <div
+                className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}
+              >
+                <Calendar size={24} />
+              </div>
+              <div className="flex-1 min-w-0 pr-3">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
+                  Age
+                </label>
+                <div className="flex items-center">
+                  <input
+                    type="number"
+                    min="2"
+                    onKeyDown={(e) => {
+                      if (["-", "+", "e", "E"].includes(e.key))
+                        e.preventDefault();
+                    }}
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    placeholder="e.g. 25"
+                    className="w-full bg-transparent border-none outline-none text-base font-semibold text-slate-200 placeholder-slate-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="text-teal-500 font-bold text-sm ml-2 shrink-0">
+                    yrs
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
+            >
+              <div
+                className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}
+              >
+                <UserCircle size={24} />
+              </div>
+              <div className="flex-1 min-w-0 pr-3">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
+                  Gender
+                </label>
+                <div className="flex items-center h-full">
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className={`w-full bg-transparent border-none outline-none text-base font-semibold cursor-pointer appearance-none ${gender ? "text-slate-200" : "text-slate-600"}`}
+                  >
+                    <option value="" disabled className="text-slate-500">
+                      Select...
+                    </option>
+                    <option
+                      value="male"
+                      className="bg-slate-900 text-slate-200"
+                    >
+                      Male
+                    </option>
+                    <option
+                      value="female"
+                      className="bg-slate-900 text-slate-200"
+                    >
+                      Female
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <div
               className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
             >
@@ -305,7 +389,7 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                     value={height}
                     onChange={(e) => setHeight(e.target.value)}
                     placeholder={
-                      unit === "metric" ? "e.g. 171" : "e.g. 5.6 for 5'6\""
+                      unit === "metric" ? "e.g. 171" : "e.g. 5.9 for 5'9\""
                     }
                     className="w-full bg-transparent border-none outline-none text-base font-semibold text-slate-200 placeholder-slate-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
@@ -406,13 +490,17 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                   <span
                     className={`text-xs font-bold uppercase tracking-wider ${result.color}`}
                   >
-                    {result.category}
+                    {result.category === "Normal Weight"
+                      ? "Status: Healthy"
+                      : `Status: ${result.category}`}
                   </span>
                 </div>
 
                 <div className="text-sm text-slate-400 leading-relaxed mt-2 space-y-2">
                   <p className="font-semibold text-slate-300">
-                    Actionable Advice:
+                    {result.category === "Normal Weight"
+                      ? "Tips to maintain:"
+                      : "How to improve:"}
                   </p>
                   <ul className="list-disc pl-4 space-y-1">
                     {result.advice.map((item, idx) => (
@@ -1446,6 +1534,10 @@ export function ChatDashboard() {
     <div
       className={`fixed inset-0 flex font-sans overflow-hidden selection:bg-teal-500/30 transition-colors duration-300 ${isDark ? "bg-[#020617] text-slate-200" : "bg-white text-slate-900"}`}
     >
+      <div
+        className={`absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full blur-[120px] pointer-events-none ${isDark ? "bg-teal-500/5" : "bg-teal-500/10"}`}
+      />
+
       {toastMessage && (
         <div className="fixed bottom-6 right-6 bg-teal-500 text-slate-900 px-5 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-3 z-[200] animate-in slide-in-from-bottom-5">
           <CheckCircle2 size={20} /> {toastMessage}
@@ -1692,12 +1784,7 @@ export function ChatDashboard() {
         <SidebarContent />
       </div>
 
-      <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative overflow-hidden bg-transparent z-0">
-        {/* Ambient Background Glow centered in the chat area */}
-        <div
-          className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] rounded-full blur-[100px] pointer-events-none z-[-1] ${isDark ? "bg-teal-500/15" : "bg-teal-500/20"}`}
-        />
-
+      <main className="flex-1 flex flex-col h-[100dvh] min-w-0 relative overflow-hidden bg-transparent">
         <header
           className={`flex-none z-[90] h-[72px] border-b flex items-center justify-between px-3 sm:px-4 lg:px-8 backdrop-blur-md transition-colors duration-300 ${isDark ? "bg-[#020617]/95 border-slate-800/60 shadow-xl" : "bg-white/95 border-slate-200 shadow-sm"}`}
         >
@@ -1754,14 +1841,11 @@ export function ChatDashboard() {
               className={`max-w-4xl mx-auto flex flex-col space-y-6 pb-12 ${messages.length === 0 ? "h-full justify-center" : ""}`}
             >
               {messages.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20 relative z-10">
-                  {/* HIGH-CONTRAST LOGO: Solid Teal Circle forces visibility on all Laptop Monitors */}
-                  <div
-                    className={`w-20 h-20 sm:w-28 sm:h-28 rounded-full flex items-center justify-center mb-6 transition-all shadow-[0_0_50px_rgba(45,212,191,0.4)] ${isDark ? "bg-teal-500" : "bg-teal-100"}`}
-                  >
+                <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
+                  <div className="w-24 h-24 bg-teal-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(45,212,191,0.4)]">
                     <Activity
-                      className={`h-10 w-10 sm:h-14 sm:w-14 ${isDark ? "text-[#020617]" : "text-teal-600"}`}
-                      strokeWidth={3}
+                      className="h-12 w-12 text-slate-900"
+                      strokeWidth={2.5}
                     />
                   </div>
                   <h2
@@ -1815,6 +1899,13 @@ export function ChatDashboard() {
                             onAdd={addConfirmSymptom}
                             onConfirm={confirmSymptoms}
                           />
+                        ) : msg.type === "bmi_calculator" ? (
+                          <div
+                            className={`p-4 rounded-2xl shadow-lg text-sm italic ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-400 rounded-tl-none" : "bg-slate-50 border border-slate-200 text-slate-500 rounded-tl-none"}`}
+                          >
+                            The BMI Calculator has been upgraded to a full page.
+                            Please access it from the "Saved Advice" tab.
+                          </div>
                         ) : (
                           <div
                             className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none"}`}
@@ -1837,7 +1928,8 @@ export function ChatDashboard() {
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
                           {msg.sender === "bot" &&
-                            msg.type !== "confirmation" && (
+                            msg.type !== "confirmation" &&
+                            msg.type !== "bmi_calculator" && (
                               <div className="flex items-center gap-1 ml-1">
                                 <button
                                   onClick={() => speakText(msg.text, msg.id)}
