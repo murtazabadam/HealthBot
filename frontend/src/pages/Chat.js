@@ -45,6 +45,7 @@ import {
   AlertTriangle,
   Pause,
   Mail,
+  FileText,
 } from "lucide-react";
 
 function SymptomConfirmationCard({
@@ -553,6 +554,390 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
               <span className="font-mono text-slate-300">&ge; 30.0</span>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const HealthRangesView = ({ isDark, onBack }) => {
+  const sections = [
+    {
+      title: "Blood Pressure",
+      unit: "mmHg",
+      rows: [
+        { label: "Normal", value: "< 120 / < 80", color: "bg-teal-400" },
+        { label: "Elevated", value: "120–129 / < 80", color: "bg-amber-400" },
+        {
+          label: "High (Stage 1)",
+          value: "130–139 / 80–89",
+          color: "bg-amber-500",
+        },
+        {
+          label: "High (Stage 2)",
+          value: "\u2265 140 / \u2265 90",
+          color: "bg-rose-400",
+        },
+        {
+          label: "Hypertensive Crisis — seek care now",
+          value: "> 180 / > 120",
+          color: "bg-rose-600",
+        },
+      ],
+    },
+    {
+      title: "Resting Heart Rate",
+      unit: "bpm",
+      rows: [
+        { label: "Normal adult range", value: "60–100", color: "bg-teal-400" },
+        {
+          label: "Trained athletes (can be normal)",
+          value: "40–60",
+          color: "bg-blue-400",
+        },
+        { label: "Tachycardia (high)", value: "> 100", color: "bg-rose-400" },
+        { label: "Bradycardia (low)", value: "< 60", color: "bg-amber-400" },
+      ],
+    },
+    {
+      title: "Body Temperature",
+      unit: "\u00b0F  (\u00b0C)",
+      rows: [
+        {
+          label: "Normal range",
+          value: "97–99 \u00b0F (36.1–37.2 \u00b0C)",
+          color: "bg-teal-400",
+        },
+        {
+          label: "Fever",
+          value: "\u2265 100.4 \u00b0F (\u2265 38 \u00b0C)",
+          color: "bg-rose-400",
+        },
+        {
+          label: "Hypothermia — seek care",
+          value: "< 95 \u00b0F (< 35 \u00b0C)",
+          color: "bg-rose-600",
+        },
+      ],
+    },
+    {
+      title: "Respiratory Rate",
+      unit: "breaths/min",
+      rows: [
+        { label: "Normal adult range", value: "12–20", color: "bg-teal-400" },
+        {
+          label: "Abnormal — seek advice",
+          value: "< 12 or > 20",
+          color: "bg-amber-400",
+        },
+      ],
+    },
+    {
+      title: "Oxygen Saturation (SpO\u2082)",
+      unit: "%",
+      rows: [
+        { label: "Normal", value: "95–100", color: "bg-teal-400" },
+        {
+          label: "Low — seek medical advice",
+          value: "92–94",
+          color: "bg-amber-400",
+        },
+        {
+          label: "Concerning — seek care now",
+          value: "< 92",
+          color: "bg-rose-500",
+        },
+      ],
+    },
+    {
+      title: "Blood Glucose",
+      unit: "mg/dL",
+      rows: [
+        { label: "Normal (fasting)", value: "< 100", color: "bg-teal-400" },
+        {
+          label: "Prediabetes (fasting)",
+          value: "100–125",
+          color: "bg-amber-400",
+        },
+        {
+          label: "Diabetes (fasting)",
+          value: "\u2265 126",
+          color: "bg-rose-400",
+        },
+        { label: "Normal (random)", value: "< 140", color: "bg-teal-400" },
+        {
+          label: "Diabetes (random)",
+          value: "\u2265 200",
+          color: "bg-rose-400",
+        },
+      ],
+    },
+    {
+      title: "HbA1c (3-month average)",
+      unit: "%",
+      rows: [
+        { label: "Normal", value: "< 5.7", color: "bg-teal-400" },
+        { label: "Prediabetes", value: "5.7–6.4", color: "bg-amber-400" },
+        { label: "Diabetes", value: "\u2265 6.5", color: "bg-rose-400" },
+      ],
+    },
+    {
+      title: "Cholesterol",
+      unit: "mg/dL",
+      rows: [
+        { label: "Total — Desirable", value: "< 200", color: "bg-teal-400" },
+        {
+          label: "Total — Borderline High",
+          value: "200–239",
+          color: "bg-amber-400",
+        },
+        { label: "Total — High", value: "\u2265 240", color: "bg-rose-400" },
+        {
+          label: "LDL (\u201cbad\u201d) — Optimal",
+          value: "< 100",
+          color: "bg-teal-400",
+        },
+        {
+          label: "HDL (\u201cgood\u201d) — Low (risk)",
+          value: "< 40",
+          color: "bg-rose-400",
+        },
+        {
+          label: "Triglycerides — Normal",
+          value: "< 150",
+          color: "bg-teal-400",
+        },
+      ],
+    },
+    {
+      title: "CBC — Complete Blood Count",
+      unit: "adult reference",
+      rows: [
+        {
+          label: "Hemoglobin — Men",
+          value: "13.5–17.5 g/dL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "Hemoglobin — Women",
+          value: "12.0–15.5 g/dL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "RBC — Men",
+          value: "4.7–6.1 million/mcL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "RBC — Women",
+          value: "4.2–5.4 million/mcL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "White Blood Cells (WBC)",
+          value: "4,500–11,000 /mcL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "Platelets",
+          value: "150,000–450,000 /mcL",
+          color: "bg-teal-400",
+        },
+        { label: "Hematocrit — Men", value: "38.8–50%", color: "bg-teal-400" },
+        {
+          label: "Hematocrit — Women",
+          value: "34.9–44.5%",
+          color: "bg-teal-400",
+        },
+      ],
+    },
+    {
+      title: "Kidney Function",
+      unit: "adult reference",
+      rows: [
+        {
+          label: "Creatinine — Men",
+          value: "0.7–1.3 mg/dL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "Creatinine — Women",
+          value: "0.6–1.1 mg/dL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "Blood Urea Nitrogen (BUN)",
+          value: "7–20 mg/dL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "eGFR — Normal",
+          value: "\u2265 90 mL/min/1.73m\u00b2",
+          color: "bg-teal-400",
+        },
+        {
+          label: "eGFR — Reduced",
+          value: "< 60 mL/min/1.73m\u00b2",
+          color: "bg-amber-400",
+        },
+      ],
+    },
+    {
+      title: "Liver Function",
+      unit: "U/L  (bilirubin: mg/dL)",
+      rows: [
+        {
+          label: "ALT (Alanine Transaminase)",
+          value: "7–56",
+          color: "bg-teal-400",
+        },
+        {
+          label: "AST (Aspartate Transaminase)",
+          value: "10–40",
+          color: "bg-teal-400",
+        },
+        { label: "Total Bilirubin", value: "0.1–1.2", color: "bg-teal-400" },
+      ],
+    },
+    {
+      title: "Electrolytes",
+      unit: "adult reference",
+      rows: [
+        { label: "Sodium", value: "135–145 mEq/L", color: "bg-teal-400" },
+        { label: "Potassium", value: "3.5–5.0 mEq/L", color: "bg-teal-400" },
+        { label: "Calcium", value: "8.5–10.5 mg/dL", color: "bg-teal-400" },
+      ],
+    },
+    {
+      title: "Thyroid (TSH)",
+      unit: "mIU/L",
+      rows: [
+        {
+          label: "Hyperthyroid (overactive)",
+          value: "< 0.4",
+          color: "bg-amber-400",
+        },
+        { label: "Normal", value: "0.4–4.0", color: "bg-teal-400" },
+        {
+          label: "Subclinical Hypothyroid",
+          value: "4.0–10",
+          color: "bg-amber-400",
+        },
+        {
+          label: "Hypothyroid (underactive)",
+          value: "> 10",
+          color: "bg-rose-400",
+        },
+      ],
+    },
+    {
+      title: "Vitamin D (25-hydroxy)",
+      unit: "ng/mL",
+      rows: [
+        { label: "Deficient", value: "< 20", color: "bg-rose-400" },
+        { label: "Insufficient", value: "20–29", color: "bg-amber-400" },
+        { label: "Sufficient", value: "30–100", color: "bg-teal-400" },
+      ],
+    },
+    {
+      title: "Vitamin B12",
+      unit: "pg/mL",
+      rows: [
+        { label: "Deficient", value: "< 200", color: "bg-rose-400" },
+        { label: "Normal", value: "200–900", color: "bg-teal-400" },
+      ],
+    },
+    {
+      title: "Iron Stores (Ferritin)",
+      unit: "ng/mL — varies notably by lab",
+      rows: [
+        { label: "Men — typical range", value: "20–250", color: "bg-teal-400" },
+        {
+          label: "Women — typical range",
+          value: "10–120",
+          color: "bg-teal-400",
+        },
+      ],
+    },
+    {
+      title: "Uric Acid",
+      unit: "mg/dL",
+      rows: [
+        { label: "Men — Normal", value: "3.4–7.0", color: "bg-teal-400" },
+        { label: "Women — Normal", value: "2.4–6.0", color: "bg-teal-400" },
+      ],
+    },
+  ];
+
+  return (
+    <div className="max-w-2xl mx-auto w-full animate-in fade-in slide-in-from-right-4 duration-500 pb-10">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-slate-500 hover:text-teal-500 mb-6 transition-colors font-medium"
+      >
+        <ArrowLeft size={18} /> Back to Saved Advice
+      </button>
+
+      <div
+        className={`rounded-3xl shadow-2xl overflow-hidden border ${isDark ? "bg-[#0B1120] border-slate-800/80" : "bg-white border-slate-200"}`}
+      >
+        <div className="p-6 sm:p-8">
+          <h2
+            className={`text-2xl sm:text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
+          >
+            Health Reference Ranges
+          </h2>
+          <p className="text-slate-500 text-sm mt-1">
+            Common lab and vital-sign ranges across the major body systems — for
+            general awareness, not a diagnosis.
+          </p>
+        </div>
+
+        {sections.map((section, i) => (
+          <div
+            key={section.title}
+            className={`p-6 border-t ${isDark ? "border-slate-800/80" : "border-slate-200"} ${i % 2 === 1 ? (isDark ? "bg-slate-900/30" : "bg-slate-50") : ""}`}
+          >
+            <div className="flex items-baseline justify-between mb-4">
+              <h4
+                className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-900"}`}
+              >
+                {section.title}
+              </h4>
+              <span className="text-[11px] text-slate-500 font-mono text-right">
+                {section.unit}
+              </span>
+            </div>
+            <div className="space-y-3">
+              {section.rows.map((row) => (
+                <div
+                  key={row.label}
+                  className="flex justify-between items-center text-sm gap-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${row.color}`}
+                    />
+                    <span className="text-slate-400 font-medium">
+                      {row.label}
+                    </span>
+                  </div>
+                  <span className="font-mono text-slate-300 text-right whitespace-nowrap">
+                    {row.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        <div
+          className={`p-6 border-t text-xs text-slate-500 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}
+        >
+          Reference values are general adult guidelines and can vary by lab,
+          individual, age, and pregnancy status — some (like ferritin and
+          vitamin levels) vary more than others between labs. Always interpret
+          results with a doctor.
         </div>
       </div>
     </div>
@@ -1186,6 +1571,11 @@ export function ChatDashboard() {
       return;
     }
 
+    if (title === "Health Ranges") {
+      handleNavClick("health-ranges");
+      return;
+    }
+
     const now = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -1471,7 +1861,9 @@ export function ChatDashboard() {
         <SidebarBtn
           icon={Bookmark}
           label="Saved Advice"
-          active={page === "saved" || page === "bmi"}
+          active={
+            page === "saved" || page === "bmi" || page === "health-ranges"
+          }
           isDark={isDark}
           onClick={() => handleNavClick("saved")}
         />
@@ -1842,11 +2234,8 @@ export function ChatDashboard() {
             >
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
-                  <div className="w-24 h-24 bg-teal-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(45,212,191,0.4)]">
-                    <Activity
-                      className="h-12 w-12 text-slate-900"
-                      strokeWidth={2.5}
-                    />
+                  <div className="w-20 h-20 bg-teal-500/10 border border-teal-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(45,212,191,0.15)]">
+                    <Activity className="h-10 w-10 text-teal-400" />
                   </div>
                   <h2
                     className={`text-3xl md:text-4xl font-bold mb-3 text-center tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}
@@ -1981,6 +2370,13 @@ export function ChatDashboard() {
                 </>
               )}
             </div>
+          )}
+
+          {page === "health-ranges" && (
+            <HealthRangesView
+              isDark={isDark}
+              onBack={() => handleNavClick("saved")}
+            />
           )}
 
           {page === "bmi" && (
@@ -2405,13 +2801,20 @@ export function ChatDashboard() {
               >
                 Saved Prescriptions & Advice
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <SavedCard
                   title="BMI Calculator"
                   date="Interactive Tool"
                   icon={Activity}
                   isDark={isDark}
                   onClick={() => loadSavedAdvice("BMI Calculator")}
+                />
+                <SavedCard
+                  title="Health Ranges"
+                  date="Reference Guide"
+                  icon={FileText}
+                  isDark={isDark}
+                  onClick={() => loadSavedAdvice("Health Ranges")}
                 />
                 <SavedCard
                   title="Emergency Contacts"
