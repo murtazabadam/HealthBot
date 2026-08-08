@@ -1526,6 +1526,18 @@ export function ChatDashboard() {
   };
 
   const saveProfile = async () => {
+    if (
+      !profileForm.name ||
+      !profileForm.age ||
+      !profileForm.gender ||
+      !profileForm.bloodGroup ||
+      !profileForm.address ||
+      !profileForm.phoneNumber
+    ) {
+      showToast("Please fill in all mandatory fields.");
+      return;
+    }
+
     setSavingProfile(true);
     try {
       const res = await fetch(
@@ -1776,6 +1788,15 @@ export function ChatDashboard() {
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
+      if (res.data.emergency) {
+        setEmergencyAlert(true);
+        notifyEmergencyContact();
+        speakText(
+          "Emergency alert. Please select an option to get immediate help.",
+          "emergency",
+        );
+      }
+
       const botReply = res.data.reply;
 
       setMessages((prev) => [
@@ -1813,10 +1834,6 @@ export function ChatDashboard() {
     }
   };
 
-  // Fires the emergency SMS/email to the user's registered emergency
-  // contact. Geolocation is best-effort — if the browser denies permission
-  // or it's unavailable, the backend falls back to the user's saved
-  // address instead, so this never blocks the alert itself.
   const notifyEmergencyContact = () => {
     const send = (coords) => {
       axios
@@ -1837,7 +1854,7 @@ export function ChatDashboard() {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
           }),
-        () => send({}), // permission denied / unavailable — backend uses saved address
+        () => send({}),
         { timeout: 5000 },
       );
     } else {
@@ -1852,18 +1869,31 @@ export function ChatDashboard() {
     const emergencyKeywords = [
       "heart attack",
       "stroke",
-      "bleeding heavily",
       "suicide",
+      "kill myself",
       "unconscious",
-      "can't breathe",
-      "shortness of breath",
-      "getting worse",
-      "condition is worsening",
-      "severe pain",
-      "unbearable",
+      "passed out",
+      "fainted",
       "fainting",
-      "losing consciousness",
+      "can't breathe",
+      "cannot breathe",
+      "not breathing",
+      "shortness of breath",
+      "chest pain",
+      "heavy bleeding",
+      "bleeding heavily",
+      "bleeding out",
+      "blood loss",
+      "choking",
+      "poison",
+      "overdose",
+      "seizure",
+      "convulsion",
       "massive accident",
+      "severe pain",
+      "unbearable pain",
+      "getting worse",
+      "worsening",
     ];
     const isEmergency = emergencyKeywords.some((keyword) =>
       textToSend.toLowerCase().includes(keyword),
@@ -1913,6 +1943,15 @@ export function ChatDashboard() {
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
+
+      if (res.data.emergency && !isEmergency) {
+        setEmergencyAlert(true);
+        notifyEmergencyContact();
+        speakText(
+          "Emergency alert. Please select an option to get immediate help.",
+          "emergency",
+        );
+      }
 
       if (res.data.needsConfirmation) {
         setMessages((prev) => [
@@ -2385,8 +2424,11 @@ export function ChatDashboard() {
             >
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
-                  <div className="w-20 h-20 bg-teal-500/10 border border-teal-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(45,212,191,0.15)]">
-                    <Activity className="h-10 w-10 text-teal-400" />
+                  <div className="w-24 h-24 bg-teal-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(45,212,191,0.4)]">
+                    <Activity
+                      className="h-12 w-12 text-slate-900"
+                      strokeWidth={2.5}
+                    />
                   </div>
                   <h2
                     className={`text-3xl md:text-4xl font-bold mb-3 text-center tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}
@@ -2439,6 +2481,13 @@ export function ChatDashboard() {
                             onAdd={addConfirmSymptom}
                             onConfirm={confirmSymptoms}
                           />
+                        ) : msg.type === "bmi_calculator" ? (
+                          <div
+                            className={`p-4 rounded-2xl shadow-lg text-sm italic ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-400 rounded-tl-none" : "bg-slate-50 border border-slate-200 text-slate-500 rounded-tl-none"}`}
+                          >
+                            The BMI Calculator has been upgraded to a full page.
+                            Please access it from the "Saved Advice" tab.
+                          </div>
                         ) : (
                           <div
                             className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none"}`}
@@ -2461,7 +2510,8 @@ export function ChatDashboard() {
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
                           {msg.sender === "bot" &&
-                            msg.type !== "confirmation" && (
+                            msg.type !== "confirmation" &&
+                            msg.type !== "bmi_calculator" && (
                               <div className="flex items-center gap-1 ml-1">
                                 <button
                                   onClick={() => speakText(msg.text, msg.id)}
@@ -2630,6 +2680,7 @@ export function ChatDashboard() {
                     isDark={isDark}
                     name="name"
                     onChange={handleProfileChange}
+                    required={true}
                   />
 
                   <div className="flex flex-col gap-2">
@@ -2654,6 +2705,7 @@ export function ChatDashboard() {
                     isDark={isDark}
                     name="phoneNumber"
                     onChange={handleProfileChange}
+                    required={true}
                   />
                   <ProfileField
                     label="Age"
@@ -2664,11 +2716,18 @@ export function ChatDashboard() {
                     name="age"
                     type="number"
                     onChange={handleProfileChange}
+                    required={true}
                   />
 
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                      <User className="h-3 w-3" /> Gender
+                      <User className="h-3 w-3" />{" "}
+                      <span>
+                        Gender{" "}
+                        {isEditingProfile && (
+                          <span className="text-red-500">*</span>
+                        )}
+                      </span>
                     </label>
                     {isEditingProfile ? (
                       <select
@@ -2692,7 +2751,13 @@ export function ChatDashboard() {
 
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                      <Droplet className="h-3 w-3" /> Blood Group
+                      <Droplet className="h-3 w-3" />{" "}
+                      <span>
+                        Blood Group{" "}
+                        {isEditingProfile && (
+                          <span className="text-red-500">*</span>
+                        )}
+                      </span>
                     </label>
                     {isEditingProfile ? (
                       <select
@@ -2721,7 +2786,13 @@ export function ChatDashboard() {
 
                   <div className="flex flex-col gap-2 sm:col-span-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                      <MapPin className="h-3 w-3" /> Address
+                      <MapPin className="h-3 w-3" />{" "}
+                      <span>
+                        Address{" "}
+                        {isEditingProfile && (
+                          <span className="text-red-500">*</span>
+                        )}
+                      </span>
                     </label>
                     {isEditingProfile ? (
                       <input
@@ -2899,21 +2970,16 @@ export function ChatDashboard() {
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
                           Password Requirements:
                         </p>
-                        <div className="flex flex-col gap-2.5">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                           {passwordRequirements.map((req, i) => (
-                            <div
+                            <span
                               key={i}
-                              className={`flex items-center gap-2 transition-colors duration-300 ${req.met ? "text-teal-400" : "text-red-400"}`}
+                              className={`text-[10px] font-medium flex items-center gap-1 transition-colors duration-300 ${
+                                req.met ? "text-green-500" : "text-red-500"
+                              }`}
                             >
-                              <div
-                                className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center text-[10px] font-bold ${req.met ? "bg-teal-500/20 border-teal-500/50" : "bg-red-500/10 border-red-500/40"}`}
-                              >
-                                {req.met ? "✓" : "✗"}
-                              </div>
-                              <span className="text-xs font-medium tracking-wide">
-                                {String(req.label)}
-                              </span>
-                            </div>
+                              {req.met ? "✓" : "✗"} {req.label}
+                            </span>
                           ))}
                         </div>
                       </div>
@@ -3693,10 +3759,14 @@ const ProfileField = ({
   type = "text",
   name,
   isDark,
+  required,
 }) => (
   <div className="flex flex-col gap-2">
     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-      <Icon className="h-3 w-3" /> {label}
+      <Icon className="h-3 w-3" />{" "}
+      <span>
+        {label} {editing && required && <span className="text-red-500">*</span>}
+      </span>
     </label>
     {editing ? (
       <input
