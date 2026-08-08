@@ -97,7 +97,20 @@ export default function Register() {
       return setErrorMessage("Please fulfill all password requirements.");
     if (formData.password !== formData.confirmPassword)
       return setErrorMessage("Passwords do not match.");
-    if (!formData.gender) return setErrorMessage("Please select your gender.");
+
+    // Strict check for ALL mandatory fields
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.age ||
+      !formData.gender ||
+      !formData.bloodGroup ||
+      !formData.address ||
+      !formData.phoneNumber
+    ) {
+      return setErrorMessage("Please fill in all mandatory fields.");
+    }
+
     if (!agreedToTerms)
       return setErrorMessage("You must agree to the Terms of Service.");
 
@@ -324,12 +337,12 @@ export default function Register() {
                         )}
                       </button>
                     </div>
-                    {/* Dynamic Password Requirements List */}
-                    <div className="flex flex-col gap-1 mt-1">
+                    {/* Horizontal Dynamic Password Requirements List */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
                       {passwordRequirements.map((req, i) => (
                         <span
                           key={i}
-                          className={`text-[10px] font-medium flex items-center gap-1.5 transition-colors duration-300 ${
+                          className={`text-[10px] font-medium flex items-center gap-1 transition-colors duration-300 ${
                             req.met ? "text-green-500" : "text-red-500"
                           }`}
                         >
@@ -396,17 +409,17 @@ export default function Register() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                      Age
+                      Age <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
                       name="age"
+                      required
                       min="1"
                       placeholder="Age"
                       value={formData.age}
                       onChange={handleChange}
                       onKeyDown={(e) => {
-                        // Prevent typing -, +, e, E to enforce positive integer manually
                         if (["-", "+", "e", "E"].includes(e.key)) {
                           e.preventDefault();
                         }
@@ -416,11 +429,12 @@ export default function Register() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                      Phone
+                      Phone <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="tel"
                       name="phoneNumber"
+                      required
                       placeholder="Phone"
                       value={formData.phoneNumber}
                       onChange={handleChange}
@@ -429,11 +443,12 @@ export default function Register() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                      Address
+                      Address <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       name="address"
+                      required
                       placeholder="Address"
                       value={formData.address}
                       onChange={handleChange}
@@ -465,11 +480,12 @@ export default function Register() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                      Blood Group
+                      Blood Group <span className="text-red-500">*</span>
                     </label>
                     <div className="relative group">
                       <select
                         name="bloodGroup"
+                        required
                         value={formData.bloodGroup}
                         onChange={handleChange}
                         className="w-full bg-[#0B1120] border border-slate-700 rounded-xl py-3.5 px-4 text-sm text-slate-300 focus:outline-none focus:border-teal-400 appearance-none transition-all cursor-pointer"
