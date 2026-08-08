@@ -46,4 +46,45 @@ async function sendOTPEmail(toEmail, toName, otp, type = 'verification') {
   }
 }
 
-module.exports = { sendOTPEmail };
+// ── Emergency alert email ────────────────────────────────────────────────────
+async function sendEmergencyAlertEmail(toEmail, contactName, userName, mapsUrl) {
+  const subject = `URGENT: ${userName} may need help — HealthBot Emergency Alert`;
+  const body = `Hi ${contactName || 'there'},\n\n${userName} triggered an emergency alert on HealthBot and may need immediate help.\n\n${mapsUrl ? `Their location: ${mapsUrl}\n\n` : ''}Please try to reach them right away, and contact emergency services if you cannot.\n\n— HealthBot`;
+
+  try {
+    await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender:    { name: 'HealthBot', email: process.env.EMAIL_FROM || 'noreply@healthbot.com' },
+        to:        [{ email: toEmail, name: contactName || 'Emergency Contact' }],
+        subject,
+        textContent: body,
+        htmlContent: `
+          <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px;">
+            <div style="background:#fef2f2;border:2px solid #dc2626;border-radius:8px;padding:20px;margin-bottom:20px;">
+              <h2 style="color:#dc2626;margin:0 0 10px 0;">⚠️ Emergency Alert</h2>
+              <p style="margin:0;font-size:16px;"><strong>${userName}</strong> may need immediate help.</p>
+            </div>
+            <p>Hi ${contactName || 'there'},</p>
+            <p>${userName} triggered an emergency alert on HealthBot. Please try to reach them right away.</p>
+            ${mapsUrl ? `<p><a href="${mapsUrl}" style="color:#0d9488;font-weight:bold;">View their location on Google Maps</a></p>` : ''}
+            <p style="color:#888;font-size:12px;margin-top:20px;">If you cannot reach them, please contact local emergency services.</p>
+          </div>
+        `,
+      },
+      {
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    console.log(`Emergency alert email sent to ${toEmail}`);
+    return true;
+  } catch (err) {
+    console.error('Emergency email error:', err.response?.data || err.message);
+    return false;
+  }
+}
+
+module.exports = { sendOTPEmail, sendEmergencyAlertEmail };

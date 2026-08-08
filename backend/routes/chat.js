@@ -4,6 +4,8 @@ const auth = require("../middleware/auth");
 const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const { getGroqResponse, isOffTopic } = require("../config/groq");
+const { sendEmergencyAlertEmail } = require("../config/emailService");
+const { sendSMS } = require("../config/smsService");
 const nodemailer = require("nodemailer");
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
@@ -678,6 +680,54 @@ router.post("/email-reminder", auth, async (req, res) => {
     res.json({ message: "Reminder email sent successfully!" });
   } catch (err) {
     console.error("Email error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── Notify Emergency Contact ──────────────────────────────────────────────────
+// Fired when the frontend's emergency alert triggers. Sends SMS + email to
+// the user's registered emergency contact (Profile settings, not
+// registration), including a Google Maps link built from the browser's
+// geolocation when available, falling back to the user's saved address.
+router.post("/notify-emergency", auth, async (req, res) => {
+  try {
+    const { latitude, longitude } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const { emergencyContactName, emergencyContactPhone, emergencyContactEmail, address } = user;
+    if (!emergencyContactPhone && !emergencyContactEmail) {
+      return res.status(400).json({
+        message: "No emergency contact on file",
+        hint: "Add one in Profile settings",
+      });
+    }
+
+    const mapsUrl =
+      latitude && longitude
+        ? `https://www.google.com/maps?q=${latitude},${longitude}`
+        : address
+          ? `https://www.google.com/maps/search/${encodeURIComponent(address)}`
+          : null;
+
+    const results = { sms: false, email: false };
+
+    if (emergencyContactPhone) {
+      const smsText = `HealthBot Emergency Alert: ${user.name} may need help.${mapsUrl ? ` Location: ${mapsUrl}` : ""}`;
+      results.sms = await sendSMS(emergencyContactPhone, smsText);
+    }
+    if (emergencyContactEmail) {
+      results.email = await sendEmergencyAlertEmail(
+        emergencyContactEmail,
+        emergencyContactName,
+        user.name,
+        mapsUrl,
+      );
+    }
+
+    res.json({ notified: results.sms || results.email, ...results });
+  } catch (err) {
+    console.error("Emergency notify error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

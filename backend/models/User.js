@@ -15,6 +15,11 @@ const UserSchema = new mongoose.Schema({
   address:             { type: String, default: '' },
   phoneNumber:         { type: String, default: '' },
 
+  // Emergency contact (added to Profile rather than registration, so signup stays short)
+  emergencyContactName:  { type: String, default: '' },
+  emergencyContactPhone: { type: String, default: '' },
+  emergencyContactEmail: { type: String, default: '' },
+
   // Verification
   isVerified:          { type: Boolean, default: false },
   verificationOTP:     { type: String,  default: null },
