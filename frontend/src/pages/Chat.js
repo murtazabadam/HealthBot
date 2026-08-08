@@ -943,6 +943,125 @@ const HealthRangesView = ({ isDark, onBack }) => {
   );
 };
 
+const EmergencyContactsView = ({ isDark, onBack, user }) => {
+  return (
+    <div className="max-w-2xl mx-auto w-full animate-in fade-in slide-in-from-right-4 duration-500 pb-10">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-2 text-slate-500 hover:text-teal-500 mb-6 transition-colors font-medium"
+      >
+        <ArrowLeft size={18} /> Back to Saved Advice
+      </button>
+
+      <div
+        className={`rounded-3xl shadow-2xl overflow-hidden border ${isDark ? "bg-[#0B1120] border-slate-800/80" : "bg-white border-slate-200"}`}
+      >
+        <div className="p-6 sm:p-8 border-b border-slate-800/80">
+          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
+            <Bell className="h-8 w-8 text-red-500" />
+          </div>
+          <h2
+            className={`text-2xl sm:text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
+          >
+            Emergency Contacts
+          </h2>
+          <p className="text-slate-500 text-sm mt-1">
+            Your registered emergency contacts and rapid response numbers.
+          </p>
+        </div>
+
+        <div className="p-6 sm:p-8 space-y-6">
+          {/* Ambulance Card */}
+          <div
+            className={`p-4 sm:p-5 rounded-2xl border ${isDark ? "bg-red-500/5 border-red-500/20" : "bg-red-50 border-red-200"} flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-500 text-white rounded-xl shadow-lg shadow-red-500/30">
+                <PhoneCall size={24} />
+              </div>
+              <div>
+                <h4
+                  className={`font-bold text-lg ${isDark ? "text-white" : "text-slate-900"}`}
+                >
+                  Ambulance / Emergency
+                </h4>
+                <p className="text-sm text-red-400 font-bold mt-0.5">
+                  Dial 108
+                </p>
+              </div>
+            </div>
+            <a
+              href="tel:108"
+              className="w-full sm:w-auto text-center bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-95"
+            >
+              Call Now
+            </a>
+          </div>
+
+          {/* Personal Contact Details */}
+          <div
+            className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
+          >
+            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <User size={14} /> Your Personal Emergency Contact
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Name</p>
+                <p
+                  className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"}`}
+                >
+                  {user?.emergencyContactName || "Not set in Profile"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Phone Number</p>
+                <p
+                  className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"}`}
+                >
+                  {user?.emergencyContactPhone || "Not set in Profile"}
+                </p>
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-xs text-slate-500 mb-1">Email Address</p>
+                <p
+                  className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"}`}
+                >
+                  {user?.emergencyContactEmail || "Not set in Profile"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Registered Location */}
+          <div
+            className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
+          >
+            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+              <MapPin size={14} /> Your Registered Location
+            </h4>
+            <p
+              className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"} leading-relaxed`}
+            >
+              {user?.address ||
+                "Please update your address in the Profile section."}
+            </p>
+            <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <p className="text-xs text-amber-500 flex items-start gap-2">
+                <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                <span>
+                  Tip: In a severe emergency, provide this location to the
+                  emergency services immediately.
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export function ChatDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [page, setPage] = useState("chat");
@@ -1581,19 +1700,10 @@ export function ChatDashboard() {
       return;
     }
 
-    const now = new Date().toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    let text = "";
     if (title === "Emergency Contacts") {
-      text = `🚨 Your Emergency Contacts:\n- Ambulance/Emergency: 108\n- Your Registered Location: ${user.address || "Please update address in Profile"}\n\nTip: In a severe emergency, call 108 immediately and provide them with your registered location.`;
+      handleNavClick("emergency-contacts");
+      return;
     }
-
-    setActiveSessionId(Date.now());
-    setMessages([{ id: Date.now(), sender: "bot", text, time: now }]);
-    handleNavClick("chat");
   };
 
   const clearChatHistory = () => {
@@ -1900,7 +2010,10 @@ export function ChatDashboard() {
           icon={Bookmark}
           label="Saved Advice"
           active={
-            page === "saved" || page === "bmi" || page === "health-ranges"
+            page === "saved" ||
+            page === "bmi" ||
+            page === "health-ranges" ||
+            page === "emergency-contacts"
           }
           isDark={isDark}
           onClick={() => handleNavClick("saved")}
@@ -2272,11 +2385,8 @@ export function ChatDashboard() {
             >
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
-                  <div className="w-24 h-24 bg-teal-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(45,212,191,0.4)]">
-                    <Activity
-                      className="h-12 w-12 text-slate-900"
-                      strokeWidth={2.5}
-                    />
+                  <div className="w-20 h-20 bg-teal-500/10 border border-teal-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(45,212,191,0.15)]">
+                    <Activity className="h-10 w-10 text-teal-400" />
                   </div>
                   <h2
                     className={`text-3xl md:text-4xl font-bold mb-3 text-center tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}
@@ -2329,13 +2439,6 @@ export function ChatDashboard() {
                             onAdd={addConfirmSymptom}
                             onConfirm={confirmSymptoms}
                           />
-                        ) : msg.type === "bmi_calculator" ? (
-                          <div
-                            className={`p-4 rounded-2xl shadow-lg text-sm italic ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-400 rounded-tl-none" : "bg-slate-50 border border-slate-200 text-slate-500 rounded-tl-none"}`}
-                          >
-                            The BMI Calculator has been upgraded to a full page.
-                            Please access it from the "Saved Advice" tab.
-                          </div>
                         ) : (
                           <div
                             className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none"}`}
@@ -2358,8 +2461,7 @@ export function ChatDashboard() {
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
                           {msg.sender === "bot" &&
-                            msg.type !== "confirmation" &&
-                            msg.type !== "bmi_calculator" && (
+                            msg.type !== "confirmation" && (
                               <div className="flex items-center gap-1 ml-1">
                                 <button
                                   onClick={() => speakText(msg.text, msg.id)}
@@ -2424,6 +2526,14 @@ export function ChatDashboard() {
             <HealthRangesView
               isDark={isDark}
               onBack={() => handleNavClick("saved")}
+            />
+          )}
+
+          {page === "emergency-contacts" && (
+            <EmergencyContactsView
+              isDark={isDark}
+              onBack={() => handleNavClick("saved")}
+              user={user}
             />
           )}
 
