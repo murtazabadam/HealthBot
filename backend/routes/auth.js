@@ -27,6 +27,9 @@ function userResponse(user) {
     bloodGroup:  user.bloodGroup  || '',
     address:     user.address     || '',
     phoneNumber: user.phoneNumber || '',
+    emergencyContactName:  user.emergencyContactName  || '',
+    emergencyContactPhone: user.emergencyContactPhone || '',
+    emergencyContactEmail: user.emergencyContactEmail || '',
     isVerified:  user.isVerified,
     createdAt:   user.createdAt
   };
@@ -277,7 +280,8 @@ router.get('/profile', auth, async (req, res) => {
 // ── Update Profile ─────────────────────────────────────────────────────────────
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { name, age, gender, bloodGroup, address, phoneNumber } = req.body;
+    const { name, age, gender, bloodGroup, address, phoneNumber,
+            emergencyContactName, emergencyContactPhone, emergencyContactEmail } = req.body;
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -287,6 +291,9 @@ router.put('/profile', auth, async (req, res) => {
     if (bloodGroup  !== undefined) user.bloodGroup  = bloodGroup;
     if (address     !== undefined) user.address     = address;
     if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
+    if (emergencyContactName  !== undefined) user.emergencyContactName  = emergencyContactName;
+    if (emergencyContactPhone !== undefined) user.emergencyContactPhone = emergencyContactPhone;
+    if (emergencyContactEmail !== undefined) user.emergencyContactEmail = emergencyContactEmail;
     await user.save();
 
     res.json({ message: 'Profile updated successfully!', user: userResponse(user) });
