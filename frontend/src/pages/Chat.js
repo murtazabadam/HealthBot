@@ -45,7 +45,6 @@ import {
   AlertTriangle,
   Pause,
   Mail,
-  FileText,
 } from "lucide-react";
 
 function SymptomConfirmationCard({
@@ -975,6 +974,9 @@ export function ChatDashboard() {
     bloodGroup: user.bloodGroup || "",
     address: user.address || "",
     phoneNumber: user.phoneNumber || "",
+    emergencyContactName: user.emergencyContactName || "",
+    emergencyContactPhone: user.emergencyContactPhone || "",
+    emergencyContactEmail: user.emergencyContactEmail || "",
   });
   const [toastMessage, setToastMessage] = useState("");
 
@@ -1038,6 +1040,9 @@ export function ChatDashboard() {
             bloodGroup: userData.bloodGroup || "",
             address: userData.address || "",
             phoneNumber: userData.phoneNumber || "",
+            emergencyContactName: userData.emergencyContactName || "",
+            emergencyContactPhone: userData.emergencyContactPhone || "",
+            emergencyContactEmail: userData.emergencyContactEmail || "",
           });
         }
       } catch (err) {
@@ -1698,6 +1703,38 @@ export function ChatDashboard() {
     }
   };
 
+  // Fires the emergency SMS/email to the user's registered emergency
+  // contact. Geolocation is best-effort — if the browser denies permission
+  // or it's unavailable, the backend falls back to the user's saved
+  // address instead, so this never blocks the alert itself.
+  const notifyEmergencyContact = () => {
+    const send = (coords) => {
+      axios
+        .post(
+          "https://healthbot-backend-ezxv.onrender.com/api/chat/notify-emergency",
+          coords,
+          { headers: { Authorization: `Bearer ${token}` } },
+        )
+        .catch((err) => {
+          console.error("Emergency notify failed:", err.message);
+        });
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) =>
+          send({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          }),
+        () => send({}), // permission denied / unavailable — backend uses saved address
+        { timeout: 5000 },
+      );
+    } else {
+      send({});
+    }
+  };
+
   const sendMessage = async (textOverride = null) => {
     const textToSend = textOverride || inputText;
     if ((!textToSend.trim() && !uploadedImage) || loading) return;
@@ -1724,6 +1761,7 @@ export function ChatDashboard() {
 
     if (isEmergency) {
       setEmergencyAlert(true);
+      notifyEmergencyContact();
       speakText(
         "Emergency alert. Please select an option to get immediate help.",
         "emergency",
@@ -2234,8 +2272,11 @@ export function ChatDashboard() {
             >
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
-                  <div className="w-20 h-20 bg-teal-500/10 border border-teal-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(45,212,191,0.15)]">
-                    <Activity className="h-10 w-10 text-teal-400" />
+                  <div className="w-24 h-24 bg-teal-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(45,212,191,0.4)]">
+                    <Activity
+                      className="h-12 w-12 text-slate-900"
+                      strokeWidth={2.5}
+                    />
                   </div>
                   <h2
                     className={`text-3xl md:text-4xl font-bold mb-3 text-center tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}
@@ -2372,15 +2413,15 @@ export function ChatDashboard() {
             </div>
           )}
 
-          {page === "health-ranges" && (
-            <HealthRangesView
+          {page === "bmi" && (
+            <BmiCalculatorView
               isDark={isDark}
               onBack={() => handleNavClick("saved")}
             />
           )}
 
-          {page === "bmi" && (
-            <BmiCalculatorView
+          {page === "health-ranges" && (
+            <HealthRangesView
               isDark={isDark}
               onBack={() => handleNavClick("saved")}
             />
@@ -2452,6 +2493,12 @@ export function ChatDashboard() {
                               bloodGroup: user.bloodGroup || "",
                               address: user.address || "",
                               phoneNumber: user.phoneNumber || "",
+                              emergencyContactName:
+                                user.emergencyContactName || "",
+                              emergencyContactPhone:
+                                user.emergencyContactPhone || "",
+                              emergencyContactEmail:
+                                user.emergencyContactEmail || "",
                             });
                             setToastMessage("");
                           }}
@@ -2587,7 +2634,94 @@ export function ChatDashboard() {
               </div>
 
               <div
-                className={`border rounded-3xl p-6 sm:p-8 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 backdrop-blur-xl border-slate-700/50" : "bg-white border-slate-200 shadow-sm"}`}
+                className={`border rounded-3xl p-6 sm:p-8 mt-6 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 backdrop-blur-xl border-slate-700/50" : "bg-white border-slate-200 shadow-sm"}`}
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <Bell className="h-5 w-5 text-teal-500" />
+                  <div>
+                    <h2
+                      className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}
+                    >
+                      Emergency Contact
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Notified automatically by SMS and email if you trigger an
+                      emergency alert
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                      <User className="h-3 w-3" /> Contact Name
+                    </label>
+                    {isEditingProfile ? (
+                      <input
+                        type="text"
+                        name="emergencyContactName"
+                        value={profileForm.emergencyContactName}
+                        onChange={handleProfileChange}
+                        placeholder="e.g. Father, Spouse, Friend"
+                        className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
+                      />
+                    ) : (
+                      <p
+                        className={`text-sm py-3 px-4 rounded-xl ${isDark ? "bg-slate-800/30 text-white" : "bg-slate-50 text-slate-900 border border-slate-200"}`}
+                      >
+                        {user?.emergencyContactName || "—"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                      <Phone className="h-3 w-3" /> Contact Phone
+                    </label>
+                    {isEditingProfile ? (
+                      <input
+                        type="tel"
+                        name="emergencyContactPhone"
+                        value={profileForm.emergencyContactPhone}
+                        onChange={handleProfileChange}
+                        placeholder="10-digit mobile number"
+                        className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
+                      />
+                    ) : (
+                      <p
+                        className={`text-sm py-3 px-4 rounded-xl ${isDark ? "bg-slate-800/30 text-white" : "bg-slate-50 text-slate-900 border border-slate-200"}`}
+                      >
+                        {user?.emergencyContactPhone || "—"}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:col-span-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                      <Mail className="h-3 w-3" /> Contact Email
+                    </label>
+                    {isEditingProfile ? (
+                      <input
+                        type="email"
+                        name="emergencyContactEmail"
+                        value={profileForm.emergencyContactEmail}
+                        onChange={handleProfileChange}
+                        placeholder="their.email@example.com"
+                        className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
+                      />
+                    ) : (
+                      <p
+                        className={`text-sm py-3 px-4 rounded-xl ${isDark ? "bg-slate-800/30 text-white" : "bg-slate-50 text-slate-900 border border-slate-200"}`}
+                      >
+                        {user?.emergencyContactEmail || "—"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className={`border rounded-3xl p-6 sm:p-8 mt-6 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 backdrop-blur-xl border-slate-700/50" : "bg-white border-slate-200 shadow-sm"}`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                   <div className="flex items-center gap-3">
@@ -2801,7 +2935,7 @@ export function ChatDashboard() {
               >
                 Saved Prescriptions & Advice
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <SavedCard
                   title="BMI Calculator"
                   date="Interactive Tool"
@@ -2810,9 +2944,9 @@ export function ChatDashboard() {
                   onClick={() => loadSavedAdvice("BMI Calculator")}
                 />
                 <SavedCard
-                  title="Health Ranges"
-                  date="Reference Guide"
-                  icon={FileText}
+                  title="Health Reference Ranges"
+                  date="BP, CBC, Kidney, Liver, Thyroid & More"
+                  icon={HeartPulse}
                   isDark={isDark}
                   onClick={() => loadSavedAdvice("Health Ranges")}
                 />
