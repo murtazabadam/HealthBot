@@ -71,7 +71,7 @@ function SymptomConfirmationCard({
     <div
       className={`p-4 rounded-2xl text-xs lg:text-sm shadow-lg w-full max-w-md ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200" : "bg-slate-50 border border-slate-200 text-slate-800"}`}
     >
-      <p className="font-semibold mb-3">We detected:</p>
+      <p className="font-semibold mb-3">You mentioned:</p>
 
       {msg.detectedSymptoms.length === 0 && (
         <p className="text-slate-500 italic mb-3">
@@ -98,6 +98,29 @@ function SymptomConfirmationCard({
           </span>
         ))}
       </div>
+
+      {!msg.resolved &&
+        msg.suggestedSymptoms &&
+        msg.suggestedSymptoms.length > 0 && (
+          <div className="mb-3">
+            <p className="text-slate-500 text-[11px] mb-2">
+              Do you also have any of these? Tap to add:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {msg.suggestedSymptoms
+                .filter((s) => !msg.detectedSymptoms.some((d) => d.id === s.id))
+                .map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => onAdd(msg.id, s)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${isDark ? "border-slate-600 text-slate-300 hover:border-teal-500 hover:text-teal-300" : "border-slate-300 text-slate-600 hover:border-teal-400 hover:text-teal-600"}`}
+                  >
+                    <Plus size={12} /> {s.label}
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
 
       {!msg.resolved && (
         <>
@@ -1683,22 +1706,24 @@ export function ChatDashboard() {
     handleNavClick("chat");
   };
 
+  const [confirmDialog, setConfirmDialog] = useState(null);
+
   const deleteSession = (e, id) => {
     e.stopPropagation();
-    if (
-      window.confirm(
-        "Are you sure you want to permanently delete this chat session?",
-      )
-    ) {
-      const updatedHistory = chatHistoryList.filter((s) => s.id !== id);
-      setChatHistoryList(updatedHistory);
-      localStorage.setItem("chatHistory", JSON.stringify(updatedHistory));
+    setConfirmDialog({
+      message: "Are you sure you want to permanently delete this chat session?",
+      onConfirm: () => {
+        const updatedHistory = chatHistoryList.filter((s) => s.id !== id);
+        setChatHistoryList(updatedHistory);
+        localStorage.setItem("chatHistory", JSON.stringify(updatedHistory));
 
-      if (activeSessionId === id) {
-        handleNewChat();
-      }
-      showToast("Chat session deleted.");
-    }
+        if (activeSessionId === id) {
+          handleNewChat();
+        }
+        showToast("Chat session deleted.");
+        setConfirmDialog(null);
+      },
+    });
   };
 
   const loadSavedAdvice = (title) => {
@@ -1719,16 +1744,16 @@ export function ChatDashboard() {
   };
 
   const clearChatHistory = () => {
-    if (
-      window.confirm(
-        "Are you sure you want to permanently delete all chat history?",
-      )
-    ) {
-      setChatHistoryList([]);
-      localStorage.removeItem("chatHistory");
-      handleNewChat();
-      showToast("History Cleared");
-    }
+    setConfirmDialog({
+      message: "Are you sure you want to permanently delete all chat history?",
+      onConfirm: () => {
+        setChatHistoryList([]);
+        localStorage.removeItem("chatHistory");
+        handleNewChat();
+        showToast("History Cleared");
+        setConfirmDialog(null);
+      },
+    });
   };
 
   const [symptomOptions, setSymptomOptions] = useState([]);
@@ -1787,6 +1812,27 @@ export function ChatDashboard() {
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
+
+      if (res.data.needsConfirmation) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + 1,
+            sender: "bot",
+            type: "confirmation",
+            originalText: res.data.originalText,
+            detectedSymptoms: res.data.detectedSymptoms,
+            suggestedSymptoms: res.data.suggestedSymptoms || [],
+            resolved: false,
+            time: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          },
+        ]);
+        setLoading(false);
+        return;
+      }
 
       if (res.data.emergency) {
         setEmergencyAlert(true);
@@ -2174,6 +2220,42 @@ export function ChatDashboard() {
         </div>
       )}
 
+      {confirmDialog && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div
+            className={`w-full max-w-sm rounded-2xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 ${isDark ? "bg-[#111827] border border-slate-700/50" : "bg-white border border-slate-200"}`}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-rose-500/10 rounded-full">
+                <AlertTriangle className="h-5 w-5 text-rose-500" />
+              </div>
+              <h3
+                className={`font-bold text-base ${isDark ? "text-white" : "text-slate-900"}`}
+              >
+                Confirm Deletion
+              </h3>
+            </div>
+            <p className="text-sm text-slate-400 mb-6">
+              {confirmDialog.message}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDialog(null)}
+                className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors ${isDark ? "bg-slate-800 text-slate-300 hover:bg-slate-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-rose-500 hover:bg-rose-400 text-white transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isReminderModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div
@@ -2424,11 +2506,8 @@ export function ChatDashboard() {
             >
               {messages.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center my-auto animate-in fade-in zoom-in duration-500 pb-20">
-                  <div className="w-24 h-24 bg-teal-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(45,212,191,0.4)]">
-                    <Activity
-                      className="h-12 w-12 text-slate-900"
-                      strokeWidth={2.5}
-                    />
+                  <div className="w-20 h-20 bg-teal-500/10 border border-teal-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(45,212,191,0.15)]">
+                    <Activity className="h-10 w-10 text-teal-400" />
                   </div>
                   <h2
                     className={`text-3xl md:text-4xl font-bold mb-3 text-center tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}
