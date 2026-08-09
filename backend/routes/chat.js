@@ -399,28 +399,20 @@ function buildMLSection(mlResult, symptoms) {
 
   if (mlResult.low_confidence && symptoms.length < 2) {
     const suggestionPool = [
-      {
-        label: "Fever or chills",
-        keys: ["high_fever", "mild_fever", "chills"],
-      },
-      {
-        label: "Headache or body ache",
-        keys: ["headache", "severe_headache", "muscle_pain"],
-      },
-      { label: "Nausea or vomiting", keys: ["nausea", "vomiting"] },
-      { label: "Cough or sore throat", keys: ["cough", "throat_irritation"] },
-      { label: "Fatigue or weakness", keys: ["fatigue", "lethargy"] },
+      { label: "Fever or chills", id: "high_fever", keys: ["high_fever", "mild_fever", "chills"] },
+      { label: "Headache or body ache", id: "headache", keys: ["headache", "severe_headache", "muscle_pain"] },
+      { label: "Nausea or vomiting", id: "nausea", keys: ["nausea", "vomiting"] },
+      { label: "Cough or sore throat", id: "cough", keys: ["cough", "throat_irritation"] },
+      { label: "Fatigue or weakness", id: "fatigue", keys: ["fatigue", "lethargy"] },
     ];
-    const relevantSuggestions = suggestionPool
+    const suggested = suggestionPool
       .filter((s) => !s.keys.some((k) => symptoms.includes(k)))
       .slice(0, 3)
-      .map((s) => `• ${s.label}?`)
-      .join("\n");
+      .map((s) => ({ id: s.id, label: s.label }));
 
-    return {
-      summary: null,
-      block: `I detected: ${symptoms.map((s) => s.replace(/_/g, " ")).join(", ")}.\n\n🔍 For accurate analysis, please describe more symptoms.\n\nDo you also have:\n${relevantSuggestions}\n\nMore symptoms = more accurate prediction.`,
-    };
+    // needsMore, not a text block — the caller shows this as tappable
+    // suggestion chips instead of asking the user to type more.
+    return { summary: null, needsMore: true, suggested };
   }
 
   const others = mlResult.predictions
@@ -610,6 +602,20 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
 
     const mlResult = await getMLPrediction(text, symptoms);
     const ml = buildMLSection(mlResult, symptoms);
+
+    if (ml && ml.needsMore) {
+      // Not enough symptoms for a confident prediction yet — show the same
+      // checklist UI again (with quick-add suggestions) instead of asking
+      // the user to type more.
+      return res.json({
+        needsConfirmation: true,
+        originalText: text,
+        detectedSymptoms: symptoms.map((id) => ({ id, label: readableSymptom(id) })),
+        suggestedSymptoms: ml.suggested,
+        intent: "symptoms",
+        emergency: false,
+      });
+    }
 
     let botReply;
     if (process.env.GROQ_API_KEY && ml && ml.summary) {
