@@ -33,7 +33,17 @@ async function getMLPrediction(text, symptoms) {
 }
 
 // ── NL Map ────────────────────────────────────────────────────────────────────
+// A couple of symptom IDs read oddly once auto-capitalized — e.g. "fever"
+// alone maps to the ID high_fever (the dataset has no neutral "fever"
+// option), but showing the user "High Fever" back when they only said
+// "fever" reads as the bot claiming more than they said.
+const LABEL_OVERRIDES = {
+  high_fever: "Fever",
+  mild_fever: "Mild Fever",
+};
+
 function readableSymptom(id) {
+  if (LABEL_OVERRIDES[id]) return LABEL_OVERRIDES[id];
   return id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
@@ -386,7 +396,7 @@ function getFallbackReply(intent, userName) {
 }
 
 // ── Build ML Section ───────────────────────────────────────────────────────────
-function buildMLSection(mlResult, symptoms) {
+function buildMLSection(mlResult, symptoms, forceThrough = false) {
   if (
     !mlResult ||
     mlResult.error ||
@@ -397,7 +407,7 @@ function buildMLSection(mlResult, symptoms) {
 
   const top = mlResult.predictions[0];
 
-  if (mlResult.low_confidence && symptoms.length < 2) {
+  if (mlResult.low_confidence && symptoms.length < 2 && !forceThrough) {
     const suggestionPool = [
       { label: "Fever or chills", id: "high_fever", keys: ["high_fever", "mild_fever", "chills"] },
       { label: "Headache or body ache", id: "headache", keys: ["headache", "severe_headache", "muscle_pain"] },
@@ -582,7 +592,7 @@ router.delete("/history", auth, async (req, res) => {
 // ── Confirm Symptoms Route ───────────────────────────────────────────────────
 router.post("/confirm-symptoms", auth, async (req, res) => {
   try {
-    const { symptoms, originalText, saveHistory = true } = req.body;
+    const { symptoms, originalText, saveHistory = true, round = 1 } = req.body;
     if (!Array.isArray(symptoms) || symptoms.length === 0) {
       return res
         .status(400)
@@ -601,7 +611,10 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
     }
 
     const mlResult = await getMLPrediction(text, symptoms);
-    const ml = buildMLSection(mlResult, symptoms);
+    // Only one round of "add a suggested symptom" is ever offered — round 2
+    // forces a real answer through regardless of confidence, so the
+    // checklist can never reappear indefinitely.
+    const ml = buildMLSection(mlResult, symptoms, round >= 2);
 
     if (ml && ml.needsMore) {
       // Not enough symptoms for a confident prediction yet — show the same
