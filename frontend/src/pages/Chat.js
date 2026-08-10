@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { useNavigate, MemoryRouter } from "react-router-dom";
+import Tesseract from "tesseract.js";
+import { API } from "../config";
 import {
   Activity,
   MessageSquare,
@@ -45,6 +47,9 @@ import {
   AlertTriangle,
   Pause,
   Mail,
+  ClipboardList,
+  Wand2,
+  Loader2,
 } from "lucide-react";
 
 function SymptomConfirmationCard({
@@ -150,7 +155,6 @@ function SymptomConfirmationCard({
               </div>
             )}
           </div>
-
           <button
             onClick={() => onConfirm(msg)}
             disabled={msg.detectedSymptoms.length === 0}
@@ -170,11 +174,85 @@ function SymptomConfirmationCard({
   );
 }
 
+function PrescriptionParsedCard({ msg, isDark, onSave, onDiscard }) {
+  if (msg.medications.length === 0) {
+    return (
+      <div
+        className={`p-4 rounded-2xl shadow-lg w-full max-w-md ${isDark ? "bg-slate-800 border border-slate-700 text-slate-200" : "bg-slate-50 border border-slate-200 text-slate-800"}`}
+      >
+        <p className="font-semibold text-rose-500 mb-2">
+          No medications detected.
+        </p>
+        <p className="text-sm">
+          The image might be too blurry, or it doesn't contain readable
+          prescription data. Please try another photo.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`p-4 rounded-2xl text-xs lg:text-sm shadow-lg w-full max-w-md ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200" : "bg-slate-50 border border-slate-200 text-slate-800"}`}
+    >
+      <div className="flex items-center gap-2 mb-4 text-purple-400 font-bold border-b border-slate-700/50 pb-2">
+        <Wand2 size={16} /> Prescription Read Successfully
+      </div>
+
+      <div className="space-y-3 mb-5">
+        {msg.medications.map((med, i) => (
+          <div
+            key={i}
+            className={`p-3 rounded-xl border ${isDark ? "bg-[#0B1120] border-slate-700" : "bg-white border-slate-200"}`}
+          >
+            <h4 className="font-bold text-teal-400 text-base">{med.name}</h4>
+            <div className="grid grid-cols-2 gap-2 mt-2 text-[11px] text-slate-400">
+              <p>
+                <strong className="text-slate-300">Dosage:</strong>{" "}
+                {med.dosage || "N/A"}
+              </p>
+              <p>
+                <strong className="text-slate-300">Frequency:</strong>{" "}
+                {med.frequency || "N/A"}
+              </p>
+              <p className="col-span-2">
+                <strong className="text-slate-300">Duration:</strong>{" "}
+                {med.duration || "N/A"}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {!msg.resolved && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => onSave(msg)}
+            className="flex-1 bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            <Bell size={16} /> Save & Set Reminders
+          </button>
+          <button
+            onClick={() => onDiscard(msg.id)}
+            className="px-4 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2.5 rounded-xl transition-all"
+          >
+            Discard
+          </button>
+        </div>
+      )}
+
+      {msg.resolved && (
+        <p className="text-teal-500 text-xs font-medium flex items-center gap-1.5 mt-2">
+          <CheckCircle2 size={14} /> Saved & Reminders Created!
+        </p>
+      )}
+    </div>
+  );
+}
+
 const BmiCalculatorView = ({ isDark, onBack }) => {
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
-  const [age, setAge] = useState("");
-  const [gender, setGender] = useState("");
   const [unit, setUnit] = useState("metric");
   const [result, setResult] = useState(null);
 
@@ -253,13 +331,7 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
       ];
     }
 
-    setResult({
-      bmi: bmi.toFixed(1),
-      category,
-      color,
-      indicatorColor,
-      advice,
-    });
+    setResult({ bmi: bmi.toFixed(1), category, color, indicatorColor, advice });
   };
 
   return (
@@ -295,8 +367,6 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                   setResult(null);
                   setHeight("");
                   setWeight("");
-                  setAge("");
-                  setGender("");
                 }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${unit === "metric" ? "bg-teal-500 text-slate-900 shadow-sm" : "text-slate-500 hover:text-teal-500"}`}
               >
@@ -308,8 +378,6 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                   setResult(null);
                   setHeight("");
                   setWeight("");
-                  setAge("");
-                  setGender("");
                 }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${unit === "imperial" ? "bg-teal-500 text-slate-900 shadow-sm" : "text-slate-500 hover:text-teal-500"}`}
               >
@@ -319,76 +387,6 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <div
-              className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
-            >
-              <div
-                className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}
-              >
-                <Calendar size={24} />
-              </div>
-              <div className="flex-1 min-w-0 pr-3">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
-                  Age
-                </label>
-                <div className="flex items-center">
-                  <input
-                    type="number"
-                    min="2"
-                    onKeyDown={(e) => {
-                      if (["-", "+", "e", "E"].includes(e.key))
-                        e.preventDefault();
-                    }}
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    placeholder="e.g. 25"
-                    className="w-full bg-transparent border-none outline-none text-base font-semibold text-slate-200 placeholder-slate-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="text-teal-500 font-bold text-sm ml-2 shrink-0">
-                    yrs
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
-            >
-              <div
-                className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}
-              >
-                <UserCircle size={24} />
-              </div>
-              <div className="flex-1 min-w-0 pr-3">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
-                  Gender
-                </label>
-                <div className="flex items-center h-full">
-                  <select
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value)}
-                    className={`w-full bg-transparent border-none outline-none text-base font-semibold cursor-pointer appearance-none ${gender ? "text-slate-200" : "text-slate-600"}`}
-                  >
-                    <option value="" disabled className="text-slate-500">
-                      Select...
-                    </option>
-                    <option
-                      value="male"
-                      className="bg-slate-900 text-slate-200"
-                    >
-                      Male
-                    </option>
-                    <option
-                      value="female"
-                      className="bg-slate-900 text-slate-200"
-                    >
-                      Female
-                    </option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
             <div
               className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
             >
@@ -694,201 +692,6 @@ const HealthRangesView = ({ isDark, onBack }) => {
         },
       ],
     },
-    {
-      title: "HbA1c (3-month average)",
-      unit: "%",
-      rows: [
-        { label: "Normal", value: "< 5.7", color: "bg-teal-400" },
-        { label: "Prediabetes", value: "5.7–6.4", color: "bg-amber-400" },
-        { label: "Diabetes", value: "\u2265 6.5", color: "bg-rose-400" },
-      ],
-    },
-    {
-      title: "Cholesterol",
-      unit: "mg/dL",
-      rows: [
-        { label: "Total — Desirable", value: "< 200", color: "bg-teal-400" },
-        {
-          label: "Total — Borderline High",
-          value: "200–239",
-          color: "bg-amber-400",
-        },
-        { label: "Total — High", value: "\u2265 240", color: "bg-rose-400" },
-        {
-          label: "LDL (\u201cbad\u201d) — Optimal",
-          value: "< 100",
-          color: "bg-teal-400",
-        },
-        {
-          label: "HDL (\u201cgood\u201d) — Low (risk)",
-          value: "< 40",
-          color: "bg-rose-400",
-        },
-        {
-          label: "Triglycerides — Normal",
-          value: "< 150",
-          color: "bg-teal-400",
-        },
-      ],
-    },
-    {
-      title: "CBC — Complete Blood Count",
-      unit: "adult reference",
-      rows: [
-        {
-          label: "Hemoglobin — Men",
-          value: "13.5–17.5 g/dL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "Hemoglobin — Women",
-          value: "12.0–15.5 g/dL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "RBC — Men",
-          value: "4.7–6.1 million/mcL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "RBC — Women",
-          value: "4.2–5.4 million/mcL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "White Blood Cells (WBC)",
-          value: "4,500–11,000 /mcL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "Platelets",
-          value: "150,000–450,000 /mcL",
-          color: "bg-teal-400",
-        },
-        { label: "Hematocrit — Men", value: "38.8–50%", color: "bg-teal-400" },
-        {
-          label: "Hematocrit — Women",
-          value: "34.9–44.5%",
-          color: "bg-teal-400",
-        },
-      ],
-    },
-    {
-      title: "Kidney Function",
-      unit: "adult reference",
-      rows: [
-        {
-          label: "Creatinine — Men",
-          value: "0.7–1.3 mg/dL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "Creatinine — Women",
-          value: "0.6–1.1 mg/dL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "Blood Urea Nitrogen (BUN)",
-          value: "7–20 mg/dL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "eGFR — Normal",
-          value: "\u2265 90 mL/min/1.73m\u00b2",
-          color: "bg-teal-400",
-        },
-        {
-          label: "eGFR — Reduced",
-          value: "< 60 mL/min/1.73m\u00b2",
-          color: "bg-amber-400",
-        },
-      ],
-    },
-    {
-      title: "Liver Function",
-      unit: "U/L  (bilirubin: mg/dL)",
-      rows: [
-        {
-          label: "ALT (Alanine Transaminase)",
-          value: "7–56",
-          color: "bg-teal-400",
-        },
-        {
-          label: "AST (Aspartate Transaminase)",
-          value: "10–40",
-          color: "bg-teal-400",
-        },
-        { label: "Total Bilirubin", value: "0.1–1.2", color: "bg-teal-400" },
-      ],
-    },
-    {
-      title: "Electrolytes",
-      unit: "adult reference",
-      rows: [
-        { label: "Sodium", value: "135–145 mEq/L", color: "bg-teal-400" },
-        { label: "Potassium", value: "3.5–5.0 mEq/L", color: "bg-teal-400" },
-        { label: "Calcium", value: "8.5–10.5 mg/dL", color: "bg-teal-400" },
-      ],
-    },
-    {
-      title: "Thyroid (TSH)",
-      unit: "mIU/L",
-      rows: [
-        {
-          label: "Hyperthyroid (overactive)",
-          value: "< 0.4",
-          color: "bg-amber-400",
-        },
-        { label: "Normal", value: "0.4–4.0", color: "bg-teal-400" },
-        {
-          label: "Subclinical Hypothyroid",
-          value: "4.0–10",
-          color: "bg-amber-400",
-        },
-        {
-          label: "Hypothyroid (underactive)",
-          value: "> 10",
-          color: "bg-rose-400",
-        },
-      ],
-    },
-    {
-      title: "Vitamin D (25-hydroxy)",
-      unit: "ng/mL",
-      rows: [
-        { label: "Deficient", value: "< 20", color: "bg-rose-400" },
-        { label: "Insufficient", value: "20–29", color: "bg-amber-400" },
-        { label: "Sufficient", value: "30–100", color: "bg-teal-400" },
-      ],
-    },
-    {
-      title: "Vitamin B12",
-      unit: "pg/mL",
-      rows: [
-        { label: "Deficient", value: "< 200", color: "bg-rose-400" },
-        { label: "Normal", value: "200–900", color: "bg-teal-400" },
-      ],
-    },
-    {
-      title: "Iron Stores (Ferritin)",
-      unit: "ng/mL — varies notably by lab",
-      rows: [
-        { label: "Men — typical range", value: "20–250", color: "bg-teal-400" },
-        {
-          label: "Women — typical range",
-          value: "10–120",
-          color: "bg-teal-400",
-        },
-      ],
-    },
-    {
-      title: "Uric Acid",
-      unit: "mg/dL",
-      rows: [
-        { label: "Men — Normal", value: "3.4–7.0", color: "bg-teal-400" },
-        { label: "Women — Normal", value: "2.4–6.0", color: "bg-teal-400" },
-      ],
-    },
   ];
 
   return (
@@ -952,15 +755,6 @@ const HealthRangesView = ({ isDark, onBack }) => {
             </div>
           </div>
         ))}
-
-        <div
-          className={`p-6 border-t text-xs text-slate-500 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}
-        >
-          Reference values are general adult guidelines and can vary by lab,
-          individual, age, and pregnancy status — some (like ferritin and
-          vitamin levels) vary more than others between labs. Always interpret
-          results with a doctor.
-        </div>
       </div>
     </div>
   );
@@ -994,7 +788,6 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
-          {/* Ambulance Card */}
           <div
             className={`p-4 sm:p-5 rounded-2xl border ${isDark ? "bg-red-500/5 border-red-500/20" : "bg-red-50 border-red-200"} flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
           >
@@ -1021,7 +814,6 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
             </a>
           </div>
 
-          {/* Personal Contact Details */}
           <div
             className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
@@ -1056,7 +848,6 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
             </div>
           </div>
 
-          {/* Registered Location */}
           <div
             className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
@@ -1069,15 +860,6 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
               {user?.address ||
                 "Please update your address in the Profile section."}
             </p>
-            <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
-              <p className="text-xs text-amber-500 flex items-start gap-2">
-                <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                <span>
-                  Tip: In a severe emergency, provide this location to the
-                  emergency services immediately.
-                </span>
-              </p>
-            </div>
           </div>
         </div>
       </div>
@@ -1141,12 +923,11 @@ export function ChatDashboard() {
     loading: false,
   });
   const [showAccountActionPw, setShowAccountActionPw] = useState(false);
-
   const [emergencyAlert, setEmergencyAlert] = useState(false);
+  const [prescriptions, setPrescriptions] = useState([]);
 
   const isDark = appSettings.darkMode;
 
-  // --- NEW: Helper to Check if Regional AI is Active ---
   const isRegionActive = (address) => {
     if (!address) return false;
     const jkLocations = [
@@ -1192,13 +973,10 @@ export function ChatDashboard() {
     const fetchLatestProfile = async () => {
       if (!token) return;
       try {
-        const res = await fetch(
-          "https://healthbot-backend-ezxv.onrender.com/api/auth/profile",
-          {
-            method: "GET",
-            headers: { Authorization: `Bearer ${token}` },
-          },
-        );
+        const res = await fetch(API.PROFILE, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (res.status === 401) {
           localStorage.clear();
@@ -1231,6 +1009,19 @@ export function ChatDashboard() {
     };
 
     fetchLatestProfile();
+
+    const fetchPrescriptions = async () => {
+      if (!token) return;
+      try {
+        const res = await axios.get(API.PRESCRIPTIONS_GET, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setPrescriptions(res.data);
+      } catch (err) {
+        console.error("Failed to load prescriptions", err);
+      }
+    };
+    fetchPrescriptions();
   }, [token]);
 
   const passwordRequirements = useMemo(
@@ -1258,6 +1049,7 @@ export function ChatDashboard() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [scanLoading, setScanLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
 
@@ -1267,13 +1059,6 @@ export function ChatDashboard() {
       name: "Drink Water",
       date: "2026-06-01",
       time: "08:00",
-      active: true,
-    },
-    {
-      id: 2,
-      name: "Vitamin C Supplement",
-      date: "2026-06-02",
-      time: "09:00",
       active: true,
     },
   ]);
@@ -1319,7 +1104,7 @@ export function ChatDashboard() {
           if (appSettings.emailNotif && token) {
             try {
               await axios.post(
-                "https://healthbot-backend-ezxv.onrender.com/api/chat/email-reminder",
+                API.CHAT_EMAIL_REMINDER,
                 { reminderName: reminder.name, time: reminder.time },
                 { headers: { Authorization: `Bearer ${token}` } },
               );
@@ -1463,7 +1248,6 @@ export function ChatDashboard() {
 
   const speakText = (text, id) => {
     const synth = window.speechSynthesis;
-
     if (!synth) {
       showToast("Text-to-speech is not supported in this browser.");
       return;
@@ -1474,34 +1258,21 @@ export function ChatDashboard() {
       setPlayingMessageId(null);
       return;
     }
-
     synth.cancel();
     setPlayingMessageId(id);
 
     const utterance = new SpeechSynthesisUtterance(text);
-
     utterance.pitch = 0.8;
     utterance.rate = 0.95;
-
-    utterance.onend = () => {
-      setPlayingMessageId(null);
-    };
-
-    utterance.onerror = (e) => {
-      console.error("TTS Error:", e);
-      setPlayingMessageId(null);
-    };
+    utterance.onend = () => setPlayingMessageId(null);
+    utterance.onerror = () => setPlayingMessageId(null);
 
     const voices = synth.getVoices();
-    let preferredVoice = voices.find((v) => v.name.includes("Google"));
-    if (!preferredVoice) {
-      preferredVoice =
-        voices.find((v) => v.name.toLowerCase().includes("male")) || voices[0];
-    }
-
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
-    }
+    let preferredVoice =
+      voices.find((v) => v.name.includes("Google")) ||
+      voices.find((v) => v.name.toLowerCase().includes("male")) ||
+      voices[0];
+    if (preferredVoice) utterance.voice = preferredVoice;
 
     synth.speak(utterance);
   };
@@ -1511,15 +1282,11 @@ export function ChatDashboard() {
   const toggleRecording = () => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
+    if (!SpeechRecognition)
       return showToast("Speech recognition is not supported in this browser.");
-    }
 
     if (isRecording) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
+      if (recognitionRef.current) recognitionRef.current.stop();
       setIsRecording(false);
     } else {
       const recognition = new SpeechRecognition();
@@ -1529,31 +1296,19 @@ export function ChatDashboard() {
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         setInputText((prev) => (prev ? prev + " " + transcript : transcript));
-
         if (textareaRef.current) {
           textareaRef.current.style.height = "auto";
-          textareaRef.current.style.height = `${Math.min(
-            textareaRef.current.scrollHeight,
-            120,
-          )}px`;
+          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
         }
       };
-
-      recognition.onerror = (event) => {
-        console.error("Speech recognition error", event.error);
-        setIsRecording(false);
-      };
-
-      recognition.onend = () => {
-        setIsRecording(false);
-      };
+      recognition.onerror = () => setIsRecording(false);
+      recognition.onend = () => setIsRecording(false);
 
       try {
         recognition.start();
         recognitionRef.current = recognition;
         setIsRecording(true);
       } catch (error) {
-        console.error("Failed to start recording:", error);
         setIsRecording(false);
       }
     }
@@ -1566,6 +1321,109 @@ export function ChatDashboard() {
       reader.onloadend = () => setUploadedImage(reader.result);
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleScanPrescription = async () => {
+    if (!uploadedImage) return;
+    setScanLoading(true);
+
+    try {
+      showToast("Running Optical Character Recognition (OCR)...");
+      const result = await Tesseract.recognize(uploadedImage, "eng");
+      const ocrText = result.data.text;
+
+      showToast("Analyzing medical data with AI...");
+      const res = await axios.post(
+        API.PRESCRIPTIONS_EXTRACT,
+        { text: ocrText },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          sender: "bot",
+          type: "prescription_parsed",
+          medications: res.data.medications,
+          resolved: false,
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      ]);
+
+      setUploadedImage(null);
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to read prescription. Ensure the image is clear.");
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
+  const savePrescriptionAndReminders = async (msg) => {
+    try {
+      const res = await axios.post(
+        API.PRESCRIPTIONS_SAVE,
+        { medications: msg.medications },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      setPrescriptions((prev) => [res.data.prescription, ...prev]);
+
+      const newReminders = [];
+      const today = new Date().toISOString().split("T")[0];
+
+      msg.medications.forEach((med, i) => {
+        const freq = med.frequency.toLowerCase();
+        let times = ["09:00"];
+
+        if (
+          freq.includes("twice") ||
+          freq.includes("bd") ||
+          freq.includes("bid")
+        )
+          times = ["09:00", "21:00"];
+        if (
+          freq.includes("three") ||
+          freq.includes("tds") ||
+          freq.includes("tid")
+        )
+          times = ["09:00", "14:00", "21:00"];
+
+        times.forEach((t) => {
+          newReminders.push({
+            id: Date.now() + Math.random(),
+            name: `${med.name} (${med.dosage})`,
+            date: today,
+            time: t,
+            active: true,
+          });
+        });
+      });
+
+      setReminders((prev) => [...prev, ...newReminders]);
+      showToast(
+        `Prescription saved and ${newReminders.length} reminders added!`,
+      );
+
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msg.id ? { ...m, resolved: true } : m)),
+      );
+    } catch (err) {
+      showToast("Failed to save prescription.");
+    }
+  };
+
+  const discardPrescription = (id) => {
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === id
+          ? { ...m, resolved: true, text: "Prescription analysis discarded." }
+          : m,
+      ),
+    );
   };
 
   const handleNavClick = (targetPage) => {
@@ -1582,7 +1440,6 @@ export function ChatDashboard() {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  // --- NEW: Handle GPS Location Detection ---
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
       showToast("Geolocation is not supported by your browser");
@@ -1612,7 +1469,7 @@ export function ChatDashboard() {
               .trim();
 
             setProfileForm((prev) => ({ ...prev, address: formattedAddress }));
-            setIsEditingProfile(true); // <--- THIS AUTOMATICALLY TURNS ON EDIT MODE
+            setIsEditingProfile(true);
             showToast("Location detected! Please click Save.");
           }
         } catch (error) {
@@ -1644,17 +1501,14 @@ export function ChatDashboard() {
 
     setSavingProfile(true);
     try {
-      const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com/api/auth/profile`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(profileForm),
+      const res = await fetch(API.PROFILE, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      );
+        body: JSON.stringify(profileForm),
+      });
 
       if (res.status === 401) {
         localStorage.clear();
@@ -1692,20 +1546,17 @@ export function ChatDashboard() {
 
     setSavingPassword(true);
     try {
-      const res = await fetch(
-        `https://healthbot-backend-ezxv.onrender.com/api/auth/change-password`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            currentPassword: passwordData.currentPassword,
-            newPassword: passwordData.newPassword,
-          }),
+      const res = await fetch(API.CHANGE_PASSWORD, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      );
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        }),
+      });
 
       if (res.status === 401) {
         localStorage.clear();
@@ -1735,20 +1586,17 @@ export function ChatDashboard() {
     setAccountAction((prev) => ({ ...prev, loading: true }));
 
     try {
-      const res = await fetch(
-        "https://healthbot-backend-ezxv.onrender.com/api/auth/delete-account",
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            email: accountAction.email,
-            password: accountAction.password,
-          }),
+      const res = await fetch(API.DELETE_ACCOUNT, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      );
+        body: JSON.stringify({
+          email: accountAction.email,
+          password: accountAction.password,
+        }),
+      });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -1798,9 +1646,7 @@ export function ChatDashboard() {
         setChatHistoryList(updatedHistory);
         localStorage.setItem("chatHistory", JSON.stringify(updatedHistory));
 
-        if (activeSessionId === id) {
-          handleNewChat();
-        }
+        if (activeSessionId === id) handleNewChat();
         showToast("Chat session deleted.");
         setConfirmDialog(null);
       },
@@ -1808,20 +1654,10 @@ export function ChatDashboard() {
   };
 
   const loadSavedAdvice = (title) => {
-    if (title === "BMI Calculator") {
-      handleNavClick("bmi");
-      return;
-    }
-
-    if (title === "Health Ranges") {
-      handleNavClick("health-ranges");
-      return;
-    }
-
-    if (title === "Emergency Contacts") {
-      handleNavClick("emergency-contacts");
-      return;
-    }
+    if (title === "BMI Calculator") return handleNavClick("bmi");
+    if (title === "Health Ranges") return handleNavClick("health-ranges");
+    if (title === "Emergency Contacts")
+      return handleNavClick("emergency-contacts");
   };
 
   const clearChatHistory = () => {
@@ -1842,12 +1678,9 @@ export function ChatDashboard() {
   useEffect(() => {
     if (!token) return;
     axios
-      .get(
-        "https://healthbot-backend-ezxv.onrender.com/api/chat/symptom-options",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
+      .get(API.CHAT_SYMPTOM_OPTIONS, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .then((res) => setSymptomOptions(res.data || []))
       .catch(() => {});
   }, [token]);
@@ -1886,9 +1719,8 @@ export function ChatDashboard() {
     try {
       const round =
         msg.suggestedSymptoms && msg.suggestedSymptoms.length > 0 ? 2 : 1;
-
       const res = await axios.post(
-        "https://healthbot-backend-ezxv.onrender.com/api/chat/confirm-symptoms",
+        API.CHAT_CONFIRM_SYMPTOMS,
         {
           symptoms: msg.detectedSymptoms.map((s) => s.id),
           originalText: msg.originalText,
@@ -1928,14 +1760,12 @@ export function ChatDashboard() {
         );
       }
 
-      const botReply = res.data.reply;
-
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: "bot",
-          text: botReply,
+          text: res.data.reply,
           time: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
@@ -1968,16 +1798,11 @@ export function ChatDashboard() {
   const notifyEmergencyContact = () => {
     const send = (coords) => {
       axios
-        .post(
-          "https://healthbot-backend-ezxv.onrender.com/api/chat/notify-emergency",
-          coords,
-          { headers: { Authorization: `Bearer ${token}` } },
-        )
-        .catch((err) => {
-          console.error("Emergency notify failed:", err.message);
-        });
+        .post(API.NOTIFY_EMERGENCY, coords, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .catch((err) => console.error("Emergency notify failed:", err.message));
     };
-
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) =>
@@ -2043,7 +1868,6 @@ export function ChatDashboard() {
       hour: "2-digit",
       minute: "2-digit",
     });
-
     setMessages((prev) => [
       ...prev,
       {
@@ -2054,11 +1878,8 @@ export function ChatDashboard() {
         time: now,
       },
     ]);
-
     setInputText("");
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
 
     const currentImg = uploadedImage;
     setUploadedImage(null);
@@ -2066,7 +1887,7 @@ export function ChatDashboard() {
 
     try {
       const res = await axios.post(
-        "https://healthbot-backend-ezxv.onrender.com/api/chat/message",
+        API.CHAT_MESSAGE,
         {
           text: textToSend,
           image: currentImg,
@@ -2104,14 +1925,12 @@ export function ChatDashboard() {
         return;
       }
 
-      const botReply = res.data.reply;
-
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: "bot",
-          text: botReply,
+          text: res.data.reply,
           time: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
@@ -2124,7 +1943,6 @@ export function ChatDashboard() {
         window.location.href = "/login";
         return;
       }
-
       setMessages((prev) => [
         ...prev,
         {
@@ -2187,6 +2005,13 @@ export function ChatDashboard() {
           }
           isDark={isDark}
           onClick={() => handleNavClick("saved")}
+        />
+        <SidebarBtn
+          icon={ClipboardList}
+          label="Prescriptions"
+          active={page === "prescriptions"}
+          isDark={isDark}
+          onClick={() => handleNavClick("prescriptions")}
         />
         <SidebarBtn
           icon={Bell}
@@ -2269,7 +2094,6 @@ export function ChatDashboard() {
             <p className="text-slate-700 text-lg font-medium mb-8">
               Please select an immediate action below.
             </p>
-
             <div className="flex flex-col gap-3">
               <a
                 href="tel:108"
@@ -2359,7 +2183,6 @@ export function ChatDashboard() {
                 <X size={20} />
               </button>
             </div>
-
             <form onSubmit={saveReminder} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -2376,7 +2199,6 @@ export function ChatDashboard() {
                   className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -2407,7 +2229,6 @@ export function ChatDashboard() {
                   />
                 </div>
               </div>
-
               <button
                 type="submit"
                 className="w-full mt-4 bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
@@ -2443,7 +2264,6 @@ export function ChatDashboard() {
                 <X size={20} />
               </button>
             </div>
-
             <p
               className={`text-sm mb-6 ${isDark ? "text-slate-400" : "text-slate-600"}`}
             >
@@ -2453,7 +2273,6 @@ export function ChatDashboard() {
                 This action is irreversible.
               </strong>
             </p>
-
             <form
               onSubmit={confirmAccountAction}
               className="flex flex-col gap-4"
@@ -2476,7 +2295,6 @@ export function ChatDashboard() {
                   className={`w-full border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
                 />
               </div>
-
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                   Password
@@ -2508,7 +2326,6 @@ export function ChatDashboard() {
                   </button>
                 </div>
               </div>
-
               <button
                 type="submit"
                 disabled={accountAction.loading}
@@ -2557,7 +2374,6 @@ export function ChatDashboard() {
                   >
                     HealthBot
                   </h3>
-                  {/* --- NEW: Regional AI Badge --- */}
                   {isRegionActive(user?.address) && (
                     <span
                       className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-bold uppercase tracking-widest mt-0.5 transition-colors ${isDark ? "bg-teal-500/10 border-teal-500/20 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-600"}`}
@@ -2629,7 +2445,6 @@ export function ChatDashboard() {
                       Session Started Today
                     </span>
                   </div>
-
                   {messages.map((msg) => (
                     <div
                       key={msg.id}
@@ -2656,6 +2471,13 @@ export function ChatDashboard() {
                             onAdd={addConfirmSymptom}
                             onConfirm={confirmSymptoms}
                           />
+                        ) : msg.type === "prescription_parsed" ? (
+                          <PrescriptionParsedCard
+                            msg={msg}
+                            isDark={isDark}
+                            onSave={savePrescriptionAndReminders}
+                            onDiscard={discardPrescription}
+                          />
                         ) : msg.type === "bmi_calculator" ? (
                           <div
                             className={`p-4 rounded-2xl shadow-lg text-sm italic ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-400 rounded-tl-none" : "bg-slate-50 border border-slate-200 text-slate-500 rounded-tl-none"}`}
@@ -2681,12 +2503,12 @@ export function ChatDashboard() {
                             )}
                           </div>
                         )}
-
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
                           {msg.sender === "bot" &&
                             msg.type !== "confirmation" &&
-                            msg.type !== "bmi_calculator" && (
+                            msg.type !== "bmi_calculator" &&
+                            msg.type !== "prescription_parsed" && (
                               <div className="flex items-center gap-1 ml-1">
                                 <button
                                   onClick={() => speakText(msg.text, msg.id)}
@@ -2746,14 +2568,12 @@ export function ChatDashboard() {
               onBack={() => handleNavClick("saved")}
             />
           )}
-
           {page === "health-ranges" && (
             <HealthRangesView
               isDark={isDark}
               onBack={() => handleNavClick("saved")}
             />
           )}
-
           {page === "emergency-contacts" && (
             <EmergencyContactsView
               isDark={isDark}
@@ -2761,8 +2581,89 @@ export function ChatDashboard() {
               user={user}
             />
           )}
-
           {page === "first-aid" && <FirstAidView isDark={isDark} />}
+
+          {page === "prescriptions" && (
+            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
+              <div className="flex justify-between items-center mb-8">
+                <h2
+                  className={`text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
+                >
+                  My Prescriptions
+                </h2>
+                <button
+                  onClick={() => handleNavClick("chat")}
+                  className="bg-purple-500 hover:bg-purple-400 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all text-sm"
+                >
+                  <Wand2 size={16} /> Scan New
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {prescriptions.length === 0 ? (
+                  <div
+                    className={`text-center py-10 rounded-3xl border shadow-lg ${isDark ? "bg-[#111827]/80 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
+                  >
+                    <ClipboardList className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-500 font-medium">
+                      No prescriptions saved yet.
+                    </p>
+                    <p className="text-xs text-slate-400 mt-2">
+                      Upload a photo in the chat and click "Read Prescription".
+                    </p>
+                  </div>
+                ) : (
+                  prescriptions.map((p) => (
+                    <div
+                      key={p._id}
+                      className={`p-6 rounded-3xl border shadow-sm ${isDark ? "bg-[#111827]/80 border-slate-700/50" : "bg-white border-slate-200"}`}
+                    >
+                      <div className="flex justify-between items-center mb-4 border-b border-slate-700/50 pb-3">
+                        <span className="text-sm font-bold text-teal-400 flex items-center gap-2">
+                          <ClipboardList size={16} /> Prescription Date:{" "}
+                          {new Date(p.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {p.medications.map((med, idx) => (
+                          <div
+                            key={idx}
+                            className={`p-4 rounded-xl border ${isDark ? "bg-[#0B1120] border-slate-700" : "bg-slate-50 border-slate-100"}`}
+                          >
+                            <h4
+                              className={`font-bold mb-2 ${isDark ? "text-white" : "text-slate-900"}`}
+                            >
+                              {med.name}
+                            </h4>
+                            <div className="text-xs text-slate-500 space-y-1">
+                              <p>
+                                Dosage:{" "}
+                                <span className="text-slate-300 font-medium">
+                                  {med.dosage}
+                                </span>
+                              </p>
+                              <p>
+                                Frequency:{" "}
+                                <span className="text-slate-300 font-medium">
+                                  {med.frequency}
+                                </span>
+                              </p>
+                              <p>
+                                Duration:{" "}
+                                <span className="text-slate-300 font-medium">
+                                  {med.duration}
+                                </span>
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
 
           {page === "profile" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
@@ -2959,7 +2860,6 @@ export function ChatDashboard() {
                     )}
                   </div>
 
-                  {/* --- NEW: Auto-Detect GPS Address Section --- */}
                   <div className="flex flex-col gap-2 sm:col-span-2">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
@@ -2971,7 +2871,6 @@ export function ChatDashboard() {
                           )}
                         </span>
                       </label>
-                      {/* ALWAYS VISIBLE GPS BUTTON (Removed the isEditingProfile condition) */}
                       <button
                         type="button"
                         onClick={handleDetectLocation}
@@ -3017,7 +2916,6 @@ export function ChatDashboard() {
                     </p>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
@@ -3040,7 +2938,6 @@ export function ChatDashboard() {
                       </p>
                     )}
                   </div>
-
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                       <Phone className="h-3 w-3" /> Contact Phone
@@ -3062,7 +2959,6 @@ export function ChatDashboard() {
                       </p>
                     )}
                   </div>
-
                   <div className="flex flex-col gap-2 sm:col-span-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                       <Mail className="h-3 w-3" /> Contact Email
@@ -3106,11 +3002,10 @@ export function ChatDashboard() {
                     }}
                     className={`flex justify-center items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold transition-all ${isDark ? "bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700" : "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200"}`}
                   >
-                    <Lock className="h-4 w-4" />
+                    <Lock className="h-4 w-4" />{" "}
                     {showPasswordForm ? "Cancel" : "Change Password"}
                   </button>
                 </div>
-
                 {!showPasswordForm ? (
                   <p className="text-slate-400 text-sm">
                     Your password is securely encrypted. Click "Change Password"
@@ -3134,7 +3029,6 @@ export function ChatDashboard() {
                         })
                       }
                     />
-
                     <div className="flex flex-col gap-2">
                       <PasswordField
                         label="New Password"
@@ -3149,7 +3043,6 @@ export function ChatDashboard() {
                           })
                         }
                       />
-
                       <div
                         className={`p-4 rounded-xl border mt-2 ${isDark ? "bg-slate-900/50 border-slate-800" : "bg-slate-50 border-slate-200"}`}
                       >
@@ -3160,9 +3053,7 @@ export function ChatDashboard() {
                           {passwordRequirements.map((req, i) => (
                             <span
                               key={i}
-                              className={`text-[10px] font-medium flex items-center gap-1 transition-colors duration-300 ${
-                                req.met ? "text-green-500" : "text-red-500"
-                              }`}
+                              className={`text-[10px] font-medium flex items-center gap-1 transition-colors duration-300 ${req.met ? "text-green-500" : "text-red-500"}`}
                             >
                               {req.met ? "✓" : "✗"} {req.label}
                             </span>
@@ -3170,7 +3061,6 @@ export function ChatDashboard() {
                         </div>
                       </div>
                     </div>
-
                     <PasswordField
                       label="Confirm New Password"
                       value={passwordData.confirmPassword}
@@ -3184,7 +3074,6 @@ export function ChatDashboard() {
                         })
                       }
                     />
-
                     {passwordData.confirmPassword && (
                       <p
                         className={`text-xs ${passwordData.newPassword === passwordData.confirmPassword ? "text-green-500" : "text-rose-500"}`}
@@ -3195,7 +3084,6 @@ export function ChatDashboard() {
                           : "✗ Passwords do not match"}
                       </p>
                     )}
-
                     <button
                       type="submit"
                       disabled={savingPassword}
@@ -3510,19 +3398,33 @@ export function ChatDashboard() {
 
               {uploadedImage && (
                 <div
-                  className={`mb-3 flex items-center gap-3 p-2 rounded-xl border animate-in slide-in-from-bottom-2 ${isDark ? "bg-slate-800 border-slate-700" : "bg-slate-50 border-slate-200"}`}
+                  className={`mb-3 flex flex-wrap items-center gap-3 p-3 rounded-xl border animate-in slide-in-from-bottom-2 ${isDark ? "bg-slate-800 border-slate-700" : "bg-slate-50 border-slate-200"}`}
                 >
                   <img
                     src={uploadedImage}
                     alt="Preview"
-                    className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
+                    className="h-12 w-12 rounded-lg object-cover border border-slate-600"
                   />
                   <span className="text-xs text-slate-400 flex-1 truncate font-medium">
                     Image attached
                   </span>
+
+                  <button
+                    onClick={handleScanPrescription}
+                    disabled={scanLoading}
+                    className="text-xs bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold transition-colors shadow-lg disabled:opacity-50"
+                  >
+                    {scanLoading ? (
+                      <Loader2 className="animate-spin" size={14} />
+                    ) : (
+                      <Wand2 size={14} />
+                    )}
+                    {scanLoading ? "Scanning..." : "Read Prescription"}
+                  </button>
+
                   <button
                     onClick={() => setUploadedImage(null)}
-                    className="p-1 hover:bg-slate-200 rounded-lg text-rose-500"
+                    className="p-2 hover:bg-rose-500/20 rounded-lg text-rose-500 transition-colors"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -3571,11 +3473,7 @@ export function ChatDashboard() {
                 <button
                   type="button"
                   onClick={toggleRecording}
-                  className={`relative p-2 sm:p-2.5 rounded-xl transition-all shrink-0 flex items-center justify-center ${
-                    isRecording
-                      ? "bg-emerald-500/10 text-emerald-500 shadow-[0_0_15px_rgba(52,211,153,0.3)]"
-                      : "text-slate-400 hover:text-teal-500"
-                  }`}
+                  className={`relative p-2 sm:p-2.5 rounded-xl transition-all shrink-0 flex items-center justify-center ${isRecording ? "bg-emerald-500/10 text-emerald-500 shadow-[0_0_15px_rgba(52,211,153,0.3)]" : "text-slate-400 hover:text-teal-500"}`}
                 >
                   {isRecording && (
                     <span className="absolute top-1 right-1 flex h-2 w-2">
@@ -3597,7 +3495,6 @@ export function ChatDashboard() {
                   <Send size={18} strokeWidth={3} />
                 </button>
               </div>
-
               <p className="mt-3 text-[9px] lg:text-[10px] text-teal-500 font-bold text-center italic opacity-80 leading-relaxed border-t border-slate-800/10 pt-3">
                 🩺 For guidance only • Consult a doctor for emergencies
               </p>
@@ -3771,7 +3668,6 @@ const FirstAidView = ({ isDark }) => {
           <PhoneCall size={20} /> Emergency SOS (108)
         </a>
       </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         {topics.map((topic) => (
           <div
@@ -3799,7 +3695,6 @@ const FirstAidView = ({ isDark }) => {
           </div>
         ))}
       </div>
-
       <div className="mt-8 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex gap-4 backdrop-blur-md">
         <AlertCircle className="text-amber-500 shrink-0 mt-0.5" />
         <div>
@@ -3887,7 +3782,6 @@ const FacilityCard = ({
 }) => {
   const location = userAddress ? `near ${userAddress}` : "near me";
   const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(query + " " + location)}`;
-
   return (
     <a
       href={mapUrl}
@@ -3913,28 +3807,26 @@ const FacilityCard = ({
   );
 };
 
-const SettingToggle = ({ label, desc, checked, onChange, isDark }) => {
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <span
-          className={`font-bold text-lg block mb-1 ${isDark ? "text-white" : "text-slate-900"}`}
-        >
-          {label}
-        </span>
-        <span className="text-slate-500 text-sm">{desc}</span>
-      </div>
-      <button
-        onClick={onChange}
-        className={`w-14 h-7 rounded-full transition-colors relative shadow-inner flex-shrink-0 ${checked ? "bg-teal-500" : "bg-slate-300"}`}
+const SettingToggle = ({ label, desc, checked, onChange, isDark }) => (
+  <div className="flex items-center justify-between">
+    <div>
+      <span
+        className={`font-bold text-lg block mb-1 ${isDark ? "text-white" : "text-slate-900"}`}
       >
-        <div
-          className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all shadow-md ${checked ? "left-8" : "left-1"}`}
-        />
-      </button>
+        {label}
+      </span>
+      <span className="text-slate-500 text-sm">{desc}</span>
     </div>
-  );
-};
+    <button
+      onClick={onChange}
+      className={`w-14 h-7 rounded-full transition-colors relative shadow-inner flex-shrink-0 ${checked ? "bg-teal-500" : "bg-slate-300"}`}
+    >
+      <div
+        className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all shadow-md ${checked ? "left-8" : "left-1"}`}
+      />
+    </button>
+  </div>
+);
 
 const ProfileField = ({
   label,
