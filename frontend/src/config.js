@@ -31,6 +31,7 @@ export const API = {
   CHAT_CONFIRM_SYMPTOMS: `${API_BASE_URL}/api/chat/confirm-symptoms`,
   CHAT_SYMPTOM_OPTIONS: `${API_BASE_URL}/api/chat/symptom-options`,
   CHAT_EMAIL_REMINDER: `${API_BASE_URL}/api/chat/email-reminder`,
+  NOTIFY_EMERGENCY: `${API_BASE_URL}/api/chat/notify-emergency`,
 };
 
 export default API_BASE_URL;
