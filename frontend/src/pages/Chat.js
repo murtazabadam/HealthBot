@@ -1146,6 +1146,20 @@ export function ChatDashboard() {
 
   const isDark = appSettings.darkMode;
 
+  // --- NEW: Helper to Check if Regional AI is Active ---
+  const isRegionActive = (address) => {
+    if (!address) return false;
+    const jkLocations = [
+      "kashmir", "srinagar", "j&k", "jammu", "j and k", 
+      "anantnag", "baramulla", "kupwara", "pulwama", "budgam", 
+      "kulgam", "shopian", "bandipora", "ganderbal", "pahalgam", 
+      "gulmarg", "sonamarg", "sopore", "tral", "samba", "kathua", 
+      "udhampur", "reasi", "ramban", "poonch", "doda", "kishtwar", 
+      "rajouri", "bhaderwah", "katra"
+    ];
+    return jkLocations.some(loc => address.toLowerCase().includes(loc));
+  };
+
   useEffect(() => {
     document.body.style.backgroundColor = isDark ? "#020617" : "#ffffff";
   }, [isDark]);
@@ -1544,6 +1558,36 @@ export function ChatDashboard() {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
+  // --- NEW: Handle GPS Location Detection ---
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      showToast("Geolocation is not supported by your browser");
+      return;
+    }
+    
+    showToast("Detecting your location...");
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const { latitude, longitude } = position.coords;
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+        const data = await res.json();
+        
+        if (data && data.address) {
+          const city = data.address.city || data.address.town || data.address.village || data.address.county || "";
+          const state = data.address.state || "";
+          const formattedAddress = `${city}, ${state}`.replace(/^, /, '').trim();
+          
+          setProfileForm(prev => ({ ...prev, address: formattedAddress }));
+          showToast("Location detected successfully!");
+        }
+      } catch (error) {
+        showToast("Failed to fetch location name.");
+      }
+    }, () => {
+      showToast("Location access denied. Please allow permissions.");
+    });
+  };
+
   const handleProfileChange = (e) => {
     setProfileForm({ ...profileForm, [e.target.name]: e.target.value });
   };
@@ -1803,12 +1847,16 @@ export function ChatDashboard() {
     );
     setLoading(true);
     try {
+      const round =
+        msg.suggestedSymptoms && msg.suggestedSymptoms.length > 0 ? 2 : 1;
+
       const res = await axios.post(
         "https://healthbot-backend-ezxv.onrender.com/api/chat/confirm-symptoms",
         {
           symptoms: msg.detectedSymptoms.map((s) => s.id),
           originalText: msg.originalText,
           saveHistory: appSettings.saveHistory,
+          round,
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -2466,11 +2514,22 @@ export function ChatDashboard() {
                 <Activity size={20} className="text-teal-500" />
               </div>
               <div className="flex flex-col justify-center">
-                <h3
-                  className={`text-sm lg:text-base font-bold tracking-tight leading-tight ${isDark ? "text-white" : "text-slate-900"}`}
-                >
-                  HealthBot
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3
+                    className={`text-sm lg:text-base font-bold tracking-tight leading-tight ${isDark ? "text-white" : "text-slate-900"}`}
+                  >
+                    HealthBot
+                  </h3>
+                  {/* --- NEW: Regional AI Badge --- */}
+                  {isRegionActive(user?.address) && (
+                    <span
+                      className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-bold uppercase tracking-widest mt-0.5 transition-colors ${isDark ? "bg-teal-500/10 border-teal-500/20 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-600"}`}
+                      title="AI is optimizing predictions based on your regional epidemiology."
+                    >
+                      <MapPin size={8} /> Regional AI Active
+                    </span>
+                  )}
+                </div>
                 <p className="text-[9px] sm:text-[10px] text-teal-500 font-bold uppercase flex items-center gap-1.5 mt-0.5">
                   <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-pulse shadow-[0_0_5px_rgba(45,212,191,0.8)]" />
                   Online
@@ -2863,25 +2922,42 @@ export function ChatDashboard() {
                     )}
                   </div>
 
+                  {/* --- NEW: Auto-Detect GPS Address Section --- */}
                   <div className="flex flex-col gap-2 sm:col-span-2">
-                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                      <MapPin className="h-3 w-3" />{" "}
-                      <span>
-                        Address{" "}
-                        {isEditingProfile && (
-                          <span className="text-red-500">*</span>
-                        )}
-                      </span>
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                        <MapPin className="h-3 w-3" />{" "}
+                        <span>
+                          Address{" "}
+                          {isEditingProfile && (
+                            <span className="text-red-500">*</span>
+                          )}
+                        </span>
+                      </label>
+                      {isEditingProfile && (
+                        <button
+                          type="button"
+                          onClick={handleDetectLocation}
+                          className="text-teal-500 hover:text-teal-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors bg-teal-500/10 px-2 py-1 rounded-lg"
+                        >
+                          <MapPin size={10} /> Auto-Detect GPS
+                        </button>
+                      )}
+                    </div>
                     {isEditingProfile ? (
-                      <input
-                        type="text"
-                        name="address"
-                        value={profileForm.address}
-                        onChange={handleProfileChange}
-                        placeholder="Enter address"
-                        className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
-                      />
+                      <>
+                        <input
+                          type="text"
+                          name="address"
+                          value={profileForm.address}
+                          onChange={handleProfileChange}
+                          placeholder="e.g. Srinagar, Jammu and Kashmir"
+                          className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
+                        />
+                        <p className="text-[9px] text-teal-500/80 font-medium italic mt-1 ml-1 leading-relaxed">
+                          * We use your address to automatically optimize the AI's epidemiological disease predictions for your specific region.
+                        </p>
+                      </>
                     ) : (
                       <p
                         className={`text-sm py-3 px-4 rounded-xl ${isDark ? "bg-slate-800/30 text-white" : "bg-slate-50 text-slate-900 border border-slate-200"}`}
