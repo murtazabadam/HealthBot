@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { useNavigate, MemoryRouter } from "react-router-dom";
-import Tesseract from "tesseract.js";
 import { API } from "../config";
 import {
   Activity,
@@ -47,9 +46,6 @@ import {
   AlertTriangle,
   Pause,
   Mail,
-  ClipboardList,
-  Wand2,
-  Loader2,
 } from "lucide-react";
 
 function SymptomConfirmationCard({
@@ -168,82 +164,6 @@ function SymptomConfirmationCard({
       {msg.resolved && (
         <p className="text-teal-500 text-xs font-medium flex items-center gap-1.5">
           <CheckCircle2 size={14} /> Confirmed — analyzing...
-        </p>
-      )}
-    </div>
-  );
-}
-
-function PrescriptionParsedCard({ msg, isDark, onSave, onDiscard }) {
-  if (msg.medications.length === 0) {
-    return (
-      <div
-        className={`p-4 rounded-2xl shadow-lg w-full max-w-md ${isDark ? "bg-slate-800 border border-slate-700 text-slate-200" : "bg-slate-50 border border-slate-200 text-slate-800"}`}
-      >
-        <p className="font-semibold text-rose-500 mb-2">
-          No medications detected.
-        </p>
-        <p className="text-sm">
-          The image might be too blurry, or it doesn't contain readable
-          prescription data. Please try another photo.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`p-4 rounded-2xl text-xs lg:text-sm shadow-lg w-full max-w-md ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200" : "bg-slate-50 border border-slate-200 text-slate-800"}`}
-    >
-      <div className="flex items-center gap-2 mb-4 text-purple-400 font-bold border-b border-slate-700/50 pb-2">
-        <Wand2 size={16} /> Prescription Read Successfully
-      </div>
-
-      <div className="space-y-3 mb-5">
-        {msg.medications.map((med, i) => (
-          <div
-            key={i}
-            className={`p-3 rounded-xl border ${isDark ? "bg-[#0B1120] border-slate-700" : "bg-white border-slate-200"}`}
-          >
-            <h4 className="font-bold text-teal-400 text-base">{med.name}</h4>
-            <div className="grid grid-cols-2 gap-2 mt-2 text-[11px] text-slate-400">
-              <p>
-                <strong className="text-slate-300">Dosage:</strong>{" "}
-                {med.dosage || "N/A"}
-              </p>
-              <p>
-                <strong className="text-slate-300">Frequency:</strong>{" "}
-                {med.frequency || "N/A"}
-              </p>
-              <p className="col-span-2">
-                <strong className="text-slate-300">Duration:</strong>{" "}
-                {med.duration || "N/A"}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {!msg.resolved && (
-        <div className="flex gap-2">
-          <button
-            onClick={() => onSave(msg)}
-            className="flex-1 bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
-          >
-            <Bell size={16} /> Save & Set Reminders
-          </button>
-          <button
-            onClick={() => onDiscard(msg.id)}
-            className="px-4 bg-slate-700 hover:bg-slate-600 text-white font-bold py-2.5 rounded-xl transition-all"
-          >
-            Discard
-          </button>
-        </div>
-      )}
-
-      {msg.resolved && (
-        <p className="text-teal-500 text-xs font-medium flex items-center gap-1.5 mt-2">
-          <CheckCircle2 size={14} /> Saved & Reminders Created!
         </p>
       )}
     </div>
@@ -923,8 +843,8 @@ export function ChatDashboard() {
     loading: false,
   });
   const [showAccountActionPw, setShowAccountActionPw] = useState(false);
+
   const [emergencyAlert, setEmergencyAlert] = useState(false);
-  const [prescriptions, setPrescriptions] = useState([]);
 
   const isDark = appSettings.darkMode;
 
@@ -1009,19 +929,6 @@ export function ChatDashboard() {
     };
 
     fetchLatestProfile();
-
-    const fetchPrescriptions = async () => {
-      if (!token) return;
-      try {
-        const res = await axios.get(API.PRESCRIPTIONS_GET, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setPrescriptions(res.data);
-      } catch (err) {
-        console.error("Failed to load prescriptions", err);
-      }
-    };
-    fetchPrescriptions();
   }, [token]);
 
   const passwordRequirements = useMemo(
@@ -1049,7 +956,6 @@ export function ChatDashboard() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
-  const [scanLoading, setScanLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
 
@@ -1321,109 +1227,6 @@ export function ChatDashboard() {
       reader.onloadend = () => setUploadedImage(reader.result);
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleScanPrescription = async () => {
-    if (!uploadedImage) return;
-    setScanLoading(true);
-
-    try {
-      showToast("Running Optical Character Recognition (OCR)...");
-      const result = await Tesseract.recognize(uploadedImage, "eng");
-      const ocrText = result.data.text;
-
-      showToast("Analyzing medical data with AI...");
-      const res = await axios.post(
-        API.PRESCRIPTIONS_EXTRACT,
-        { text: ocrText },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          sender: "bot",
-          type: "prescription_parsed",
-          medications: res.data.medications,
-          resolved: false,
-          time: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        },
-      ]);
-
-      setUploadedImage(null);
-    } catch (e) {
-      console.error(e);
-      showToast("Failed to read prescription. Ensure the image is clear.");
-    } finally {
-      setScanLoading(false);
-    }
-  };
-
-  const savePrescriptionAndReminders = async (msg) => {
-    try {
-      const res = await axios.post(
-        API.PRESCRIPTIONS_SAVE,
-        { medications: msg.medications },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      setPrescriptions((prev) => [res.data.prescription, ...prev]);
-
-      const newReminders = [];
-      const today = new Date().toISOString().split("T")[0];
-
-      msg.medications.forEach((med, i) => {
-        const freq = med.frequency.toLowerCase();
-        let times = ["09:00"];
-
-        if (
-          freq.includes("twice") ||
-          freq.includes("bd") ||
-          freq.includes("bid")
-        )
-          times = ["09:00", "21:00"];
-        if (
-          freq.includes("three") ||
-          freq.includes("tds") ||
-          freq.includes("tid")
-        )
-          times = ["09:00", "14:00", "21:00"];
-
-        times.forEach((t) => {
-          newReminders.push({
-            id: Date.now() + Math.random(),
-            name: `${med.name} (${med.dosage})`,
-            date: today,
-            time: t,
-            active: true,
-          });
-        });
-      });
-
-      setReminders((prev) => [...prev, ...newReminders]);
-      showToast(
-        `Prescription saved and ${newReminders.length} reminders added!`,
-      );
-
-      setMessages((prev) =>
-        prev.map((m) => (m.id === msg.id ? { ...m, resolved: true } : m)),
-      );
-    } catch (err) {
-      showToast("Failed to save prescription.");
-    }
-  };
-
-  const discardPrescription = (id) => {
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === id
-          ? { ...m, resolved: true, text: "Prescription analysis discarded." }
-          : m,
-      ),
-    );
   };
 
   const handleNavClick = (targetPage) => {
@@ -2007,13 +1810,6 @@ export function ChatDashboard() {
           onClick={() => handleNavClick("saved")}
         />
         <SidebarBtn
-          icon={ClipboardList}
-          label="Prescriptions"
-          active={page === "prescriptions"}
-          isDark={isDark}
-          onClick={() => handleNavClick("prescriptions")}
-        />
-        <SidebarBtn
           icon={Bell}
           label="Reminders"
           active={page === "reminders"}
@@ -2471,13 +2267,6 @@ export function ChatDashboard() {
                             onAdd={addConfirmSymptom}
                             onConfirm={confirmSymptoms}
                           />
-                        ) : msg.type === "prescription_parsed" ? (
-                          <PrescriptionParsedCard
-                            msg={msg}
-                            isDark={isDark}
-                            onSave={savePrescriptionAndReminders}
-                            onDiscard={discardPrescription}
-                          />
                         ) : msg.type === "bmi_calculator" ? (
                           <div
                             className={`p-4 rounded-2xl shadow-lg text-sm italic ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-400 rounded-tl-none" : "bg-slate-50 border border-slate-200 text-slate-500 rounded-tl-none"}`}
@@ -2507,8 +2296,7 @@ export function ChatDashboard() {
                           {msg.time}
                           {msg.sender === "bot" &&
                             msg.type !== "confirmation" &&
-                            msg.type !== "bmi_calculator" &&
-                            msg.type !== "prescription_parsed" && (
+                            msg.type !== "bmi_calculator" && (
                               <div className="flex items-center gap-1 ml-1">
                                 <button
                                   onClick={() => speakText(msg.text, msg.id)}
@@ -2582,88 +2370,6 @@ export function ChatDashboard() {
             />
           )}
           {page === "first-aid" && <FirstAidView isDark={isDark} />}
-
-          {page === "prescriptions" && (
-            <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
-              <div className="flex justify-between items-center mb-8">
-                <h2
-                  className={`text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
-                >
-                  My Prescriptions
-                </h2>
-                <button
-                  onClick={() => handleNavClick("chat")}
-                  className="bg-purple-500 hover:bg-purple-400 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all text-sm"
-                >
-                  <Wand2 size={16} /> Scan New
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                {prescriptions.length === 0 ? (
-                  <div
-                    className={`text-center py-10 rounded-3xl border shadow-lg ${isDark ? "bg-[#111827]/80 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
-                  >
-                    <ClipboardList className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-                    <p className="text-slate-500 font-medium">
-                      No prescriptions saved yet.
-                    </p>
-                    <p className="text-xs text-slate-400 mt-2">
-                      Upload a photo in the chat and click "Read Prescription".
-                    </p>
-                  </div>
-                ) : (
-                  prescriptions.map((p) => (
-                    <div
-                      key={p._id}
-                      className={`p-6 rounded-3xl border shadow-sm ${isDark ? "bg-[#111827]/80 border-slate-700/50" : "bg-white border-slate-200"}`}
-                    >
-                      <div className="flex justify-between items-center mb-4 border-b border-slate-700/50 pb-3">
-                        <span className="text-sm font-bold text-teal-400 flex items-center gap-2">
-                          <ClipboardList size={16} /> Prescription Date:{" "}
-                          {new Date(p.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {p.medications.map((med, idx) => (
-                          <div
-                            key={idx}
-                            className={`p-4 rounded-xl border ${isDark ? "bg-[#0B1120] border-slate-700" : "bg-slate-50 border-slate-100"}`}
-                          >
-                            <h4
-                              className={`font-bold mb-2 ${isDark ? "text-white" : "text-slate-900"}`}
-                            >
-                              {med.name}
-                            </h4>
-                            <div className="text-xs text-slate-500 space-y-1">
-                              <p>
-                                Dosage:{" "}
-                                <span className="text-slate-300 font-medium">
-                                  {med.dosage}
-                                </span>
-                              </p>
-                              <p>
-                                Frequency:{" "}
-                                <span className="text-slate-300 font-medium">
-                                  {med.frequency}
-                                </span>
-                              </p>
-                              <p>
-                                Duration:{" "}
-                                <span className="text-slate-300 font-medium">
-                                  {med.duration}
-                                </span>
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
 
           {page === "profile" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
@@ -3408,20 +3114,6 @@ export function ChatDashboard() {
                   <span className="text-xs text-slate-400 flex-1 truncate font-medium">
                     Image attached
                   </span>
-
-                  <button
-                    onClick={handleScanPrescription}
-                    disabled={scanLoading}
-                    className="text-xs bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold transition-colors shadow-lg disabled:opacity-50"
-                  >
-                    {scanLoading ? (
-                      <Loader2 className="animate-spin" size={14} />
-                    ) : (
-                      <Wand2 size={14} />
-                    )}
-                    {scanLoading ? "Scanning..." : "Read Prescription"}
-                  </button>
-
                   <button
                     onClick={() => setUploadedImage(null)}
                     className="p-2 hover:bg-rose-500/20 rounded-lg text-rose-500 transition-colors"
