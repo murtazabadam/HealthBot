@@ -610,7 +610,14 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
       recentHistory = conv ? conv.messages.slice(-12) : [];
     }
 
-    const mlResult = await getMLPrediction(text, symptoms);
+    // Deliberately pass an EMPTY text here, not the raw original message.
+    // The ML engine's /predict endpoint unions any symptoms it independently
+    // extracts from `text` with the explicit `symptoms` list — which meant a
+    // symptom the user just removed from the confirmation checklist would
+    // silently reappear in the prediction anyway, since the raw text (still
+    // containing that symptom) got re-extracted and merged back in. Passing
+    // no text means the ML engine trusts the confirmed list exactly as given.
+    const mlResult = await getMLPrediction("", symptoms);
     // Only one round of "add a suggested symptom" is ever offered — round 2
     // forces a real answer through regardless of confidence, so the
     // checklist can never reappear indefinitely.
