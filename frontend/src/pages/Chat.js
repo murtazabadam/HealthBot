@@ -1150,14 +1150,38 @@ export function ChatDashboard() {
   const isRegionActive = (address) => {
     if (!address) return false;
     const jkLocations = [
-      "kashmir", "srinagar", "j&k", "jammu", "j and k", 
-      "anantnag", "baramulla", "kupwara", "pulwama", "budgam", 
-      "kulgam", "shopian", "bandipora", "ganderbal", "pahalgam", 
-      "gulmarg", "sonamarg", "sopore", "tral", "samba", "kathua", 
-      "udhampur", "reasi", "ramban", "poonch", "doda", "kishtwar", 
-      "rajouri", "bhaderwah", "katra"
+      "kashmir",
+      "srinagar",
+      "j&k",
+      "jammu",
+      "j and k",
+      "anantnag",
+      "baramulla",
+      "kupwara",
+      "pulwama",
+      "budgam",
+      "kulgam",
+      "shopian",
+      "bandipora",
+      "ganderbal",
+      "pahalgam",
+      "gulmarg",
+      "sonamarg",
+      "sopore",
+      "tral",
+      "samba",
+      "kathua",
+      "udhampur",
+      "reasi",
+      "ramban",
+      "poonch",
+      "doda",
+      "kishtwar",
+      "rajouri",
+      "bhaderwah",
+      "katra",
     ];
-    return jkLocations.some(loc => address.toLowerCase().includes(loc));
+    return jkLocations.some((loc) => address.toLowerCase().includes(loc));
   };
 
   useEffect(() => {
@@ -1564,28 +1588,41 @@ export function ChatDashboard() {
       showToast("Geolocation is not supported by your browser");
       return;
     }
-    
+
     showToast("Detecting your location...");
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      try {
-        const { latitude, longitude } = position.coords;
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-        const data = await res.json();
-        
-        if (data && data.address) {
-          const city = data.address.city || data.address.town || data.address.village || data.address.county || "";
-          const state = data.address.state || "";
-          const formattedAddress = `${city}, ${state}`.replace(/^, /, '').trim();
-          
-          setProfileForm(prev => ({ ...prev, address: formattedAddress }));
-          showToast("Location detected successfully!");
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+          );
+          const data = await res.json();
+
+          if (data && data.address) {
+            const city =
+              data.address.city ||
+              data.address.town ||
+              data.address.village ||
+              data.address.county ||
+              "";
+            const state = data.address.state || "";
+            const formattedAddress = `${city}, ${state}`
+              .replace(/^, /, "")
+              .trim();
+
+            setProfileForm((prev) => ({ ...prev, address: formattedAddress }));
+            setIsEditingProfile(true); // <--- THIS AUTOMATICALLY TURNS ON EDIT MODE
+            showToast("Location detected! Please click Save.");
+          }
+        } catch (error) {
+          showToast("Failed to fetch location name.");
         }
-      } catch (error) {
-        showToast("Failed to fetch location name.");
-      }
-    }, () => {
-      showToast("Location access denied. Please allow permissions.");
-    });
+      },
+      () => {
+        showToast("Location access denied. Please allow permissions.");
+      },
+    );
   };
 
   const handleProfileChange = (e) => {
@@ -2934,30 +2971,24 @@ export function ChatDashboard() {
                           )}
                         </span>
                       </label>
-                      {isEditingProfile && (
-                        <button
-                          type="button"
-                          onClick={handleDetectLocation}
-                          className="text-teal-500 hover:text-teal-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors bg-teal-500/10 px-2 py-1 rounded-lg"
-                        >
-                          <MapPin size={10} /> Auto-Detect GPS
-                        </button>
-                      )}
+                      {/* ALWAYS VISIBLE GPS BUTTON (Removed the isEditingProfile condition) */}
+                      <button
+                        type="button"
+                        onClick={handleDetectLocation}
+                        className="text-teal-500 hover:text-teal-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors bg-teal-500/10 px-2 py-1 rounded-lg"
+                      >
+                        <MapPin size={10} /> Auto-Detect GPS
+                      </button>
                     </div>
                     {isEditingProfile ? (
-                      <>
-                        <input
-                          type="text"
-                          name="address"
-                          value={profileForm.address}
-                          onChange={handleProfileChange}
-                          placeholder="e.g. Srinagar, Jammu and Kashmir"
-                          className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
-                        />
-                        <p className="text-[9px] text-teal-500/80 font-medium italic mt-1 ml-1 leading-relaxed">
-                          * We use your address to automatically optimize the AI's epidemiological disease predictions for your specific region.
-                        </p>
-                      </>
+                      <input
+                        type="text"
+                        name="address"
+                        value={profileForm.address}
+                        onChange={handleProfileChange}
+                        placeholder="e.g. Srinagar, Jammu and Kashmir"
+                        className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
+                      />
                     ) : (
                       <p
                         className={`text-sm py-3 px-4 rounded-xl ${isDark ? "bg-slate-800/30 text-white" : "bg-slate-50 text-slate-900 border border-slate-200"}`}
