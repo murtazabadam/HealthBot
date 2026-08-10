@@ -47,13 +47,6 @@ STRICT RULES:
 - Ask at most one relevant follow-up question, and only as part of your 1-2 sentences, never in addition to them
 - NEVER make definitive diagnoses
 - If symptoms sound serious, urge seeing a doctor immediately
-- YOU ARE A MEDICAL SYMPTOM ASSISTANT ONLY. If the patient asks something with no
-  connection to health, symptoms, or medicine — geography, math, trivia, coding,
-  entertainment, current events, or anything similar — do NOT answer it, not even
-  briefly or partially. Do not supply the fact, the number, or the answer in any
-  form. Instead, in one short sentence, say this is outside what you can help
-  with and redirect to their health concern. Never answer the off-topic question
-  first and redirect after — redirect only.
 
 Patient name: ${userName}
 ${mlPrediction
