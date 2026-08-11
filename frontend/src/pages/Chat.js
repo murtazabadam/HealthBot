@@ -51,6 +51,7 @@ import {
   Search,
 } from "lucide-react";
 
+// Inline API config to prevent missing module errors
 const API_BASE_URL = "http://localhost:5000/api";
 const API = {
   PROFILE: `${API_BASE_URL}/auth/profile`,
@@ -60,7 +61,6 @@ const API = {
   CHAT_CONFIRM_SYMPTOMS: `${API_BASE_URL}/chat/confirm-symptoms`,
   CHAT_SYMPTOM_OPTIONS: `${API_BASE_URL}/chat/symptom-options`,
   CHAT_EMAIL_REMINDER: `${API_BASE_URL}/chat/email-reminder`,
-  FACILITIES: `${API_BASE_URL}/chat/facilities`,
   NOTIFY_EMERGENCY: `${API_BASE_URL}/chat/notify-emergency`,
 };
 
@@ -935,6 +935,7 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
+          {/* Ambulance Card */}
           <div
             className={`p-4 sm:p-5 rounded-2xl border ${isDark ? "bg-red-500/5 border-red-500/20" : "bg-red-50 border-red-200"} flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
           >
@@ -961,6 +962,7 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
             </a>
           </div>
 
+          {/* Personal Contact Details */}
           <div
             className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
@@ -995,6 +997,7 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
             </div>
           </div>
 
+          {/* Registered Location */}
           <div
             className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
@@ -1082,6 +1085,7 @@ export function ChatDashboard() {
 
   const [emergencyAlert, setEmergencyAlert] = useState(false);
 
+  // ── Find a Doctor / Facilities ─────────────────────────────────────────
   const [facilitiesData, setFacilitiesData] = useState([]);
   const [facilitiesLoading, setFacilitiesLoading] = useState(false);
   const [facilitiesError, setFacilitiesError] = useState("");
@@ -1404,6 +1408,144 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
+  const fetchFacilities = async (coords = null) => {
+    setFacilitiesLoading(true);
+    setFacilitiesError("");
+    try {
+      let lat, lon;
+      let source = "gps";
+
+      // 1. Get coordinates
+      if (coords) {
+        lat = coords.latitude;
+        lon = coords.longitude;
+      } else if (user?.address) {
+        source = "address";
+        // Call Nominatim without custom headers to avoid CORS
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(user.address)}`,
+        );
+
+        if (!geoRes.ok)
+          throw new Error("Could not connect to location services.");
+
+        const geoData = await geoRes.json();
+        if (geoData && geoData.length > 0) {
+          lat = parseFloat(geoData[0].lat);
+          lon = parseFloat(geoData[0].lon);
+        } else {
+          throw new Error(
+            `Could not find map coordinates for "${user.address}". Try updating your profile address or click Use My Location.`,
+          );
+        }
+      } else {
+        throw new Error(
+          "No location provided. Please click 'Use My Location' or update your profile address.",
+        );
+      }
+
+      // 2. Query Overpass API for Hospitals, Clinics, Pharmacies within 10km
+      const radius = 10000;
+      const overpassQuery = `
+        [out:json][timeout:25];
+        (
+          node["amenity"~"(?i)(hospital|clinic|doctors|pharmacy)"](around:${radius},${lat},${lon});
+          way["amenity"~"(?i)(hospital|clinic|doctors|pharmacy)"](around:${radius},${lat},${lon});
+          node["healthcare"~"(?i)(hospital|clinic|doctor|pharmacy|centre)"](around:${radius},${lat},${lon});
+          way["healthcare"~"(?i)(hospital|clinic|doctor|pharmacy|centre)"](around:${radius},${lat},${lon});
+        );
+        out center;
+      `;
+
+      // Call Overpass strictly with native fetch and standard headers
+      const overpassRes = await fetch(
+        "https://overpass-api.de/api/interpreter",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `data=${encodeURIComponent(overpassQuery)}`,
+        },
+      );
+
+      if (!overpassRes.ok) {
+        throw new Error(
+          "Map server is currently busy. Please try again in a few moments.",
+        );
+      }
+
+      const overpassData = await overpassRes.json();
+
+      let facilities = [];
+      if (overpassData && overpassData.elements) {
+        facilities = overpassData.elements.map((el) => {
+          const centerLat = el.lat || el.center?.lat;
+          const centerLon = el.lon || el.center?.lon;
+          const tags = el.tags || {};
+
+          let type = "Hospital";
+          const am = (tags.amenity || "").toLowerCase();
+          const hc = (tags.healthcare || "").toLowerCase();
+
+          if (
+            am.includes("clinic") ||
+            hc.includes("clinic") ||
+            hc.includes("centre")
+          )
+            type = "Clinic";
+          else if (am.includes("doctor") || hc.includes("doctor"))
+            type = "Doctor";
+          else if (am.includes("pharmacy") || hc.includes("pharmacy"))
+            type = "Pharmacy";
+
+          // Haversine Distance Calculation (Frontend Native)
+          const R = 6371;
+          const dLat = ((centerLat - lat) * Math.PI) / 180;
+          const dLon = ((centerLon - lon) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos((lat * Math.PI) / 180) *
+              Math.cos((centerLat * Math.PI) / 180) *
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2);
+          const distanceKm = (
+            R *
+            2 *
+            Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+          ).toFixed(1);
+
+          return {
+            name: tags.name || `Unnamed ${type}`,
+            type: type,
+            distanceKm,
+            address: tags["addr:street"]
+              ? `${tags["addr:street"]} ${tags["addr:city"] || ""}`.trim()
+              : null,
+            phone: tags.phone || tags["contact:phone"] || null,
+            mapsUrl: `https://www.google.com/maps/search/?api=1&query=${centerLat},${centerLon}`,
+          };
+        });
+
+        // Filter out completely unnamed entries and sort by closest
+        facilities = facilities
+          .filter((f) => !f.name.startsWith("Unnamed"))
+          .sort((a, b) => parseFloat(a.distanceKm) - parseFloat(b.distanceKm))
+          .slice(0, 30);
+      }
+
+      setFacilitiesData(facilities);
+      setFacilitiesLocationSource(source);
+      setFacilitiesFetchedOnce(true);
+    } catch (err) {
+      setFacilitiesError(
+        err.message ||
+          "Failed to load facilities. Check your internet connection.",
+      );
+      setFacilitiesData([]);
+    } finally {
+      setFacilitiesLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (page === "facilities" && !facilitiesFetchedOnce && !facilitiesLoading) {
       fetchFacilities();
@@ -1572,45 +1714,6 @@ export function ChatDashboard() {
         showToast("Location access denied. Please allow permissions.");
       },
     );
-  };
-
-  const fetchFacilities = async (coords = null) => {
-    setFacilitiesLoading(true);
-    setFacilitiesError("");
-    try {
-      let url = API.FACILITIES;
-
-      if (coords) {
-        url += `?lat=${coords.latitude}&lon=${coords.longitude}`;
-      }
-
-      const res = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(
-          data.message || data.hint || "Failed to fetch nearby facilities.",
-        );
-      }
-
-      setFacilitiesData(data.facilities || []);
-      setFacilitiesLocationSource(data.locationSource || "gps");
-      setFacilitiesFetchedOnce(true);
-    } catch (err) {
-      setFacilitiesError(
-        err.message || "Failed to load facilities. The server might be busy.",
-      );
-      setFacilitiesData([]);
-    } finally {
-      setFacilitiesLoading(false);
-    }
   };
 
   const handleUseMyLocationForFacilities = () => {
@@ -2554,6 +2657,7 @@ export function ChatDashboard() {
                   >
                     HealthBot
                   </h3>
+                  {/* --- NEW: Regional AI Badge --- */}
                   {isRegionActive(user?.address) && (
                     <span
                       className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-bold uppercase tracking-widest mt-0.5 transition-colors ${isDark ? "bg-teal-500/10 border-teal-500/20 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-600"}`}
@@ -3571,6 +3675,7 @@ export function ChatDashboard() {
                       <RealFacilityCard key={i} facility={f} isDark={isDark} />
                     ))}
 
+                  {/* Fallback if search filter hides all facilities */}
                   {facilitySearchQuery &&
                     facilitiesData
                       .filter(
