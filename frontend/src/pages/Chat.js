@@ -49,16 +49,10 @@ import {
   Loader2,
   Navigation,
   RefreshCw,
+  Search,
 } from "lucide-react";
 
-function SymptomConfirmationCard({
-  msg,
-  options,
-  isDark,
-  onRemove,
-  onAdd,
-  onConfirm,
-}) {
+function SymptomConfirmationCard({ msg, options, isDark, onRemove, onAdd, onConfirm }) {
   const [search, setSearch] = useState("");
   const suggestions =
     search.trim().length > 0
@@ -72,9 +66,7 @@ function SymptomConfirmationCard({
       : [];
 
   return (
-    <div
-      className={`p-4 rounded-2xl text-xs lg:text-sm shadow-lg w-full max-w-md ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200" : "bg-slate-50 border border-slate-200 text-slate-800"}`}
-    >
+    <div className={`p-4 rounded-2xl text-xs lg:text-sm shadow-lg w-full max-w-md ${isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200" : "bg-slate-50 border border-slate-200 text-slate-800"}`}>
       <p className="font-semibold mb-3">You mentioned:</p>
 
       {msg.detectedSymptoms.length === 0 && (
@@ -85,17 +77,10 @@ function SymptomConfirmationCard({
 
       <div className="flex flex-wrap gap-2 mb-3">
         {msg.detectedSymptoms.map((s) => (
-          <span
-            key={s.id}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? "bg-teal-500/15 text-teal-300 border border-teal-500/30" : "bg-teal-50 text-teal-700 border border-teal-200"}`}
-          >
+          <span key={s.id} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${isDark ? "bg-teal-500/15 text-teal-300 border border-teal-500/30" : "bg-teal-50 text-teal-700 border border-teal-200"}`}>
             {s.label}
             {!msg.resolved && (
-              <button
-                onClick={() => onRemove(msg.id, s.id)}
-                className="hover:text-rose-400"
-                aria-label={`Remove ${s.label}`}
-              >
+              <button onClick={() => onRemove(msg.id, s.id)} className="hover:text-rose-400" aria-label={`Remove ${s.label}`}>
                 <X size={12} />
               </button>
             )}
@@ -103,28 +88,26 @@ function SymptomConfirmationCard({
         ))}
       </div>
 
-      {!msg.resolved &&
-        msg.suggestedSymptoms &&
-        msg.suggestedSymptoms.length > 0 && (
-          <div className="mb-3">
-            <p className="text-slate-500 text-[11px] mb-2">
-              Do you also have any of these? Tap to add:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {msg.suggestedSymptoms
-                .filter((s) => !msg.detectedSymptoms.some((d) => d.id === s.id))
-                .map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => onAdd(msg.id, s)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${isDark ? "border-slate-600 text-slate-300 hover:border-teal-500 hover:text-teal-300" : "border-slate-300 text-slate-600 hover:border-teal-400 hover:text-teal-600"}`}
-                  >
-                    <Plus size={12} /> {s.label}
-                  </button>
-                ))}
-            </div>
+      {!msg.resolved && msg.suggestedSymptoms && msg.suggestedSymptoms.length > 0 && (
+        <div className="mb-3">
+          <p className="text-slate-500 text-[11px] mb-2">
+            Do you also have any of these? Tap to add:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {msg.suggestedSymptoms
+              .filter((s) => !msg.detectedSymptoms.some((d) => d.id === s.id))
+              .map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => onAdd(msg.id, s)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${isDark ? "border-slate-600 text-slate-300 hover:border-teal-500 hover:text-teal-300" : "border-slate-300 text-slate-600 hover:border-teal-400 hover:text-teal-600"}`}
+                >
+                  <Plus size={12} /> {s.label}
+                </button>
+              ))}
           </div>
-        )}
+        </div>
+      )}
 
       {!msg.resolved && (
         <>
@@ -136,9 +119,7 @@ function SymptomConfirmationCard({
               className={`w-full text-xs px-3 py-2 rounded-lg border outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white placeholder-slate-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400"}`}
             />
             {suggestions.length > 0 && (
-              <div
-                className={`absolute z-10 mt-1 w-full rounded-lg border shadow-lg overflow-hidden ${isDark ? "bg-[#0B1120] border-slate-700" : "bg-white border-slate-200"}`}
-              >
+              <div className={`absolute z-10 mt-1 w-full rounded-lg border shadow-lg overflow-hidden ${isDark ? "bg-[#0B1120] border-slate-700" : "bg-white border-slate-200"}`}>
                 {suggestions.map((s) => (
                   <button
                     key={s.id}
@@ -177,8 +158,6 @@ function SymptomConfirmationCard({
 const BmiCalculatorView = ({ isDark, onBack }) => {
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
-  const [age, setAge] = useState("");
-  const [gender, setGender] = useState("");
   const [unit, setUnit] = useState("metric");
   const [result, setResult] = useState(null);
 
@@ -275,32 +254,24 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
         <ArrowLeft size={18} /> Back to Saved Advice
       </button>
 
-      <div
-        className={`rounded-3xl shadow-2xl overflow-hidden border ${isDark ? "bg-[#0B1120] border-slate-800/80" : "bg-white border-slate-200"}`}
-      >
+      <div className={`rounded-3xl shadow-2xl overflow-hidden border ${isDark ? "bg-[#0B1120] border-slate-800/80" : "bg-white border-slate-200"}`}>
         <div className="p-6 sm:p-8">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2
-                className={`text-2xl sm:text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
-              >
+              <h2 className={`text-2xl sm:text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
                 BMI Calculator
               </h2>
               <p className="text-slate-500 text-sm mt-1">
                 Calculate your Body Mass Index and know your health status
               </p>
             </div>
-            <div
-              className={`flex rounded-xl p-1 border ${isDark ? "bg-slate-800/50 border-slate-700/50" : "bg-slate-100 border-slate-200"}`}
-            >
+            <div className={`flex rounded-xl p-1 border ${isDark ? "bg-slate-800/50 border-slate-700/50" : "bg-slate-100 border-slate-200"}`}>
               <button
                 onClick={() => {
                   setUnit("metric");
                   setResult(null);
                   setHeight("");
                   setWeight("");
-                  setAge("");
-                  setGender("");
                 }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${unit === "metric" ? "bg-teal-500 text-slate-900 shadow-sm" : "text-slate-500 hover:text-teal-500"}`}
               >
@@ -312,8 +283,6 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                   setResult(null);
                   setHeight("");
                   setWeight("");
-                  setAge("");
-                  setGender("");
                 }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${unit === "imperial" ? "bg-teal-500 text-slate-900 shadow-sm" : "text-slate-500 hover:text-teal-500"}`}
               >
@@ -323,82 +292,8 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-            <div
-              className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
-            >
-              <div
-                className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}
-              >
-                <Calendar size={24} />
-              </div>
-              <div className="flex-1 min-w-0 pr-3">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
-                  Age
-                </label>
-                <div className="flex items-center">
-                  <input
-                    type="number"
-                    min="2"
-                    onKeyDown={(e) => {
-                      if (["-", "+", "e", "E"].includes(e.key))
-                        e.preventDefault();
-                    }}
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    placeholder="e.g. 25"
-                    className="w-full bg-transparent border-none outline-none text-base font-semibold text-slate-200 placeholder-slate-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <span className="text-teal-500 font-bold text-sm ml-2 shrink-0">
-                    yrs
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
-            >
-              <div
-                className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}
-              >
-                <UserCircle size={24} />
-              </div>
-              <div className="flex-1 min-w-0 pr-3">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
-                  Gender
-                </label>
-                <div className="flex items-center h-full">
-                  <select
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value)}
-                    className={`w-full bg-transparent border-none outline-none text-base font-semibold cursor-pointer appearance-none ${gender ? "text-slate-200" : "text-slate-600"}`}
-                  >
-                    <option value="" disabled className="text-slate-500">
-                      Select...
-                    </option>
-                    <option
-                      value="male"
-                      className="bg-slate-900 text-slate-200"
-                    >
-                      Male
-                    </option>
-                    <option
-                      value="female"
-                      className="bg-slate-900 text-slate-200"
-                    >
-                      Female
-                    </option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
-            >
-              <div
-                className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}
-              >
+            <div className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}>
+              <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}>
                 <User size={24} />
               </div>
               <div className="flex-1 min-w-0 pr-3">
@@ -415,9 +310,7 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                     }}
                     value={height}
                     onChange={(e) => setHeight(e.target.value)}
-                    placeholder={
-                      unit === "metric" ? "e.g. 171" : "e.g. 5.9 for 5'9\""
-                    }
+                    placeholder={unit === "metric" ? "e.g. 171" : "e.g. 5.9 for 5'9\""}
                     className="w-full bg-transparent border-none outline-none text-base font-semibold text-slate-200 placeholder-slate-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <span className="text-teal-500 font-bold text-sm ml-2 shrink-0">
@@ -427,12 +320,8 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
               </div>
             </div>
 
-            <div
-              className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
-            >
-              <div
-                className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}
-              >
+            <div className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}>
+              <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}>
                 <Activity size={24} />
               </div>
               <div className="flex-1 min-w-0 pr-3">
@@ -468,22 +357,10 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
           </button>
 
           {result && (
-            <div
-              className={`mt-6 p-6 rounded-2xl border animate-in fade-in zoom-in duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 ${isDark ? "bg-[#0B1120] border-slate-800" : "bg-white border-slate-200 shadow-sm"}`}
-            >
+            <div className={`mt-6 p-6 rounded-2xl border animate-in fade-in zoom-in duration-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 ${isDark ? "bg-[#0B1120] border-slate-800" : "bg-white border-slate-200 shadow-sm"}`}>
               <div className="relative w-32 h-32 flex items-center justify-center shrink-0 mx-auto sm:mx-0">
-                <svg
-                  className="w-full h-full transform -rotate-90"
-                  viewBox="0 0 100 100"
-                >
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="45"
-                    fill="none"
-                    stroke={isDark ? "#1e293b" : "#e2e8f0"}
-                    strokeWidth="8"
-                  />
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="45" fill="none" stroke={isDark ? "#1e293b" : "#e2e8f0"} strokeWidth="8" />
                   <circle
                     cx="50"
                     cy="50"
@@ -492,9 +369,7 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                     stroke="currentColor"
                     strokeWidth="8"
                     strokeDasharray="283"
-                    strokeDashoffset={
-                      283 - (283 * Math.min(result.bmi, 40)) / 40
-                    }
+                    strokeDashoffset={283 - (283 * Math.min(result.bmi, 40)) / 40}
                     className={`${result.color} transition-all duration-1000 ease-out`}
                     strokeLinecap="round"
                   />
@@ -511,23 +386,15 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
 
               <div className="flex-1 text-left w-full">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/50 mb-3 border border-slate-700/50">
-                  <span
-                    className={`w-2 h-2 rounded-full animate-pulse ${result.indicatorColor}`}
-                  />
-                  <span
-                    className={`text-xs font-bold uppercase tracking-wider ${result.color}`}
-                  >
-                    {result.category === "Normal Weight"
-                      ? "Status: Healthy"
-                      : `Status: ${result.category}`}
+                  <span className={`w-2 h-2 rounded-full animate-pulse ${result.indicatorColor}`} />
+                  <span className={`text-xs font-bold uppercase tracking-wider ${result.color}`}>
+                    {result.category === "Normal Weight" ? "Status: Healthy" : `Status: ${result.category}`}
                   </span>
                 </div>
 
                 <div className="text-sm text-slate-400 leading-relaxed mt-2 space-y-2">
                   <p className="font-semibold text-slate-300">
-                    {result.category === "Normal Weight"
-                      ? "Tips to maintain:"
-                      : "How to improve:"}
+                    {result.category === "Normal Weight" ? "Tips to maintain:" : "How to improve:"}
                   </p>
                   <ul className="list-disc pl-4 space-y-1">
                     {result.advice.map((item, idx) => (
@@ -540,12 +407,8 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
           )}
         </div>
 
-        <div
-          className={`p-6 border-t ${isDark ? "bg-slate-900/30 border-slate-800/80" : "bg-slate-50 border-slate-200"}`}
-        >
-          <h4
-            className={`text-sm font-bold mb-4 ${isDark ? "text-white" : "text-slate-900"}`}
-          >
+        <div className={`p-6 border-t ${isDark ? "bg-slate-900/30 border-slate-800/80" : "bg-slate-50 border-slate-200"}`}>
+          <h4 className={`text-sm font-bold mb-4 ${isDark ? "text-white" : "text-slate-900"}`}>
             BMI Categories
           </h4>
           <div className="space-y-3">
@@ -559,9 +422,7 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
             <div className="flex justify-between items-center text-sm">
               <div className="flex items-center gap-3">
                 <span className="w-2.5 h-2.5 rounded-full bg-teal-400" />
-                <span className="text-slate-400 font-medium">
-                  Normal Weight
-                </span>
+                <span className="text-slate-400 font-medium">Normal Weight</span>
               </div>
               <span className="font-mono text-slate-300">18.5 - 24.9</span>
             </div>
@@ -594,21 +455,9 @@ const HealthRangesView = ({ isDark, onBack }) => {
       rows: [
         { label: "Normal", value: "< 120 / < 80", color: "bg-teal-400" },
         { label: "Elevated", value: "120–129 / < 80", color: "bg-amber-400" },
-        {
-          label: "High (Stage 1)",
-          value: "130–139 / 80–89",
-          color: "bg-amber-500",
-        },
-        {
-          label: "High (Stage 2)",
-          value: "\u2265 140 / \u2265 90",
-          color: "bg-rose-400",
-        },
-        {
-          label: "Hypertensive Crisis — seek care now",
-          value: "> 180 / > 120",
-          color: "bg-rose-600",
-        },
+        { label: "High (Stage 1)", value: "130–139 / 80–89", color: "bg-amber-500" },
+        { label: "High (Stage 2)", value: "\u2265 140 / \u2265 90", color: "bg-rose-400" },
+        { label: "Hypertensive Crisis — seek care now", value: "> 180 / > 120", color: "bg-rose-600" },
       ],
     },
     {
@@ -616,11 +465,7 @@ const HealthRangesView = ({ isDark, onBack }) => {
       unit: "bpm",
       rows: [
         { label: "Normal adult range", value: "60–100", color: "bg-teal-400" },
-        {
-          label: "Trained athletes (can be normal)",
-          value: "40–60",
-          color: "bg-blue-400",
-        },
+        { label: "Trained athletes (can be normal)", value: "40–60", color: "bg-blue-400" },
         { label: "Tachycardia (high)", value: "> 100", color: "bg-rose-400" },
         { label: "Bradycardia (low)", value: "< 60", color: "bg-amber-400" },
       ],
@@ -629,21 +474,9 @@ const HealthRangesView = ({ isDark, onBack }) => {
       title: "Body Temperature",
       unit: "\u00b0F  (\u00b0C)",
       rows: [
-        {
-          label: "Normal range",
-          value: "97–99 \u00b0F (36.1–37.2 \u00b0C)",
-          color: "bg-teal-400",
-        },
-        {
-          label: "Fever",
-          value: "\u2265 100.4 \u00b0F (\u2265 38 \u00b0C)",
-          color: "bg-rose-400",
-        },
-        {
-          label: "Hypothermia — seek care",
-          value: "< 95 \u00b0F (< 35 \u00b0C)",
-          color: "bg-rose-600",
-        },
+        { label: "Normal range", value: "97–99 \u00b0F (36.1–37.2 \u00b0C)", color: "bg-teal-400" },
+        { label: "Fever", value: "\u2265 100.4 \u00b0F (\u2265 38 \u00b0C)", color: "bg-rose-400" },
+        { label: "Hypothermia — seek care", value: "< 95 \u00b0F (< 35 \u00b0C)", color: "bg-rose-600" },
       ],
     },
     {
@@ -651,11 +484,7 @@ const HealthRangesView = ({ isDark, onBack }) => {
       unit: "breaths/min",
       rows: [
         { label: "Normal adult range", value: "12–20", color: "bg-teal-400" },
-        {
-          label: "Abnormal — seek advice",
-          value: "< 12 or > 20",
-          color: "bg-amber-400",
-        },
+        { label: "Abnormal — seek advice", value: "< 12 or > 20", color: "bg-amber-400" },
       ],
     },
     {
@@ -663,16 +492,8 @@ const HealthRangesView = ({ isDark, onBack }) => {
       unit: "%",
       rows: [
         { label: "Normal", value: "95–100", color: "bg-teal-400" },
-        {
-          label: "Low — seek medical advice",
-          value: "92–94",
-          color: "bg-amber-400",
-        },
-        {
-          label: "Concerning — seek care now",
-          value: "< 92",
-          color: "bg-rose-500",
-        },
+        { label: "Low — seek medical advice", value: "92–94", color: "bg-amber-400" },
+        { label: "Concerning — seek care now", value: "< 92", color: "bg-rose-500" },
       ],
     },
     {
@@ -680,22 +501,10 @@ const HealthRangesView = ({ isDark, onBack }) => {
       unit: "mg/dL",
       rows: [
         { label: "Normal (fasting)", value: "< 100", color: "bg-teal-400" },
-        {
-          label: "Prediabetes (fasting)",
-          value: "100–125",
-          color: "bg-amber-400",
-        },
-        {
-          label: "Diabetes (fasting)",
-          value: "\u2265 126",
-          color: "bg-rose-400",
-        },
+        { label: "Prediabetes (fasting)", value: "100–125", color: "bg-amber-400" },
+        { label: "Diabetes (fasting)", value: "\u2265 126", color: "bg-rose-400" },
         { label: "Normal (random)", value: "< 140", color: "bg-teal-400" },
-        {
-          label: "Diabetes (random)",
-          value: "\u2265 200",
-          color: "bg-rose-400",
-        },
+        { label: "Diabetes (random)", value: "\u2265 200", color: "bg-rose-400" },
       ],
     },
     {
@@ -712,116 +521,44 @@ const HealthRangesView = ({ isDark, onBack }) => {
       unit: "mg/dL",
       rows: [
         { label: "Total — Desirable", value: "< 200", color: "bg-teal-400" },
-        {
-          label: "Total — Borderline High",
-          value: "200–239",
-          color: "bg-amber-400",
-        },
+        { label: "Total — Borderline High", value: "200–239", color: "bg-amber-400" },
         { label: "Total — High", value: "\u2265 240", color: "bg-rose-400" },
-        {
-          label: "LDL (\u201cbad\u201d) — Optimal",
-          value: "< 100",
-          color: "bg-teal-400",
-        },
-        {
-          label: "HDL (\u201cgood\u201d) — Low (risk)",
-          value: "< 40",
-          color: "bg-rose-400",
-        },
-        {
-          label: "Triglycerides — Normal",
-          value: "< 150",
-          color: "bg-teal-400",
-        },
+        { label: "LDL (\u201cbad\u201d) — Optimal", value: "< 100", color: "bg-teal-400" },
+        { label: "HDL (\u201cgood\u201d) — Low (risk)", value: "< 40", color: "bg-rose-400" },
+        { label: "Triglycerides — Normal", value: "< 150", color: "bg-teal-400" },
       ],
     },
     {
       title: "CBC — Complete Blood Count",
       unit: "adult reference",
       rows: [
-        {
-          label: "Hemoglobin — Men",
-          value: "13.5–17.5 g/dL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "Hemoglobin — Women",
-          value: "12.0–15.5 g/dL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "RBC — Men",
-          value: "4.7–6.1 million/mcL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "RBC — Women",
-          value: "4.2–5.4 million/mcL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "White Blood Cells (WBC)",
-          value: "4,500–11,000 /mcL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "Platelets",
-          value: "150,000–450,000 /mcL",
-          color: "bg-teal-400",
-        },
+        { label: "Hemoglobin — Men", value: "13.5–17.5 g/dL", color: "bg-teal-400" },
+        { label: "Hemoglobin — Women", value: "12.0–15.5 g/dL", color: "bg-teal-400" },
+        { label: "RBC — Men", value: "4.7–6.1 million/mcL", color: "bg-teal-400" },
+        { label: "RBC — Women", value: "4.2–5.4 million/mcL", color: "bg-teal-400" },
+        { label: "White Blood Cells (WBC)", value: "4,500–11,000 /mcL", color: "bg-teal-400" },
+        { label: "Platelets", value: "150,000–450,000 /mcL", color: "bg-teal-400" },
         { label: "Hematocrit — Men", value: "38.8–50%", color: "bg-teal-400" },
-        {
-          label: "Hematocrit — Women",
-          value: "34.9–44.5%",
-          color: "bg-teal-400",
-        },
+        { label: "Hematocrit — Women", value: "34.9–44.5%", color: "bg-teal-400" },
       ],
     },
     {
       title: "Kidney Function",
       unit: "adult reference",
       rows: [
-        {
-          label: "Creatinine — Men",
-          value: "0.7–1.3 mg/dL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "Creatinine — Women",
-          value: "0.6–1.1 mg/dL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "Blood Urea Nitrogen (BUN)",
-          value: "7–20 mg/dL",
-          color: "bg-teal-400",
-        },
-        {
-          label: "eGFR — Normal",
-          value: "\u2265 90 mL/min/1.73m\u00b2",
-          color: "bg-teal-400",
-        },
-        {
-          label: "eGFR — Reduced",
-          value: "< 60 mL/min/1.73m\u00b2",
-          color: "bg-amber-400",
-        },
+        { label: "Creatinine — Men", value: "0.7–1.3 mg/dL", color: "bg-teal-400" },
+        { label: "Creatinine — Women", value: "0.6–1.1 mg/dL", color: "bg-teal-400" },
+        { label: "Blood Urea Nitrogen (BUN)", value: "7–20 mg/dL", color: "bg-teal-400" },
+        { label: "eGFR — Normal", value: "\u2265 90 mL/min/1.73m\u00b2", color: "bg-teal-400" },
+        { label: "eGFR — Reduced", value: "< 60 mL/min/1.73m\u00b2", color: "bg-amber-400" },
       ],
     },
     {
       title: "Liver Function",
       unit: "U/L  (bilirubin: mg/dL)",
       rows: [
-        {
-          label: "ALT (Alanine Transaminase)",
-          value: "7–56",
-          color: "bg-teal-400",
-        },
-        {
-          label: "AST (Aspartate Transaminase)",
-          value: "10–40",
-          color: "bg-teal-400",
-        },
+        { label: "ALT (Alanine Transaminase)", value: "7–56", color: "bg-teal-400" },
+        { label: "AST (Aspartate Transaminase)", value: "10–40", color: "bg-teal-400" },
         { label: "Total Bilirubin", value: "0.1–1.2", color: "bg-teal-400" },
       ],
     },
@@ -838,22 +575,10 @@ const HealthRangesView = ({ isDark, onBack }) => {
       title: "Thyroid (TSH)",
       unit: "mIU/L",
       rows: [
-        {
-          label: "Hyperthyroid (overactive)",
-          value: "< 0.4",
-          color: "bg-amber-400",
-        },
+        { label: "Hyperthyroid (overactive)", value: "< 0.4", color: "bg-amber-400" },
         { label: "Normal", value: "0.4–4.0", color: "bg-teal-400" },
-        {
-          label: "Subclinical Hypothyroid",
-          value: "4.0–10",
-          color: "bg-amber-400",
-        },
-        {
-          label: "Hypothyroid (underactive)",
-          value: "> 10",
-          color: "bg-rose-400",
-        },
+        { label: "Subclinical Hypothyroid", value: "4.0–10", color: "bg-amber-400" },
+        { label: "Hypothyroid (underactive)", value: "> 10", color: "bg-rose-400" },
       ],
     },
     {
@@ -878,11 +603,7 @@ const HealthRangesView = ({ isDark, onBack }) => {
       unit: "ng/mL — varies notably by lab",
       rows: [
         { label: "Men — typical range", value: "20–250", color: "bg-teal-400" },
-        {
-          label: "Women — typical range",
-          value: "10–120",
-          color: "bg-teal-400",
-        },
+        { label: "Women — typical range", value: "10–120", color: "bg-teal-400" },
       ],
     },
     {
@@ -904,18 +625,13 @@ const HealthRangesView = ({ isDark, onBack }) => {
         <ArrowLeft size={18} /> Back to Saved Advice
       </button>
 
-      <div
-        className={`rounded-3xl shadow-2xl overflow-hidden border ${isDark ? "bg-[#0B1120] border-slate-800/80" : "bg-white border-slate-200"}`}
-      >
+      <div className={`rounded-3xl shadow-2xl overflow-hidden border ${isDark ? "bg-[#0B1120] border-slate-800/80" : "bg-white border-slate-200"}`}>
         <div className="p-6 sm:p-8">
-          <h2
-            className={`text-2xl sm:text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
-          >
+          <h2 className={`text-2xl sm:text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
             Health Reference Ranges
           </h2>
           <p className="text-slate-500 text-sm mt-1">
-            Common lab and vital-sign ranges across the major body systems — for
-            general awareness, not a diagnosis.
+            Common lab and vital-sign ranges across the major body systems — for general awareness, not a diagnosis.
           </p>
         </div>
 
@@ -925,9 +641,7 @@ const HealthRangesView = ({ isDark, onBack }) => {
             className={`p-6 border-t ${isDark ? "border-slate-800/80" : "border-slate-200"} ${i % 2 === 1 ? (isDark ? "bg-slate-900/30" : "bg-slate-50") : ""}`}
           >
             <div className="flex items-baseline justify-between mb-4">
-              <h4
-                className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-900"}`}
-              >
+              <h4 className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
                 {section.title}
               </h4>
               <span className="text-[11px] text-slate-500 font-mono text-right">
@@ -936,17 +650,10 @@ const HealthRangesView = ({ isDark, onBack }) => {
             </div>
             <div className="space-y-3">
               {section.rows.map((row) => (
-                <div
-                  key={row.label}
-                  className="flex justify-between items-center text-sm gap-4"
-                >
+                <div key={row.label} className="flex justify-between items-center text-sm gap-4">
                   <div className="flex items-center gap-3">
-                    <span
-                      className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${row.color}`}
-                    />
-                    <span className="text-slate-400 font-medium">
-                      {row.label}
-                    </span>
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${row.color}`} />
+                    <span className="text-slate-400 font-medium">{row.label}</span>
                   </div>
                   <span className="font-mono text-slate-300 text-right whitespace-nowrap">
                     {row.value}
@@ -957,13 +664,8 @@ const HealthRangesView = ({ isDark, onBack }) => {
           </div>
         ))}
 
-        <div
-          className={`p-6 border-t text-xs text-slate-500 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}
-        >
-          Reference values are general adult guidelines and can vary by lab,
-          individual, age, and pregnancy status — some (like ferritin and
-          vitamin levels) vary more than others between labs. Always interpret
-          results with a doctor.
+        <div className={`p-6 border-t text-xs text-slate-500 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}>
+          Reference values are general adult guidelines and can vary by lab, individual, age, and pregnancy status — some (like ferritin and vitamin levels) vary more than others between labs. Always interpret results with a doctor.
         </div>
       </div>
     </div>
@@ -980,16 +682,12 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
         <ArrowLeft size={18} /> Back to Saved Advice
       </button>
 
-      <div
-        className={`rounded-3xl shadow-2xl overflow-hidden border ${isDark ? "bg-[#0B1120] border-slate-800/80" : "bg-white border-slate-200"}`}
-      >
+      <div className={`rounded-3xl shadow-2xl overflow-hidden border ${isDark ? "bg-[#0B1120] border-slate-800/80" : "bg-white border-slate-200"}`}>
         <div className="p-6 sm:p-8 border-b border-slate-800/80">
           <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
             <Bell className="h-8 w-8 text-red-500" />
           </div>
-          <h2
-            className={`text-2xl sm:text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
-          >
+          <h2 className={`text-2xl sm:text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}>
             Emergency Contacts
           </h2>
           <p className="text-slate-500 text-sm mt-1">
@@ -999,22 +697,16 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
 
         <div className="p-6 sm:p-8 space-y-6">
           {/* Ambulance Card */}
-          <div
-            className={`p-4 sm:p-5 rounded-2xl border ${isDark ? "bg-red-500/5 border-red-500/20" : "bg-red-50 border-red-200"} flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
-          >
+          <div className={`p-4 sm:p-5 rounded-2xl border ${isDark ? "bg-red-500/5 border-red-500/20" : "bg-red-50 border-red-200"} flex flex-col sm:flex-row sm:items-center justify-between gap-4`}>
             <div className="flex items-center gap-4">
               <div className="p-3 bg-red-500 text-white rounded-xl shadow-lg shadow-red-500/30">
                 <PhoneCall size={24} />
               </div>
               <div>
-                <h4
-                  className={`font-bold text-lg ${isDark ? "text-white" : "text-slate-900"}`}
-                >
+                <h4 className={`font-bold text-lg ${isDark ? "text-white" : "text-slate-900"}`}>
                   Ambulance / Emergency
                 </h4>
-                <p className="text-sm text-red-400 font-bold mt-0.5">
-                  Dial 108
-                </p>
+                <p className="text-sm text-red-400 font-bold mt-0.5">Dial 108</p>
               </div>
             </div>
             <a
@@ -1026,34 +718,26 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
           </div>
 
           {/* Personal Contact Details */}
-          <div
-            className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
-          >
+          <div className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
               <User size={14} /> Your Personal Emergency Contact
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
                 <p className="text-xs text-slate-500 mb-1">Name</p>
-                <p
-                  className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"}`}
-                >
+                <p className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"}`}>
                   {user?.emergencyContactName || "Not set in Profile"}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-slate-500 mb-1">Phone Number</p>
-                <p
-                  className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"}`}
-                >
+                <p className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"}`}>
                   {user?.emergencyContactPhone || "Not set in Profile"}
                 </p>
               </div>
               <div className="sm:col-span-2">
                 <p className="text-xs text-slate-500 mb-1">Email Address</p>
-                <p
-                  className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"}`}
-                >
+                <p className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"}`}>
                   {user?.emergencyContactEmail || "Not set in Profile"}
                 </p>
               </div>
@@ -1061,24 +745,18 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
           </div>
 
           {/* Registered Location */}
-          <div
-            className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
-          >
+          <div className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
             <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
               <MapPin size={14} /> Your Registered Location
             </h4>
-            <p
-              className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"} leading-relaxed`}
-            >
-              {user?.address ||
-                "Please update your address in the Profile section."}
+            <p className={`font-medium text-sm ${isDark ? "text-white" : "text-slate-900"} leading-relaxed`}>
+              {user?.address || "Please update your address in the Profile section."}
             </p>
             <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
               <p className="text-xs text-amber-500 flex items-start gap-2">
                 <AlertCircle size={14} className="shrink-0 mt-0.5" />
                 <span>
-                  Tip: In a severe emergency, provide this location to the
-                  emergency services immediately.
+                  Tip: In a severe emergency, provide this location to the emergency services immediately.
                 </span>
               </p>
             </div>
@@ -1152,47 +830,23 @@ export function ChatDashboard() {
   const [facilitiesData, setFacilitiesData] = useState([]);
   const [facilitiesLoading, setFacilitiesLoading] = useState(false);
   const [facilitiesError, setFacilitiesError] = useState("");
-  const [facilitiesLocationSource, setFacilitiesLocationSource] =
-    useState(null);
+  const [facilitiesLocationSource, setFacilitiesLocationSource] = useState(null);
   const [facilityTypeFilter, setFacilityTypeFilter] = useState("all");
   const [facilitiesFetchedOnce, setFacilitiesFetchedOnce] = useState(false);
+  
+  // NEW: Search Query for Facilities
+  const [facilitySearchQuery, setFacilitySearchQuery] = useState("");
 
   const isDark = appSettings.darkMode;
 
-  // --- NEW: Helper to Check if Regional AI is Active ---
   const isRegionActive = (address) => {
     if (!address) return false;
     const jkLocations = [
-      "kashmir",
-      "srinagar",
-      "j&k",
-      "jammu",
-      "j and k",
-      "anantnag",
-      "baramulla",
-      "kupwara",
-      "pulwama",
-      "budgam",
-      "kulgam",
-      "shopian",
-      "bandipora",
-      "ganderbal",
-      "pahalgam",
-      "gulmarg",
-      "sonamarg",
-      "sopore",
-      "tral",
-      "samba",
-      "kathua",
-      "udhampur",
-      "reasi",
-      "ramban",
-      "poonch",
-      "doda",
-      "kishtwar",
-      "rajouri",
-      "bhaderwah",
-      "katra",
+      "kashmir", "srinagar", "j&k", "jammu", "j and k", "anantnag", "baramulla",
+      "kupwara", "pulwama", "budgam", "kulgam", "shopian", "bandipora",
+      "ganderbal", "pahalgam", "gulmarg", "sonamarg", "sopore", "tral", "samba",
+      "kathua", "udhampur", "reasi", "ramban", "poonch", "doda", "kishtwar",
+      "rajouri", "bhaderwah", "katra",
     ];
     return jkLocations.some((loc) => address.toLowerCase().includes(loc));
   };
@@ -1599,7 +1253,6 @@ export function ChatDashboard() {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  // --- NEW: Handle GPS Location Detection ---
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
       showToast("Geolocation is not supported by your browser");
@@ -1629,7 +1282,8 @@ export function ChatDashboard() {
               .trim();
 
             setProfileForm((prev) => ({ ...prev, address: formattedAddress }));
-            showToast("Location detected successfully!");
+            setIsEditingProfile(true); 
+            showToast("Location detected! Please click Save.");
           }
         } catch (error) {
           showToast("Failed to fetch location name.");
@@ -2255,7 +1909,7 @@ export function ChatDashboard() {
         />
         <SidebarBtn
           icon={MapPin}
-          label="Find a Doctor"
+          label="Care Locator"
           active={page === "facilities"}
           isDark={isDark}
           onClick={() => handleNavClick("facilities")}
@@ -2750,7 +2404,7 @@ export function ChatDashboard() {
                                 onClick={() => handleNavClick("facilities")}
                                 className="text-[10px] font-bold uppercase tracking-widest text-teal-500 mt-3 hover:text-teal-400 transition-colors"
                               >
-                                See all {msg.facilities.length} in Find a Doctor
+                                See all {msg.facilities.length} in Care Locator
                                 →
                               </button>
                             )}
@@ -3063,32 +2717,23 @@ export function ChatDashboard() {
                           )}
                         </span>
                       </label>
-                      {isEditingProfile && (
-                        <button
-                          type="button"
-                          onClick={handleDetectLocation}
-                          className="text-teal-500 hover:text-teal-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors bg-teal-500/10 px-2 py-1 rounded-lg"
-                        >
-                          <MapPin size={10} /> Auto-Detect GPS
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={handleDetectLocation}
+                        className="text-teal-500 hover:text-teal-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors bg-teal-500/10 px-2 py-1 rounded-lg"
+                      >
+                        <MapPin size={10} /> Auto-Detect GPS
+                      </button>
                     </div>
                     {isEditingProfile ? (
-                      <>
-                        <input
-                          type="text"
-                          name="address"
-                          value={profileForm.address}
-                          onChange={handleProfileChange}
-                          placeholder="e.g. Srinagar, Jammu and Kashmir"
-                          className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
-                        />
-                        <p className="text-[9px] text-teal-500/80 font-medium italic mt-1 ml-1 leading-relaxed">
-                          * We use your address to automatically optimize the
-                          AI's epidemiological disease predictions for your
-                          specific region.
-                        </p>
-                      </>
+                      <input
+                        type="text"
+                        name="address"
+                        value={profileForm.address}
+                        onChange={handleProfileChange}
+                        placeholder="e.g. Srinagar, Jammu and Kashmir"
+                        className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
+                      />
                     ) : (
                       <p
                         className={`text-sm py-3 px-4 rounded-xl ${isDark ? "bg-slate-800/30 text-white" : "bg-slate-50 text-slate-900 border border-slate-200"}`}
@@ -3190,9 +2835,9 @@ export function ChatDashboard() {
               <div
                 className={`border rounded-3xl p-6 sm:p-8 mt-6 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 backdrop-blur-xl border-slate-700/50" : "bg-white border-slate-200 shadow-sm"}`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                  <div className="flex items-center gap-3">
-                    <Shield className="h-5 w-5 text-teal-500" />
+                <div className="flex items-center gap-3 mb-6">
+                  <Shield className="h-5 w-5 text-teal-500" />
+                  <div>
                     <h2
                       className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}
                     >
@@ -3486,11 +3131,11 @@ export function ChatDashboard() {
 
           {page === "facilities" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
-              <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                 <h2
                   className={`text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
                 >
-                  Find a Doctor
+                  Care Locator
                 </h2>
                 <div className="flex items-center gap-2">
                   <button
@@ -3521,6 +3166,32 @@ export function ChatDashboard() {
                     : "Real hospitals, clinics, doctors, and pharmacies from OpenStreetMap."}{" "}
                 Coverage may be thinner for smaller private clinics.
               </p>
+
+              {/* SEARCH BAR */}
+              <div className="relative mb-6">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Search size={18} className="text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search for a hospital, clinic, doctor, or specialist..."
+                  value={facilitySearchQuery}
+                  onChange={(e) => setFacilitySearchQuery(e.target.value)}
+                  className={`w-full pl-11 pr-12 py-3 rounded-2xl text-sm transition-colors outline-none border ${
+                    isDark
+                      ? "bg-[#111827] border-slate-700/50 text-white focus:border-teal-500/50"
+                      : "bg-white border-slate-200 text-slate-900 focus:border-teal-400"
+                  }`}
+                />
+                {facilitySearchQuery && (
+                  <button
+                    onClick={() => setFacilitySearchQuery("")}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-rose-400 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
 
               {facilitiesData.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6">
@@ -3597,9 +3268,34 @@ export function ChatDashboard() {
                         facilityTypeFilter === "all" ||
                         f.type === facilityTypeFilter,
                     )
+                    .filter((f) => {
+                      if (!facilitySearchQuery) return true;
+                      const q = facilitySearchQuery.toLowerCase();
+                      return (
+                        (f.name && f.name.toLowerCase().includes(q)) ||
+                        (f.type && f.type.toLowerCase().includes(q)) ||
+                        (f.address && f.address.toLowerCase().includes(q))
+                      );
+                    })
                     .map((f, i) => (
                       <RealFacilityCard key={i} facility={f} isDark={isDark} />
                     ))}
+                  
+                  {/* Fallback if search filter hides all facilities */}
+                  {facilitySearchQuery && facilitiesData
+                    .filter(f => facilityTypeFilter === "all" || f.type === facilityTypeFilter)
+                    .filter(f => {
+                      const q = facilitySearchQuery.toLowerCase();
+                      return (
+                        (f.name && f.name.toLowerCase().includes(q)) ||
+                        (f.type && f.type.toLowerCase().includes(q)) ||
+                        (f.address && f.address.toLowerCase().includes(q))
+                      );
+                    }).length === 0 && (
+                    <div className="col-span-1 md:col-span-2 text-center py-10 text-slate-500 text-sm">
+                      No facilities found matching "{facilitySearchQuery}".
+                    </div>
+                  )}
                 </div>
               )}
             </div>
