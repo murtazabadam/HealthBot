@@ -46,6 +46,9 @@ import {
   AlertTriangle,
   Pause,
   Mail,
+  Loader2,
+  Navigation,
+  RefreshCw,
 } from "lucide-react";
 
 function SymptomConfirmationCard({
@@ -151,6 +154,7 @@ function SymptomConfirmationCard({
               </div>
             )}
           </div>
+
           <button
             onClick={() => onConfirm(msg)}
             disabled={msg.detectedSymptoms.length === 0}
@@ -173,6 +177,8 @@ function SymptomConfirmationCard({
 const BmiCalculatorView = ({ isDark, onBack }) => {
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState("");
   const [unit, setUnit] = useState("metric");
   const [result, setResult] = useState(null);
 
@@ -251,7 +257,13 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
       ];
     }
 
-    setResult({ bmi: bmi.toFixed(1), category, color, indicatorColor, advice });
+    setResult({
+      bmi: bmi.toFixed(1),
+      category,
+      color,
+      indicatorColor,
+      advice,
+    });
   };
 
   return (
@@ -287,6 +299,8 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                   setResult(null);
                   setHeight("");
                   setWeight("");
+                  setAge("");
+                  setGender("");
                 }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${unit === "metric" ? "bg-teal-500 text-slate-900 shadow-sm" : "text-slate-500 hover:text-teal-500"}`}
               >
@@ -298,6 +312,8 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
                   setResult(null);
                   setHeight("");
                   setWeight("");
+                  setAge("");
+                  setGender("");
                 }}
                 className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${unit === "imperial" ? "bg-teal-500 text-slate-900 shadow-sm" : "text-slate-500 hover:text-teal-500"}`}
               >
@@ -307,6 +323,76 @@ const BmiCalculatorView = ({ isDark, onBack }) => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div
+              className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
+            >
+              <div
+                className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}
+              >
+                <Calendar size={24} />
+              </div>
+              <div className="flex-1 min-w-0 pr-3">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
+                  Age
+                </label>
+                <div className="flex items-center">
+                  <input
+                    type="number"
+                    min="2"
+                    onKeyDown={(e) => {
+                      if (["-", "+", "e", "E"].includes(e.key))
+                        e.preventDefault();
+                    }}
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    placeholder="e.g. 25"
+                    className="w-full bg-transparent border-none outline-none text-base font-semibold text-slate-200 placeholder-slate-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <span className="text-teal-500 font-bold text-sm ml-2 shrink-0">
+                    yrs
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
+            >
+              <div
+                className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center mr-3 ${isDark ? "bg-slate-800 text-teal-400" : "bg-white text-teal-500 shadow-sm"}`}
+              >
+                <UserCircle size={24} />
+              </div>
+              <div className="flex-1 min-w-0 pr-3">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
+                  Gender
+                </label>
+                <div className="flex items-center h-full">
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className={`w-full bg-transparent border-none outline-none text-base font-semibold cursor-pointer appearance-none ${gender ? "text-slate-200" : "text-slate-600"}`}
+                  >
+                    <option value="" disabled className="text-slate-500">
+                      Select...
+                    </option>
+                    <option
+                      value="male"
+                      className="bg-slate-900 text-slate-200"
+                    >
+                      Male
+                    </option>
+                    <option
+                      value="female"
+                      className="bg-slate-900 text-slate-200"
+                    >
+                      Female
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <div
               className={`flex items-center rounded-2xl border p-2 transition-all ${isDark ? "bg-slate-900/50 border-slate-700/50" : "bg-slate-50 border-slate-200"}`}
             >
@@ -612,6 +698,201 @@ const HealthRangesView = ({ isDark, onBack }) => {
         },
       ],
     },
+    {
+      title: "HbA1c (3-month average)",
+      unit: "%",
+      rows: [
+        { label: "Normal", value: "< 5.7", color: "bg-teal-400" },
+        { label: "Prediabetes", value: "5.7–6.4", color: "bg-amber-400" },
+        { label: "Diabetes", value: "\u2265 6.5", color: "bg-rose-400" },
+      ],
+    },
+    {
+      title: "Cholesterol",
+      unit: "mg/dL",
+      rows: [
+        { label: "Total — Desirable", value: "< 200", color: "bg-teal-400" },
+        {
+          label: "Total — Borderline High",
+          value: "200–239",
+          color: "bg-amber-400",
+        },
+        { label: "Total — High", value: "\u2265 240", color: "bg-rose-400" },
+        {
+          label: "LDL (\u201cbad\u201d) — Optimal",
+          value: "< 100",
+          color: "bg-teal-400",
+        },
+        {
+          label: "HDL (\u201cgood\u201d) — Low (risk)",
+          value: "< 40",
+          color: "bg-rose-400",
+        },
+        {
+          label: "Triglycerides — Normal",
+          value: "< 150",
+          color: "bg-teal-400",
+        },
+      ],
+    },
+    {
+      title: "CBC — Complete Blood Count",
+      unit: "adult reference",
+      rows: [
+        {
+          label: "Hemoglobin — Men",
+          value: "13.5–17.5 g/dL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "Hemoglobin — Women",
+          value: "12.0–15.5 g/dL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "RBC — Men",
+          value: "4.7–6.1 million/mcL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "RBC — Women",
+          value: "4.2–5.4 million/mcL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "White Blood Cells (WBC)",
+          value: "4,500–11,000 /mcL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "Platelets",
+          value: "150,000–450,000 /mcL",
+          color: "bg-teal-400",
+        },
+        { label: "Hematocrit — Men", value: "38.8–50%", color: "bg-teal-400" },
+        {
+          label: "Hematocrit — Women",
+          value: "34.9–44.5%",
+          color: "bg-teal-400",
+        },
+      ],
+    },
+    {
+      title: "Kidney Function",
+      unit: "adult reference",
+      rows: [
+        {
+          label: "Creatinine — Men",
+          value: "0.7–1.3 mg/dL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "Creatinine — Women",
+          value: "0.6–1.1 mg/dL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "Blood Urea Nitrogen (BUN)",
+          value: "7–20 mg/dL",
+          color: "bg-teal-400",
+        },
+        {
+          label: "eGFR — Normal",
+          value: "\u2265 90 mL/min/1.73m\u00b2",
+          color: "bg-teal-400",
+        },
+        {
+          label: "eGFR — Reduced",
+          value: "< 60 mL/min/1.73m\u00b2",
+          color: "bg-amber-400",
+        },
+      ],
+    },
+    {
+      title: "Liver Function",
+      unit: "U/L  (bilirubin: mg/dL)",
+      rows: [
+        {
+          label: "ALT (Alanine Transaminase)",
+          value: "7–56",
+          color: "bg-teal-400",
+        },
+        {
+          label: "AST (Aspartate Transaminase)",
+          value: "10–40",
+          color: "bg-teal-400",
+        },
+        { label: "Total Bilirubin", value: "0.1–1.2", color: "bg-teal-400" },
+      ],
+    },
+    {
+      title: "Electrolytes",
+      unit: "adult reference",
+      rows: [
+        { label: "Sodium", value: "135–145 mEq/L", color: "bg-teal-400" },
+        { label: "Potassium", value: "3.5–5.0 mEq/L", color: "bg-teal-400" },
+        { label: "Calcium", value: "8.5–10.5 mg/dL", color: "bg-teal-400" },
+      ],
+    },
+    {
+      title: "Thyroid (TSH)",
+      unit: "mIU/L",
+      rows: [
+        {
+          label: "Hyperthyroid (overactive)",
+          value: "< 0.4",
+          color: "bg-amber-400",
+        },
+        { label: "Normal", value: "0.4–4.0", color: "bg-teal-400" },
+        {
+          label: "Subclinical Hypothyroid",
+          value: "4.0–10",
+          color: "bg-amber-400",
+        },
+        {
+          label: "Hypothyroid (underactive)",
+          value: "> 10",
+          color: "bg-rose-400",
+        },
+      ],
+    },
+    {
+      title: "Vitamin D (25-hydroxy)",
+      unit: "ng/mL",
+      rows: [
+        { label: "Deficient", value: "< 20", color: "bg-rose-400" },
+        { label: "Insufficient", value: "20–29", color: "bg-amber-400" },
+        { label: "Sufficient", value: "30–100", color: "bg-teal-400" },
+      ],
+    },
+    {
+      title: "Vitamin B12",
+      unit: "pg/mL",
+      rows: [
+        { label: "Deficient", value: "< 200", color: "bg-rose-400" },
+        { label: "Normal", value: "200–900", color: "bg-teal-400" },
+      ],
+    },
+    {
+      title: "Iron Stores (Ferritin)",
+      unit: "ng/mL — varies notably by lab",
+      rows: [
+        { label: "Men — typical range", value: "20–250", color: "bg-teal-400" },
+        {
+          label: "Women — typical range",
+          value: "10–120",
+          color: "bg-teal-400",
+        },
+      ],
+    },
+    {
+      title: "Uric Acid",
+      unit: "mg/dL",
+      rows: [
+        { label: "Men — Normal", value: "3.4–7.0", color: "bg-teal-400" },
+        { label: "Women — Normal", value: "2.4–6.0", color: "bg-teal-400" },
+      ],
+    },
   ];
 
   return (
@@ -675,6 +956,15 @@ const HealthRangesView = ({ isDark, onBack }) => {
             </div>
           </div>
         ))}
+
+        <div
+          className={`p-6 border-t text-xs text-slate-500 ${isDark ? "border-slate-800/80" : "border-slate-200"}`}
+        >
+          Reference values are general adult guidelines and can vary by lab,
+          individual, age, and pregnancy status — some (like ferritin and
+          vitamin levels) vary more than others between labs. Always interpret
+          results with a doctor.
+        </div>
       </div>
     </div>
   );
@@ -708,6 +998,7 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
+          {/* Ambulance Card */}
           <div
             className={`p-4 sm:p-5 rounded-2xl border ${isDark ? "bg-red-500/5 border-red-500/20" : "bg-red-50 border-red-200"} flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
           >
@@ -734,6 +1025,7 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
             </a>
           </div>
 
+          {/* Personal Contact Details */}
           <div
             className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
@@ -768,6 +1060,7 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
             </div>
           </div>
 
+          {/* Registered Location */}
           <div
             className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
@@ -780,6 +1073,15 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
               {user?.address ||
                 "Please update your address in the Profile section."}
             </p>
+            <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+              <p className="text-xs text-amber-500 flex items-start gap-2">
+                <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                <span>
+                  Tip: In a severe emergency, provide this location to the
+                  emergency services immediately.
+                </span>
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -846,8 +1148,18 @@ export function ChatDashboard() {
 
   const [emergencyAlert, setEmergencyAlert] = useState(false);
 
+  // ── Find a Doctor / Facilities ─────────────────────────────────────────
+  const [facilitiesData, setFacilitiesData] = useState([]);
+  const [facilitiesLoading, setFacilitiesLoading] = useState(false);
+  const [facilitiesError, setFacilitiesError] = useState("");
+  const [facilitiesLocationSource, setFacilitiesLocationSource] =
+    useState(null);
+  const [facilityTypeFilter, setFacilityTypeFilter] = useState("all");
+  const [facilitiesFetchedOnce, setFacilitiesFetchedOnce] = useState(false);
+
   const isDark = appSettings.darkMode;
 
+  // --- NEW: Helper to Check if Regional AI is Active ---
   const isRegionActive = (address) => {
     if (!address) return false;
     const jkLocations = [
@@ -965,6 +1277,13 @@ export function ChatDashboard() {
       name: "Drink Water",
       date: "2026-06-01",
       time: "08:00",
+      active: true,
+    },
+    {
+      id: 2,
+      name: "Vitamin C Supplement",
+      date: "2026-06-02",
+      time: "09:00",
       active: true,
     },
   ]);
@@ -1152,8 +1471,16 @@ export function ChatDashboard() {
     }
   }, [messages, loading, page]);
 
+  useEffect(() => {
+    if (page === "facilities" && !facilitiesFetchedOnce && !facilitiesLoading) {
+      fetchFacilities();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
   const speakText = (text, id) => {
     const synth = window.speechSynthesis;
+
     if (!synth) {
       showToast("Text-to-speech is not supported in this browser.");
       return;
@@ -1164,21 +1491,34 @@ export function ChatDashboard() {
       setPlayingMessageId(null);
       return;
     }
+
     synth.cancel();
     setPlayingMessageId(id);
 
     const utterance = new SpeechSynthesisUtterance(text);
+
     utterance.pitch = 0.8;
     utterance.rate = 0.95;
-    utterance.onend = () => setPlayingMessageId(null);
-    utterance.onerror = () => setPlayingMessageId(null);
+
+    utterance.onend = () => {
+      setPlayingMessageId(null);
+    };
+
+    utterance.onerror = (e) => {
+      console.error("TTS Error:", e);
+      setPlayingMessageId(null);
+    };
 
     const voices = synth.getVoices();
-    let preferredVoice =
-      voices.find((v) => v.name.includes("Google")) ||
-      voices.find((v) => v.name.toLowerCase().includes("male")) ||
-      voices[0];
-    if (preferredVoice) utterance.voice = preferredVoice;
+    let preferredVoice = voices.find((v) => v.name.includes("Google"));
+    if (!preferredVoice) {
+      preferredVoice =
+        voices.find((v) => v.name.toLowerCase().includes("male")) || voices[0];
+    }
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
 
     synth.speak(utterance);
   };
@@ -1188,11 +1528,15 @@ export function ChatDashboard() {
   const toggleRecording = () => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition)
+
+    if (!SpeechRecognition) {
       return showToast("Speech recognition is not supported in this browser.");
+    }
 
     if (isRecording) {
-      if (recognitionRef.current) recognitionRef.current.stop();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       setIsRecording(false);
     } else {
       const recognition = new SpeechRecognition();
@@ -1202,19 +1546,31 @@ export function ChatDashboard() {
       recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         setInputText((prev) => (prev ? prev + " " + transcript : transcript));
+
         if (textareaRef.current) {
           textareaRef.current.style.height = "auto";
-          textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+          textareaRef.current.style.height = `${Math.min(
+            textareaRef.current.scrollHeight,
+            120,
+          )}px`;
         }
       };
-      recognition.onerror = () => setIsRecording(false);
-      recognition.onend = () => setIsRecording(false);
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error", event.error);
+        setIsRecording(false);
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
 
       try {
         recognition.start();
         recognitionRef.current = recognition;
         setIsRecording(true);
       } catch (error) {
+        console.error("Failed to start recording:", error);
         setIsRecording(false);
       }
     }
@@ -1243,6 +1599,7 @@ export function ChatDashboard() {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
+  // --- NEW: Handle GPS Location Detection ---
   const handleDetectLocation = () => {
     if (!navigator.geolocation) {
       showToast("Geolocation is not supported by your browser");
@@ -1272,8 +1629,7 @@ export function ChatDashboard() {
               .trim();
 
             setProfileForm((prev) => ({ ...prev, address: formattedAddress }));
-            setIsEditingProfile(true);
-            showToast("Location detected! Please click Save.");
+            showToast("Location detected successfully!");
           }
         } catch (error) {
           showToast("Failed to fetch location name.");
@@ -1281,6 +1637,51 @@ export function ChatDashboard() {
       },
       () => {
         showToast("Location access denied. Please allow permissions.");
+      },
+    );
+  };
+
+  const fetchFacilities = async (coords = null) => {
+    setFacilitiesLoading(true);
+    setFacilitiesError("");
+    try {
+      const token = localStorage.getItem("token");
+      const params = coords
+        ? { lat: coords.latitude, lon: coords.longitude }
+        : {};
+      const res = await axios.get(API.FIND_DOCTORS, {
+        headers: { Authorization: `Bearer ${token}` },
+        params,
+      });
+      setFacilitiesData(res.data.facilities || []);
+      setFacilitiesLocationSource(res.data.locationSource || null);
+      setFacilitiesFetchedOnce(true);
+    } catch (err) {
+      const msg =
+        err.response?.data?.message || "Could not load nearby facilities.";
+      const hint = err.response?.data?.hint;
+      setFacilitiesError(hint ? `${msg} ${hint}` : msg);
+      setFacilitiesData([]);
+    } finally {
+      setFacilitiesLoading(false);
+    }
+  };
+
+  const handleUseMyLocationForFacilities = () => {
+    if (!navigator.geolocation) {
+      showToast("Geolocation is not supported by your browser");
+      return;
+    }
+    showToast("Detecting your location...");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        fetchFacilities({ latitude, longitude });
+      },
+      () => {
+        showToast(
+          "Location access denied. Please allow permissions, or we'll use your saved address instead.",
+        );
       },
     );
   };
@@ -1449,7 +1850,9 @@ export function ChatDashboard() {
         setChatHistoryList(updatedHistory);
         localStorage.setItem("chatHistory", JSON.stringify(updatedHistory));
 
-        if (activeSessionId === id) handleNewChat();
+        if (activeSessionId === id) {
+          handleNewChat();
+        }
         showToast("Chat session deleted.");
         setConfirmDialog(null);
       },
@@ -1457,10 +1860,20 @@ export function ChatDashboard() {
   };
 
   const loadSavedAdvice = (title) => {
-    if (title === "BMI Calculator") return handleNavClick("bmi");
-    if (title === "Health Ranges") return handleNavClick("health-ranges");
-    if (title === "Emergency Contacts")
-      return handleNavClick("emergency-contacts");
+    if (title === "BMI Calculator") {
+      handleNavClick("bmi");
+      return;
+    }
+
+    if (title === "Health Ranges") {
+      handleNavClick("health-ranges");
+      return;
+    }
+
+    if (title === "Emergency Contacts") {
+      handleNavClick("emergency-contacts");
+      return;
+    }
   };
 
   const clearChatHistory = () => {
@@ -1522,6 +1935,7 @@ export function ChatDashboard() {
     try {
       const round =
         msg.suggestedSymptoms && msg.suggestedSymptoms.length > 0 ? 2 : 1;
+
       const res = await axios.post(
         API.CHAT_CONFIRM_SYMPTOMS,
         {
@@ -1563,12 +1977,14 @@ export function ChatDashboard() {
         );
       }
 
+      const botReply = res.data.reply;
+
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: "bot",
-          text: res.data.reply,
+          text: botReply,
           time: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
@@ -1604,8 +2020,11 @@ export function ChatDashboard() {
         .post(API.NOTIFY_EMERGENCY, coords, {
           headers: { Authorization: `Bearer ${token}` },
         })
-        .catch((err) => console.error("Emergency notify failed:", err.message));
+        .catch((err) => {
+          console.error("Emergency notify failed:", err.message);
+        });
     };
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) =>
@@ -1671,6 +2090,7 @@ export function ChatDashboard() {
       hour: "2-digit",
       minute: "2-digit",
     });
+
     setMessages((prev) => [
       ...prev,
       {
@@ -1681,8 +2101,11 @@ export function ChatDashboard() {
         time: now,
       },
     ]);
+
     setInputText("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
 
     const currentImg = uploadedImage;
     setUploadedImage(null);
@@ -1728,12 +2151,18 @@ export function ChatDashboard() {
         return;
       }
 
+      const botReply = res.data.reply;
+      const botFacilities = res.data.facilities;
+
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           sender: "bot",
-          text: res.data.reply,
+          text: botReply,
+          type:
+            botFacilities && botFacilities.length ? "facilities" : undefined,
+          facilities: botFacilities || undefined,
           time: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
@@ -1746,6 +2175,7 @@ export function ChatDashboard() {
         window.location.href = "/login";
         return;
       }
+
       setMessages((prev) => [
         ...prev,
         {
@@ -1825,7 +2255,7 @@ export function ChatDashboard() {
         />
         <SidebarBtn
           icon={MapPin}
-          label="Facilities"
+          label="Find a Doctor"
           active={page === "facilities"}
           isDark={isDark}
           onClick={() => handleNavClick("facilities")}
@@ -1890,6 +2320,7 @@ export function ChatDashboard() {
             <p className="text-slate-700 text-lg font-medium mb-8">
               Please select an immediate action below.
             </p>
+
             <div className="flex flex-col gap-3">
               <a
                 href="tel:108"
@@ -1979,6 +2410,7 @@ export function ChatDashboard() {
                 <X size={20} />
               </button>
             </div>
+
             <form onSubmit={saveReminder} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -1995,6 +2427,7 @@ export function ChatDashboard() {
                   className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
                 />
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -2025,6 +2458,7 @@ export function ChatDashboard() {
                   />
                 </div>
               </div>
+
               <button
                 type="submit"
                 className="w-full mt-4 bg-teal-500 hover:bg-teal-400 text-slate-900 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
@@ -2060,6 +2494,7 @@ export function ChatDashboard() {
                 <X size={20} />
               </button>
             </div>
+
             <p
               className={`text-sm mb-6 ${isDark ? "text-slate-400" : "text-slate-600"}`}
             >
@@ -2069,6 +2504,7 @@ export function ChatDashboard() {
                 This action is irreversible.
               </strong>
             </p>
+
             <form
               onSubmit={confirmAccountAction}
               className="flex flex-col gap-4"
@@ -2091,6 +2527,7 @@ export function ChatDashboard() {
                   className={`w-full border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
                 />
               </div>
+
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                   Password
@@ -2122,6 +2559,7 @@ export function ChatDashboard() {
                   </button>
                 </div>
               </div>
+
               <button
                 type="submit"
                 disabled={accountAction.loading}
@@ -2170,6 +2608,7 @@ export function ChatDashboard() {
                   >
                     HealthBot
                   </h3>
+                  {/* --- NEW: Regional AI Badge --- */}
                   {isRegionActive(user?.address) && (
                     <span
                       className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-bold uppercase tracking-widest mt-0.5 transition-colors ${isDark ? "bg-teal-500/10 border-teal-500/20 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-600"}`}
@@ -2241,6 +2680,7 @@ export function ChatDashboard() {
                       Session Started Today
                     </span>
                   </div>
+
                   {messages.map((msg) => (
                     <div
                       key={msg.id}
@@ -2274,6 +2714,47 @@ export function ChatDashboard() {
                             The BMI Calculator has been upgraded to a full page.
                             Please access it from the "Saved Advice" tab.
                           </div>
+                        ) : msg.type === "facilities" ? (
+                          <div
+                            className={`p-4 rounded-2xl shadow-lg rounded-tl-none max-w-sm ${isDark ? "bg-slate-800/90 border border-slate-700/50" : "bg-slate-50 border border-slate-200"}`}
+                          >
+                            {msg.text && (
+                              <div
+                                className={`text-xs lg:text-sm leading-relaxed mb-3 ${isDark ? "text-slate-200" : "text-slate-800"}`}
+                              >
+                                {msg.text}
+                              </div>
+                            )}
+                            {(msg.facilities || []).length > 0 && (
+                              <div className="flex flex-col gap-2">
+                                {msg.facilities.slice(0, 3).map((f, i) => (
+                                  <a
+                                    key={i}
+                                    href={f.mapsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`flex items-center justify-between gap-2 p-2.5 rounded-xl text-xs transition-colors ${isDark ? "bg-slate-900/60 hover:bg-slate-900" : "bg-white hover:bg-slate-100 border border-slate-200"}`}
+                                  >
+                                    <span className="truncate font-bold">
+                                      {f.name}
+                                    </span>
+                                    <span className="text-teal-500 flex-shrink-0 font-bold">
+                                      {f.distanceKm} km
+                                    </span>
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                            {msg.facilities && msg.facilities.length > 3 && (
+                              <button
+                                onClick={() => handleNavClick("facilities")}
+                                className="text-[10px] font-bold uppercase tracking-widest text-teal-500 mt-3 hover:text-teal-400 transition-colors"
+                              >
+                                See all {msg.facilities.length} in Find a Doctor
+                                →
+                              </button>
+                            )}
+                          </div>
                         ) : (
                           <div
                             className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none"}`}
@@ -2292,6 +2773,7 @@ export function ChatDashboard() {
                             )}
                           </div>
                         )}
+
                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter flex items-center gap-1 mt-1">
                           {msg.time}
                           {msg.sender === "bot" &&
@@ -2356,12 +2838,14 @@ export function ChatDashboard() {
               onBack={() => handleNavClick("saved")}
             />
           )}
+
           {page === "health-ranges" && (
             <HealthRangesView
               isDark={isDark}
               onBack={() => handleNavClick("saved")}
             />
           )}
+
           {page === "emergency-contacts" && (
             <EmergencyContactsView
               isDark={isDark}
@@ -2369,6 +2853,7 @@ export function ChatDashboard() {
               user={user}
             />
           )}
+
           {page === "first-aid" && <FirstAidView isDark={isDark} />}
 
           {page === "profile" && (
@@ -2566,6 +3051,7 @@ export function ChatDashboard() {
                     )}
                   </div>
 
+                  {/* --- NEW: Auto-Detect GPS Address Section --- */}
                   <div className="flex flex-col gap-2 sm:col-span-2">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
@@ -2577,23 +3063,32 @@ export function ChatDashboard() {
                           )}
                         </span>
                       </label>
-                      <button
-                        type="button"
-                        onClick={handleDetectLocation}
-                        className="text-teal-500 hover:text-teal-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors bg-teal-500/10 px-2 py-1 rounded-lg"
-                      >
-                        <MapPin size={10} /> Auto-Detect GPS
-                      </button>
+                      {isEditingProfile && (
+                        <button
+                          type="button"
+                          onClick={handleDetectLocation}
+                          className="text-teal-500 hover:text-teal-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors bg-teal-500/10 px-2 py-1 rounded-lg"
+                        >
+                          <MapPin size={10} /> Auto-Detect GPS
+                        </button>
+                      )}
                     </div>
                     {isEditingProfile ? (
-                      <input
-                        type="text"
-                        name="address"
-                        value={profileForm.address}
-                        onChange={handleProfileChange}
-                        placeholder="e.g. Srinagar, Jammu and Kashmir"
-                        className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
-                      />
+                      <>
+                        <input
+                          type="text"
+                          name="address"
+                          value={profileForm.address}
+                          onChange={handleProfileChange}
+                          placeholder="e.g. Srinagar, Jammu and Kashmir"
+                          className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 transition-all outline-none ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-white border-slate-200 text-slate-900"}`}
+                        />
+                        <p className="text-[9px] text-teal-500/80 font-medium italic mt-1 ml-1 leading-relaxed">
+                          * We use your address to automatically optimize the
+                          AI's epidemiological disease predictions for your
+                          specific region.
+                        </p>
+                      </>
                     ) : (
                       <p
                         className={`text-sm py-3 px-4 rounded-xl ${isDark ? "bg-slate-800/30 text-white" : "bg-slate-50 text-slate-900 border border-slate-200"}`}
@@ -2622,6 +3117,7 @@ export function ChatDashboard() {
                     </p>
                   </div>
                 </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
@@ -2644,6 +3140,7 @@ export function ChatDashboard() {
                       </p>
                     )}
                   </div>
+
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                       <Phone className="h-3 w-3" /> Contact Phone
@@ -2665,6 +3162,7 @@ export function ChatDashboard() {
                       </p>
                     )}
                   </div>
+
                   <div className="flex flex-col gap-2 sm:col-span-2">
                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                       <Mail className="h-3 w-3" /> Contact Email
@@ -2708,10 +3206,11 @@ export function ChatDashboard() {
                     }}
                     className={`flex justify-center items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold transition-all ${isDark ? "bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700" : "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200"}`}
                   >
-                    <Lock className="h-4 w-4" />{" "}
+                    <Lock className="h-4 w-4" />
                     {showPasswordForm ? "Cancel" : "Change Password"}
                   </button>
                 </div>
+
                 {!showPasswordForm ? (
                   <p className="text-slate-400 text-sm">
                     Your password is securely encrypted. Click "Change Password"
@@ -2735,6 +3234,7 @@ export function ChatDashboard() {
                         })
                       }
                     />
+
                     <div className="flex flex-col gap-2">
                       <PasswordField
                         label="New Password"
@@ -2749,6 +3249,7 @@ export function ChatDashboard() {
                           })
                         }
                       />
+
                       <div
                         className={`p-4 rounded-xl border mt-2 ${isDark ? "bg-slate-900/50 border-slate-800" : "bg-slate-50 border-slate-200"}`}
                       >
@@ -2759,7 +3260,9 @@ export function ChatDashboard() {
                           {passwordRequirements.map((req, i) => (
                             <span
                               key={i}
-                              className={`text-[10px] font-medium flex items-center gap-1 transition-colors duration-300 ${req.met ? "text-green-500" : "text-red-500"}`}
+                              className={`text-[10px] font-medium flex items-center gap-1 transition-colors duration-300 ${
+                                req.met ? "text-green-500" : "text-red-500"
+                              }`}
                             >
                               {req.met ? "✓" : "✗"} {req.label}
                             </span>
@@ -2767,6 +3270,7 @@ export function ChatDashboard() {
                         </div>
                       </div>
                     </div>
+
                     <PasswordField
                       label="Confirm New Password"
                       value={passwordData.confirmPassword}
@@ -2780,6 +3284,7 @@ export function ChatDashboard() {
                         })
                       }
                     />
+
                     {passwordData.confirmPassword && (
                       <p
                         className={`text-xs ${passwordData.newPassword === passwordData.confirmPassword ? "text-green-500" : "text-rose-500"}`}
@@ -2790,6 +3295,7 @@ export function ChatDashboard() {
                           : "✗ Passwords do not match"}
                       </p>
                     )}
+
                     <button
                       type="submit"
                       disabled={savingPassword}
@@ -2980,45 +3486,122 @@ export function ChatDashboard() {
 
           {page === "facilities" && (
             <div className="max-w-4xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-6">
-              <h2
-                className={`text-3xl font-bold mb-8 ${isDark ? "text-white" : "text-slate-900"}`}
-              >
-                Nearby Facilities
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FacilityCard
-                  title="Hospitals"
-                  desc="Find general and specialized hospitals near your location."
-                  icon={Building}
-                  query="hospitals"
-                  isDark={isDark}
-                  userAddress={user.address}
-                />
-                <FacilityCard
-                  title="Health Centers"
-                  desc="Locate community health centers and primary care facilities."
-                  icon={Activity}
-                  query="health centers"
-                  isDark={isDark}
-                  userAddress={user.address}
-                />
-                <FacilityCard
-                  title="Clinics"
-                  desc="Discover nearby walk-in clinics and outpatient care."
-                  icon={HeartPulse}
-                  query="clinics"
-                  isDark={isDark}
-                  userAddress={user.address}
-                />
-                <FacilityCard
-                  title="Medical Stores"
-                  desc="Find local pharmacies and 24/7 medical stores."
-                  icon={Store}
-                  query="pharmacies medical stores"
-                  isDark={isDark}
-                  userAddress={user.address}
-                />
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
+                <h2
+                  className={`text-3xl font-bold ${isDark ? "text-white" : "text-slate-900"}`}
+                >
+                  Find a Doctor
+                </h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleUseMyLocationForFacilities}
+                    disabled={facilitiesLoading}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide bg-teal-500 text-white hover:bg-teal-600 transition-colors disabled:opacity-50"
+                  >
+                    <Navigation size={14} /> Use My Location
+                  </button>
+                  <button
+                    onClick={() => fetchFacilities()}
+                    disabled={facilitiesLoading}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-colors disabled:opacity-50 ${isDark ? "bg-slate-800 text-slate-300 hover:bg-slate-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                  >
+                    <RefreshCw
+                      size={14}
+                      className={facilitiesLoading ? "animate-spin" : ""}
+                    />{" "}
+                    Refresh
+                  </button>
+                </div>
               </div>
+              <p className="text-slate-500 text-sm mb-6">
+                {facilitiesLocationSource === "gps"
+                  ? "Showing real facilities from OpenStreetMap near your current location."
+                  : facilitiesLocationSource === "address"
+                    ? "Showing real facilities from OpenStreetMap near your saved address."
+                    : "Real hospitals, clinics, doctors, and pharmacies from OpenStreetMap."}{" "}
+                Coverage may be thinner for smaller private clinics.
+              </p>
+
+              {facilitiesData.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {["all", "Hospital", "Clinic", "Doctor", "Pharmacy"].map(
+                    (t) => (
+                      <button
+                        key={t}
+                        onClick={() => setFacilityTypeFilter(t)}
+                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-colors ${
+                          facilityTypeFilter === t
+                            ? "bg-teal-500 text-white"
+                            : isDark
+                              ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        {t === "all" ? "All" : `${t}s`}
+                      </button>
+                    ),
+                  )}
+                </div>
+              )}
+
+              {facilitiesLoading && (
+                <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                  <Loader2
+                    size={32}
+                    className="animate-spin mb-3 text-teal-500"
+                  />
+                  Finding nearby facilities...
+                </div>
+              )}
+
+              {!facilitiesLoading && facilitiesError && (
+                <div
+                  className={`rounded-2xl p-6 border flex items-start gap-3 ${isDark ? "bg-red-500/10 border-red-500/30" : "bg-red-50 border-red-200"}`}
+                >
+                  <AlertCircle
+                    size={20}
+                    className="text-red-500 flex-shrink-0 mt-0.5"
+                  />
+                  <p
+                    className={`text-sm ${isDark ? "text-red-300" : "text-red-700"}`}
+                  >
+                    {facilitiesError}
+                  </p>
+                </div>
+              )}
+
+              {!facilitiesLoading &&
+                !facilitiesError &&
+                facilitiesData.length === 0 &&
+                facilitiesFetchedOnce && (
+                  <div className="text-center py-20 text-slate-500 text-sm">
+                    No listed facilities found nearby in OpenStreetMap's data.
+                    Try Use My Location, or search directly on{" "}
+                    <a
+                      href={`https://www.google.com/maps/search/${encodeURIComponent("hospitals near " + (user.address || ""))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-teal-500 underline"
+                    >
+                      Google Maps
+                    </a>
+                    .
+                  </div>
+                )}
+
+              {!facilitiesLoading && facilitiesData.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {facilitiesData
+                    .filter(
+                      (f) =>
+                        facilityTypeFilter === "all" ||
+                        f.type === facilityTypeFilter,
+                    )
+                    .map((f, i) => (
+                      <RealFacilityCard key={i} facility={f} isDark={isDark} />
+                    ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -3104,19 +3687,19 @@ export function ChatDashboard() {
 
               {uploadedImage && (
                 <div
-                  className={`mb-3 flex flex-wrap items-center gap-3 p-3 rounded-xl border animate-in slide-in-from-bottom-2 ${isDark ? "bg-slate-800 border-slate-700" : "bg-slate-50 border-slate-200"}`}
+                  className={`mb-3 flex items-center gap-3 p-2 rounded-xl border animate-in slide-in-from-bottom-2 ${isDark ? "bg-slate-800 border-slate-700" : "bg-slate-50 border-slate-200"}`}
                 >
                   <img
                     src={uploadedImage}
                     alt="Preview"
-                    className="h-12 w-12 rounded-lg object-cover border border-slate-600"
+                    className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
                   />
                   <span className="text-xs text-slate-400 flex-1 truncate font-medium">
                     Image attached
                   </span>
                   <button
                     onClick={() => setUploadedImage(null)}
-                    className="p-2 hover:bg-rose-500/20 rounded-lg text-rose-500 transition-colors"
+                    className="p-1 hover:bg-slate-200 rounded-lg text-rose-500"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -3165,7 +3748,11 @@ export function ChatDashboard() {
                 <button
                   type="button"
                   onClick={toggleRecording}
-                  className={`relative p-2 sm:p-2.5 rounded-xl transition-all shrink-0 flex items-center justify-center ${isRecording ? "bg-emerald-500/10 text-emerald-500 shadow-[0_0_15px_rgba(52,211,153,0.3)]" : "text-slate-400 hover:text-teal-500"}`}
+                  className={`relative p-2 sm:p-2.5 rounded-xl transition-all shrink-0 flex items-center justify-center ${
+                    isRecording
+                      ? "bg-emerald-500/10 text-emerald-500 shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+                      : "text-slate-400 hover:text-teal-500"
+                  }`}
                 >
                   {isRecording && (
                     <span className="absolute top-1 right-1 flex h-2 w-2">
@@ -3187,6 +3774,7 @@ export function ChatDashboard() {
                   <Send size={18} strokeWidth={3} />
                 </button>
               </div>
+
               <p className="mt-3 text-[9px] lg:text-[10px] text-teal-500 font-bold text-center italic opacity-80 leading-relaxed border-t border-slate-800/10 pt-3">
                 🩺 For guidance only • Consult a doctor for emergencies
               </p>
@@ -3360,6 +3948,7 @@ const FirstAidView = ({ isDark }) => {
           <PhoneCall size={20} /> Emergency SOS (108)
         </a>
       </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
         {topics.map((topic) => (
           <div
@@ -3387,6 +3976,7 @@ const FirstAidView = ({ isDark }) => {
           </div>
         ))}
       </div>
+
       <div className="mt-8 bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex gap-4 backdrop-blur-md">
         <AlertCircle className="text-amber-500 shrink-0 mt-0.5" />
         <div>
@@ -3464,61 +4054,88 @@ const SavedCard = ({ title, date, icon: Icon, onClick, isDark }) => (
   </div>
 );
 
-const FacilityCard = ({
-  title,
-  desc,
-  icon: Icon,
-  query,
-  userAddress,
-  isDark,
-}) => {
-  const location = userAddress ? `near ${userAddress}` : "near me";
-  const mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(query + " " + location)}`;
+const FACILITY_TYPE_ICONS = {
+  Hospital: Building,
+  Clinic: HeartPulse,
+  Doctor: UserCircle,
+  Pharmacy: Store,
+};
+
+const RealFacilityCard = ({ facility, isDark }) => {
+  const Icon = FACILITY_TYPE_ICONS[facility.type] || MapPin;
   return (
-    <a
-      href={mapUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`border rounded-2xl p-6 transition-all flex flex-col items-start gap-4 backdrop-blur-md group shadow-lg ${isDark ? "bg-[#111827]/80 border-slate-700/50 hover:border-teal-500/30 hover:-translate-y-1" : "bg-white border-slate-200 hover:border-teal-500/50 hover:-translate-y-1"}`}
+    <div
+      className={`border rounded-2xl p-6 flex flex-col gap-3 backdrop-blur-md shadow-lg ${isDark ? "bg-[#111827]/80 border-slate-700/50" : "bg-white border-slate-200"}`}
     >
-      <div className="p-3 bg-teal-500/10 rounded-xl text-teal-500 group-hover:scale-110 transition-transform">
-        <Icon size={28} />
-      </div>
-      <div className="flex-1">
-        <h4
-          className={`font-bold text-xl mb-2 ${isDark ? "text-white" : "text-slate-900"}`}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="p-3 bg-teal-500/10 rounded-xl text-teal-500 flex-shrink-0">
+            <Icon size={22} />
+          </div>
+          <div className="min-w-0">
+            <h4
+              className={`font-bold text-lg leading-tight truncate ${isDark ? "text-white" : "text-slate-900"}`}
+            >
+              {facility.name}
+            </h4>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-500">
+              {facility.type}
+            </span>
+          </div>
+        </div>
+        <span
+          className={`text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 ${isDark ? "bg-slate-800 text-slate-300" : "bg-slate-100 text-slate-600"}`}
         >
-          {title}
-        </h4>
-        <p className="text-slate-500 text-sm leading-relaxed">{desc}</p>
+          {facility.distanceKm} km
+        </span>
       </div>
-      <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-teal-500 mt-2 opacity-80 group-hover:opacity-100 transition-opacity">
-        Open Map <ChevronRight size={12} />
+      {facility.address && (
+        <p className="text-slate-500 text-sm">{facility.address}</p>
+      )}
+      <div className="flex items-center gap-4 mt-1">
+        <a
+          href={facility.mapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-teal-500 hover:text-teal-400 transition-colors"
+        >
+          <Navigation size={12} /> Directions
+        </a>
+        {facility.phone && (
+          <a
+            href={`tel:${facility.phone}`}
+            className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-teal-500 transition-colors"
+          >
+            <Phone size={12} /> {facility.phone}
+          </a>
+        )}
       </div>
-    </a>
+    </div>
   );
 };
 
-const SettingToggle = ({ label, desc, checked, onChange, isDark }) => (
-  <div className="flex items-center justify-between">
-    <div>
-      <span
-        className={`font-bold text-lg block mb-1 ${isDark ? "text-white" : "text-slate-900"}`}
+const SettingToggle = ({ label, desc, checked, onChange, isDark }) => {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <span
+          className={`font-bold text-lg block mb-1 ${isDark ? "text-white" : "text-slate-900"}`}
+        >
+          {label}
+        </span>
+        <span className="text-slate-500 text-sm">{desc}</span>
+      </div>
+      <button
+        onClick={onChange}
+        className={`w-14 h-7 rounded-full transition-colors relative shadow-inner flex-shrink-0 ${checked ? "bg-teal-500" : "bg-slate-300"}`}
       >
-        {label}
-      </span>
-      <span className="text-slate-500 text-sm">{desc}</span>
+        <div
+          className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all shadow-md ${checked ? "left-8" : "left-1"}`}
+        />
+      </button>
     </div>
-    <button
-      onClick={onChange}
-      className={`w-14 h-7 rounded-full transition-colors relative shadow-inner flex-shrink-0 ${checked ? "bg-teal-500" : "bg-slate-300"}`}
-    >
-      <div
-        className={`w-5 h-5 bg-white rounded-full absolute top-1 transition-all shadow-md ${checked ? "left-8" : "left-1"}`}
-      />
-    </button>
-  </div>
-);
+  );
+};
 
 const ProfileField = ({
   label,
