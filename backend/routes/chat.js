@@ -7,108 +7,7 @@ const { getGroqResponse, isOffTopic } = require("../config/groq");
 const { sendEmergencyAlertEmail } = require("../config/emailService");
 const { sendSMS } = require("../config/smsService");
 const nodemailer = require("nodemailer");
-const axios = require("axios");
-
-// ── HELPER: Calculate Distance in KM ──────────────────────────────────────────
-function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radius of the earth in km
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return (R * c).toFixed(1);
-}
-
-// ── HELPER: Geocode Address (Bypasses OSM Blocks) ─────────────────────────────
-async function geocodeAddress(address) {
-  try {
-    const res = await axios.get(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`,
-      {
-        headers: {
-          "User-Agent": "HealthBot-MCA-Project/1.0 (contact@healthbot.com)",
-        },
-      },
-    );
-    if (res.data && res.data.length > 0) {
-      return {
-        latitude: parseFloat(res.data[0].lat),
-        longitude: parseFloat(res.data[0].lon),
-      };
-    }
-    return null;
-  } catch (err) {
-    console.error("Geocoding Error:", err.message);
-    return null;
-  }
-}
-
-// ── HELPER: Robust Facility Fetcher (Overpass API) ────────────────────────────
-async function fetchOsmFacilities(lat, lon) {
-  try {
-    // 15km radius, using 'nwr' to catch all complex buildings
-    const overpassQuery = `
-      [out:json][timeout:25];
-      (
-        nwr["amenity"="hospital"](around:15000,${lat},${lon});
-        nwr["amenity"="clinic"](around:15000,${lat},${lon});
-        nwr["amenity"="doctors"](around:15000,${lat},${lon});
-        nwr["amenity"="pharmacy"](around:15000,${lat},${lon});
-      );
-      out center;
-    `;
-
-    // Adding User-Agent and Content-Type to bypass OSM Anti-Bot Blocks!
-    const overpassRes = await axios.post(
-      "https://overpass-api.de/api/interpreter",
-      `data=${encodeURIComponent(overpassQuery)}`,
-      {
-        headers: {
-          "User-Agent": "HealthBot-MCA-Project/1.0 (contact@healthbot.com)",
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      },
-    );
-
-    let facilities = [];
-    if (overpassRes.data && overpassRes.data.elements) {
-      facilities = overpassRes.data.elements.map((el) => {
-        const centerLat = el.lat || el.center?.lat;
-        const centerLon = el.lon || el.center?.lon;
-        const tags = el.tags || {};
-
-        let type = "Hospital";
-        if (tags.amenity === "clinic") type = "Clinic";
-        if (tags.amenity === "doctors") type = "Doctor";
-        if (tags.amenity === "pharmacy") type = "Pharmacy";
-
-        return {
-          name: tags.name || `Unnamed ${type}`,
-          type: type,
-          distanceKm: getDistance(lat, lon, centerLat, centerLon),
-          address: tags["addr:street"]
-            ? `${tags["addr:street"]} ${tags["addr:city"] || ""}`.trim()
-            : null,
-          phone: tags.phone || tags["contact:phone"] || null,
-          mapsUrl: `https://www.google.com/maps/search/?api=1&query=${centerLat},${centerLon}`,
-        };
-      });
-
-      facilities = facilities
-        .filter((f) => !f.name.startsWith("Unnamed"))
-        .sort((a, b) => parseFloat(a.distanceKm) - parseFloat(b.distanceKm));
-    }
-    return facilities;
-  } catch (error) {
-    console.error("Overpass API Error:", error.message);
-    return [];
-  }
-}
+const { geocodeAddress, findNearbyFacilities } = require("../config/facilityFinder");
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
 async function getMLPrediction(text, symptoms) {
@@ -131,65 +30,6 @@ async function getMLPrediction(text, symptoms) {
     console.error("ML error:", err.message);
     return null;
   }
-}
-
-// ── Geographical Epidemiology Filter ───────────────────────────────────────────
-function applyGeoWeighting(mlResult, userAddress) {
-  if (!mlResult || !mlResult.predictions || !userAddress) return mlResult;
-
-  const addressLower = userAddress.toLowerCase();
-  const jkLocations = [
-    "kashmir",
-    "srinagar",
-    "j&k",
-    "jammu",
-    "j and k",
-    "anantnag",
-    "baramulla",
-    "kupwara",
-    "pulwama",
-    "budgam",
-    "kulgam",
-    "shopian",
-    "bandipora",
-    "ganderbal",
-    "pahalgam",
-    "gulmarg",
-    "sonamarg",
-    "sopore",
-    "tral",
-    "samba",
-    "kathua",
-    "udhampur",
-    "reasi",
-    "ramban",
-    "poonch",
-    "doda",
-    "kishtwar",
-    "rajouri",
-    "bhaderwah",
-    "katra",
-  ];
-
-  if (jkLocations.some((loc) => addressLower.includes(loc))) {
-    let adjustedPredictions = mlResult.predictions.map((p) => {
-      let diseaseName = p.disease.toLowerCase();
-      let newConf = p.confidence;
-      if (diseaseName === "malaria" || diseaseName === "dengue")
-        newConf = Math.max(1, newConf - 45);
-      if (
-        diseaseName === "typhoid" ||
-        diseaseName === "common cold" ||
-        diseaseName === "flu" ||
-        diseaseName === "pneumonia"
-      )
-        newConf = Math.min(99, newConf + 15);
-      return { ...p, confidence: newConf };
-    });
-    adjustedPredictions.sort((a, b) => b.confidence - a.confidence);
-    mlResult.predictions = adjustedPredictions;
-  }
-  return mlResult;
 }
 
 // ── NL Map ────────────────────────────────────────────────────────────────────
@@ -665,7 +505,7 @@ router.get("/find-doctors", auth, async (req, res) => {
       });
     }
 
-    const facilities = await fetchOsmFacilities(latitude, longitude);
+    const facilities = await findNearbyFacilities(latitude, longitude);
     res.json({
       facilities,
       locationSource,
@@ -721,8 +561,6 @@ router.post("/message", auth, async (req, res) => {
       }
 
       mlResult = await getMLPrediction(text, []);
-      if (user && user.address)
-        mlResult = applyGeoWeighting(mlResult, user.address);
       const ml = buildMLSection(mlResult, symptoms);
 
       if (process.env.GROQ_API_KEY && ml && ml.summary) {
@@ -757,7 +595,7 @@ router.post("/message", auth, async (req, res) => {
         if (!geo) {
           botReply = `I couldn't pinpoint your saved address (${user.address}) on the map, ${userName.split(" ")[0]}. Try the Care Locator tab, or double-check your address in Profile settings.`;
         } else {
-          facilities = await fetchOsmFacilities(geo.latitude, geo.longitude);
+          facilities = await findNearbyFacilities(geo.latitude, geo.longitude);
           if (!facilities.length) {
             botReply = `I couldn't find any listed hospitals or clinics near ${user.address} in OpenStreetMap's data. Try the Care Locator tab for a wider search, or search nearby facilities directly on Google Maps.`;
           } else {
@@ -844,8 +682,6 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
     }
 
     let mlResult = await getMLPrediction("", symptoms);
-    if (user && user.address)
-      mlResult = applyGeoWeighting(mlResult, user.address);
 
     const ml = buildMLSection(mlResult, symptoms, round >= 2);
 

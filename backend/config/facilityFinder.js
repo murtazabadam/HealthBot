@@ -45,15 +45,15 @@ async function geocodeAddress(address) {
 async function findNearbyFacilities(latitude, longitude) {
   const query = `[out:json][timeout:25];
 (
-  node["amenity"="hospital"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  node["amenity"="clinic"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  node["amenity"="doctors"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  node["amenity"="pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  node["healthcare"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  way["amenity"="hospital"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  way["amenity"="clinic"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  way["amenity"="pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  way["healthcare"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="hospital"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="clinic"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="doctors"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="hospital"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="clinic"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="centre"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="doctor"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
 );
 out center tags;`;
 
@@ -87,6 +87,7 @@ out center tags;`;
         : tags.amenity === "pharmacy" ? "Pharmacy"
         : tags.healthcare === "hospital" ? "Hospital"
         : tags.healthcare === "clinic" ? "Clinic"
+        : tags.healthcare === "centre" ? "Clinic"
         : tags.healthcare === "doctor" ? "Doctor"
         : tags.healthcare === "pharmacy" ? "Pharmacy"
         : "Health Facility";
