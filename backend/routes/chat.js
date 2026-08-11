@@ -4,6 +4,7 @@ const auth = require("../middleware/auth");
 const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const { getGroqResponse, isOffTopic } = require("../config/groq");
+const { geocodeAddress, findNearbyFacilities } = require("../config/facilityFinder");
 const { sendEmergencyAlertEmail } = require("../config/emailService");
 const { sendSMS } = require("../config/smsService");
 const nodemailer = require("nodemailer");
@@ -356,6 +357,16 @@ function detectIntent(text) {
   )
     return "farewell";
   if (
+    [
+      "find a doctor", "find doctor", "find a clinic", "find clinic",
+      "nearby hospital", "nearest hospital", "nearby clinic", "nearest clinic",
+      "doctor near me", "hospital near me", "clinic near me",
+      "need a doctor", "recommend a doctor", "suggest a doctor",
+      "where can i find a doctor", "where can i see a doctor",
+    ].some((p) => lower.includes(p))
+  )
+    return "find_doctor";
+  if (
     extractSymptoms(text).length > 0 &&
     !isHypotheticalQuestion(text) &&
     !hasNonPersonSubject(text)
@@ -463,6 +474,7 @@ router.post("/message", auth, async (req, res) => {
     let botReply = "";
     let mlResult = null;
     let emergency = false;
+    let facilities = null;
 
     // Load history ONLY if saveHistory is true (Incognito Mode logic)
     let conv = null;
@@ -527,6 +539,25 @@ router.post("/message", auth, async (req, res) => {
       !hasConversation
     ) {
       botReply = getFallbackReply(intent, userName);
+    } else if (intent === "find_doctor") {
+      if (!user || !user.address) {
+        botReply = `I'd like to help you find a nearby doctor or hospital, ${userName.split(" ")[0]}, but I don't have an address on file for you yet. Add one in your Profile, or use the dedicated Find a Doctor tab which can use your live GPS location instead.`;
+      } else {
+        const geo = await geocodeAddress(user.address);
+        if (!geo) {
+          botReply = `I couldn't pinpoint your saved address (${user.address}) on the map, ${userName.split(" ")[0]}. Try the Find a Doctor tab, or double-check your address in Profile settings.`;
+        } else {
+          facilities = await findNearbyFacilities(geo.latitude, geo.longitude);
+          if (!facilities.length) {
+            botReply = `I couldn't find any listed hospitals or clinics near ${user.address} in OpenStreetMap's data — coverage can be thin for some areas. Try the Find a Doctor tab for a wider search, or search nearby facilities directly on Google Maps.`;
+          } else {
+            const top3 = facilities.slice(0, 3)
+              .map((f) => `${f.name} (${f.type}, ${f.distanceKm} km away)`)
+              .join(", ");
+            botReply = `Here are the nearest facilities to ${user.address}, ${userName.split(" ")[0]}: ${top3}. See the Find a Doctor tab for the full list with directions.`;
+          }
+        }
+      }
     } else {
       const offTopic = process.env.GROQ_API_KEY
         ? await isOffTopic(text, recentHistory)
@@ -562,7 +593,7 @@ router.post("/message", auth, async (req, res) => {
       await conv.save();
     }
 
-    res.json({ reply: botReply, mlResult, intent, emergency });
+    res.json({ reply: botReply, mlResult, intent, emergency, facilities });
   } catch (err) {
     console.error("Chat error:", err);
     res.status(500).json({ message: "Server error" });
@@ -754,6 +785,49 @@ router.post("/notify-emergency", auth, async (req, res) => {
     res.json({ notified: results.sms || results.email, ...results });
   } catch (err) {
     console.error("Emergency notify error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── Find Nearby Doctors / Facilities ────────────────────────────────────────
+router.get("/find-doctors", auth, async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    let latitude, longitude, locationSource;
+
+    if (lat && lon) {
+      latitude = parseFloat(lat);
+      longitude = parseFloat(lon);
+      locationSource = "gps";
+    } else if (user.address) {
+      const geo = await geocodeAddress(user.address);
+      if (!geo) {
+        return res.status(400).json({
+          message: "Could not determine your location from your saved address",
+          hint: "Try enabling GPS, or update your address in Profile settings",
+        });
+      }
+      latitude = geo.latitude;
+      longitude = geo.longitude;
+      locationSource = "address";
+    } else {
+      return res.status(400).json({
+        message: "No location available",
+        hint: "Enable GPS or add an address in Profile settings",
+      });
+    }
+
+    const facilities = await findNearbyFacilities(latitude, longitude);
+    res.json({
+      facilities,
+      locationSource,
+      resolvedLocation: { latitude, longitude },
+    });
+  } catch (err) {
+    console.error("Find-doctors error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
