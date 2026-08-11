@@ -4,7 +4,6 @@ const auth = require("../middleware/auth");
 const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const { getGroqResponse, isOffTopic } = require("../config/groq");
-const { geocodeAddress } = require("../config/facilityFinder");
 const { sendEmergencyAlertEmail } = require("../config/emailService");
 const { sendSMS } = require("../config/smsService");
 const nodemailer = require("nodemailer");
@@ -25,24 +24,55 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return (R * c).toFixed(1);
 }
 
+// ── HELPER: Geocode Address (Bypasses OSM Blocks) ─────────────────────────────
+async function geocodeAddress(address) {
+  try {
+    const res = await axios.get(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`,
+      {
+        headers: {
+          "User-Agent": "HealthBot-MCA-Project/1.0 (contact@healthbot.com)",
+        },
+      },
+    );
+    if (res.data && res.data.length > 0) {
+      return {
+        latitude: parseFloat(res.data[0].lat),
+        longitude: parseFloat(res.data[0].lon),
+      };
+    }
+    return null;
+  } catch (err) {
+    console.error("Geocoding Error:", err.message);
+    return null;
+  }
+}
+
 // ── HELPER: Robust Facility Fetcher (Overpass API) ────────────────────────────
 async function fetchOsmFacilities(lat, lon) {
   try {
+    // 15km radius, using 'nwr' to catch all complex buildings
     const overpassQuery = `
       [out:json][timeout:25];
       (
-        node["amenity"="hospital"](around:5000,${lat},${lon});
-        way["amenity"="hospital"](around:5000,${lat},${lon});
-        node["amenity"="clinic"](around:5000,${lat},${lon});
-        way["amenity"="clinic"](around:5000,${lat},${lon});
-        node["amenity"="doctors"](around:5000,${lat},${lon});
-        node["amenity"="pharmacy"](around:5000,${lat},${lon});
+        nwr["amenity"="hospital"](around:15000,${lat},${lon});
+        nwr["amenity"="clinic"](around:15000,${lat},${lon});
+        nwr["amenity"="doctors"](around:15000,${lat},${lon});
+        nwr["amenity"="pharmacy"](around:15000,${lat},${lon});
       );
       out center;
     `;
+
+    // Adding User-Agent and Content-Type to bypass OSM Anti-Bot Blocks!
     const overpassRes = await axios.post(
       "https://overpass-api.de/api/interpreter",
       `data=${encodeURIComponent(overpassQuery)}`,
+      {
+        headers: {
+          "User-Agent": "HealthBot-MCA-Project/1.0 (contact@healthbot.com)",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      },
     );
 
     let facilities = [];
@@ -52,7 +82,6 @@ async function fetchOsmFacilities(lat, lon) {
         const centerLon = el.lon || el.center?.lon;
         const tags = el.tags || {};
 
-        // Capitalize correctly for frontend tabs!
         let type = "Hospital";
         if (tags.amenity === "clinic") type = "Clinic";
         if (tags.amenity === "doctors") type = "Doctor";
@@ -97,7 +126,6 @@ async function getMLPrediction(text, symptoms) {
     });
     clearTimeout(timeout);
     const data = await res.json();
-    console.log("ML:", JSON.stringify(data).substring(0, 200));
     return data;
   } catch (err) {
     console.error("ML error:", err.message);
@@ -110,7 +138,6 @@ function applyGeoWeighting(mlResult, userAddress) {
   if (!mlResult || !mlResult.predictions || !userAddress) return mlResult;
 
   const addressLower = userAddress.toLowerCase();
-
   const jkLocations = [
     "kashmir",
     "srinagar",
@@ -144,11 +171,7 @@ function applyGeoWeighting(mlResult, userAddress) {
     "katra",
   ];
 
-  const isKashmir = jkLocations.some((location) =>
-    addressLower.includes(location),
-  );
-
-  if (isKashmir) {
+  if (jkLocations.some((loc) => addressLower.includes(loc))) {
     let adjustedPredictions = mlResult.predictions.map((p) => {
       let diseaseName = p.disease.toLowerCase();
       let newConf = p.confidence;
@@ -170,11 +193,7 @@ function applyGeoWeighting(mlResult, userAddress) {
 }
 
 // ── NL Map ────────────────────────────────────────────────────────────────────
-const LABEL_OVERRIDES = {
-  high_fever: "Fever",
-  mild_fever: "Mild Fever",
-};
-
+const LABEL_OVERRIDES = { high_fever: "Fever", mild_fever: "Mild Fever" };
 function readableSymptom(id) {
   if (LABEL_OVERRIDES[id]) return LABEL_OVERRIDES[id];
   return id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -322,7 +341,6 @@ const _SORTED = Object.keys(NL_MAP).sort((a, b) => b.length - a.length);
 function _escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-
 function _containsPhrase(lower, phrase) {
   return new RegExp(`\\b${_escapeRegex(phrase)}\\b`).test(lower);
 }
@@ -336,7 +354,6 @@ function extractSymptoms(text) {
   return [...found];
 }
 
-// ── Intent Detection ───────────────────────────────────────────────────────────
 function isHypotheticalQuestion(text) {
   const lower = text.toLowerCase().trim();
   const patterns = [
@@ -518,7 +535,6 @@ function detectIntent(text) {
   return "conversational";
 }
 
-// ── Emergency Check ────────────────────────────────────────────────────────────
 function checkEmergency(symptoms) {
   const combos = [
     ["chest_pain", "breathlessness"],
@@ -530,7 +546,6 @@ function checkEmergency(symptoms) {
   return combos.some((combo) => combo.every((s) => symptoms.includes(s)));
 }
 
-// ── Fallback ──────────────────────────────────────────────────────────────────
 function getFallbackReply(intent, userName) {
   const name = userName ? userName.split(" ")[0] : "there";
   const h = new Date().getHours();
@@ -549,7 +564,6 @@ function getFallbackReply(intent, userName) {
   );
 }
 
-// ── Build ML Section ───────────────────────────────────────────────────────────
 function buildMLSection(mlResult, symptoms, forceThrough = false) {
   if (
     !mlResult ||
@@ -558,9 +572,7 @@ function buildMLSection(mlResult, symptoms, forceThrough = false) {
     mlResult.predictions.length === 0
   )
     return null;
-
   const top = mlResult.predictions[0];
-
   if (mlResult.low_confidence && symptoms.length < 2 && !forceThrough) {
     const suggestionPool = [
       {
@@ -593,10 +605,8 @@ function buildMLSection(mlResult, symptoms, forceThrough = false) {
       .filter((s) => !s.keys.some((k) => symptoms.includes(k)))
       .slice(0, 3)
       .map((s) => ({ id: s.id, label: s.label }));
-
     return { summary: null, needsMore: true, suggested };
   }
-
   const others = mlResult.predictions
     .slice(1)
     .filter((p) => p.confidence > 3)
@@ -618,12 +628,54 @@ function buildMLSection(mlResult, symptoms, forceThrough = false) {
   const followup = mlResult.followup_question
     ? `\n\n❓ ${mlResult.followup_question}`
     : "";
-
   return {
     summary: `Top prediction: ${top.disease} (${top.confidence}% confidence). Severity: ${mlResult.severity}.`,
     block: `📊 ML Analysis (${matched.join(", ")}):\n📋 Most likely: ${top.disease} (${top.confidence}%)\n${others ? `📌 Also possible: ${others}\n` : ""}⚠️ Severity: ${mlResult.severity}\n${description}\n💊 ${mlResult.recommendation}${precautions}${tip}${followup}\n\n⚕️ Not a substitute for professional medical advice.`,
   };
 }
+
+// ── GET /api/chat/find-doctors ────────────────────────────────────────────────
+router.get("/find-doctors", auth, async (req, res) => {
+  try {
+    const { lat, lon } = req.query;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    let latitude, longitude, locationSource;
+
+    if (lat && lon) {
+      latitude = parseFloat(lat);
+      longitude = parseFloat(lon);
+      locationSource = "gps";
+    } else if (user.address) {
+      const geo = await geocodeAddress(user.address);
+      if (!geo) {
+        return res.status(400).json({
+          message: "Could not determine your location from your saved address",
+          hint: "Try enabling GPS, or update your address in Profile settings",
+        });
+      }
+      latitude = geo.latitude;
+      longitude = geo.longitude;
+      locationSource = "address";
+    } else {
+      return res.status(400).json({
+        message: "No location available",
+        hint: "Enable GPS or add an address in Profile settings",
+      });
+    }
+
+    const facilities = await fetchOsmFacilities(latitude, longitude);
+    res.json({
+      facilities,
+      locationSource,
+      resolvedLocation: { latitude, longitude },
+    });
+  } catch (err) {
+    console.error("Find-doctors error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 // ── Message Route ──────────────────────────────────────────────────────────────
 router.post("/message", auth, async (req, res) => {
@@ -656,7 +708,6 @@ router.post("/message", auth, async (req, res) => {
           conv.messages.push({ sender: "user", text });
           await conv.save();
         }
-
         return res.json({
           needsConfirmation: true,
           originalText: text,
@@ -670,9 +721,8 @@ router.post("/message", auth, async (req, res) => {
       }
 
       mlResult = await getMLPrediction(text, []);
-      if (user && user.address) {
+      if (user && user.address)
         mlResult = applyGeoWeighting(mlResult, user.address);
-      }
       const ml = buildMLSection(mlResult, symptoms);
 
       if (process.env.GROQ_API_KEY && ml && ml.summary) {
@@ -707,7 +757,6 @@ router.post("/message", auth, async (req, res) => {
         if (!geo) {
           botReply = `I couldn't pinpoint your saved address (${user.address}) on the map, ${userName.split(" ")[0]}. Try the Care Locator tab, or double-check your address in Profile settings.`;
         } else {
-          // Use the robust fetchOsmFacilities function instead of findNearbyFacilities
           facilities = await fetchOsmFacilities(geo.latitude, geo.longitude);
           if (!facilities.length) {
             botReply = `I couldn't find any listed hospitals or clinics near ${user.address} in OpenStreetMap's data. Try the Care Locator tab for a wider search, or search nearby facilities directly on Google Maps.`;
@@ -724,7 +773,6 @@ router.post("/message", auth, async (req, res) => {
       const offTopic = process.env.GROQ_API_KEY
         ? await isOffTopic(text, recentHistory)
         : false;
-
       if (offTopic) {
         botReply = `That's outside what I can help with, ${userName.split(" ")[0]} — I'm a medical symptom assistant, so I can only help with health, symptoms, and wellness questions. Is there anything going on with your health I can help you with?`;
       } else if (process.env.GROQ_API_KEY) {
@@ -758,7 +806,6 @@ router.post("/message", auth, async (req, res) => {
   }
 });
 
-// ── History Route ──────────────────────────────────────────────────────────────
 router.get("/history", auth, async (req, res) => {
   try {
     const conv = await Conversation.findOne({ userId: req.user.id });
@@ -768,7 +815,6 @@ router.get("/history", auth, async (req, res) => {
   }
 });
 
-// ── Clear History Route ────────────────────────────────────────────────────────
 router.delete("/history", auth, async (req, res) => {
   try {
     await Conversation.findOneAndDelete({ userId: req.user.id });
@@ -778,15 +824,13 @@ router.delete("/history", auth, async (req, res) => {
   }
 });
 
-// ── Confirm Symptoms Route ───────────────────────────────────────────────────
 router.post("/confirm-symptoms", auth, async (req, res) => {
   try {
     const { symptoms, originalText, saveHistory = true, round = 1 } = req.body;
-    if (!Array.isArray(symptoms) || symptoms.length === 0) {
+    if (!Array.isArray(symptoms) || symptoms.length === 0)
       return res
         .status(400)
         .json({ message: "At least one symptom is required" });
-    }
 
     const user = await User.findById(req.user.id);
     const userName = user ? user.name : "there";
@@ -800,9 +844,8 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
     }
 
     let mlResult = await getMLPrediction("", symptoms);
-    if (user && user.address) {
+    if (user && user.address)
       mlResult = applyGeoWeighting(mlResult, user.address);
-    }
 
     const ml = buildMLSection(mlResult, symptoms, round >= 2);
 
@@ -857,42 +900,32 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
   }
 });
 
-// ── Symptom Options Route ────────────────────────────────────────────────────
 router.get("/symptom-options", auth, (req, res) => {
   const ids = [...new Set(Object.values(NL_MAP))].sort();
   res.json(ids.map((id) => ({ id, label: readableSymptom(id) })));
 });
 
-// ── Email Reminder Route (Replaced Email Summary) ─────────────────────────────
 router.post("/email-reminder", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     const { reminderName, time } = req.body;
-
     const transporter = nodemailer.createTransport({
       service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
     });
-
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: user.email,
       subject: `⏰ HealthBot Reminder: ${reminderName}`,
       text: `Hello ${user.name},\n\nThis is your friendly HealthBot reminder!\n\nIt is time for: ${reminderName}\nScheduled at: ${time}\n\nStay healthy!\n- The HealthBot Team`,
     };
-
     await transporter.sendMail(mailOptions);
     res.json({ message: "Reminder email sent successfully!" });
   } catch (err) {
-    console.error("Email error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// ── Notify Emergency Contact ──────────────────────────────────────────────────
 router.post("/notify-emergency", auth, async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
@@ -906,10 +939,12 @@ router.post("/notify-emergency", auth, async (req, res) => {
       address,
     } = user;
     if (!emergencyContactPhone && !emergencyContactEmail) {
-      return res.status(400).json({
-        message: "No emergency contact on file",
-        hint: "Add one in Profile settings",
-      });
+      return res
+        .status(400)
+        .json({
+          message: "No emergency contact on file",
+          hint: "Add one in Profile settings",
+        });
     }
 
     const mapsUrl =
@@ -918,7 +953,6 @@ router.post("/notify-emergency", auth, async (req, res) => {
         : address
           ? `https://www.google.com/maps/search/${encodeURIComponent(address)}`
           : null;
-
     const results = { sms: false, email: false };
 
     if (emergencyContactPhone) {
@@ -936,51 +970,6 @@ router.post("/notify-emergency", auth, async (req, res) => {
 
     res.json({ notified: results.sms || results.email, ...results });
   } catch (err) {
-    console.error("Emergency notify error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// ── Find Nearby Doctors / Facilities ────────────────────────────────────────
-router.get("/find-doctors", auth, async (req, res) => {
-  try {
-    const { lat, lon } = req.query;
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    let latitude, longitude, locationSource;
-
-    if (lat && lon) {
-      latitude = parseFloat(lat);
-      longitude = parseFloat(lon);
-      locationSource = "gps";
-    } else if (user.address) {
-      const geo = await geocodeAddress(user.address);
-      if (!geo) {
-        return res.status(400).json({
-          message: "Could not determine your location from your saved address",
-          hint: "Try enabling GPS, or update your address in Profile settings",
-        });
-      }
-      latitude = geo.latitude;
-      longitude = geo.longitude;
-      locationSource = "address";
-    } else {
-      return res.status(400).json({
-        message: "No location available",
-        hint: "Enable GPS or add an address in Profile settings",
-      });
-    }
-
-    // Use the robust fetchOsmFacilities function instead of findNearbyFacilities
-    const facilities = await fetchOsmFacilities(latitude, longitude);
-    res.json({
-      facilities,
-      locationSource,
-      resolvedLocation: { latitude, longitude },
-    });
-  } catch (err) {
-    console.error("Find-doctors error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
