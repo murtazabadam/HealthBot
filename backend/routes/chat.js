@@ -4,10 +4,82 @@ const auth = require("../middleware/auth");
 const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const { getGroqResponse, isOffTopic } = require("../config/groq");
-const { geocodeAddress, findNearbyFacilities } = require("../config/facilityFinder");
+const { geocodeAddress } = require("../config/facilityFinder");
 const { sendEmergencyAlertEmail } = require("../config/emailService");
 const { sendSMS } = require("../config/smsService");
 const nodemailer = require("nodemailer");
+const axios = require("axios");
+
+// ── HELPER: Calculate Distance in KM ──────────────────────────────────────────
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return (R * c).toFixed(1);
+}
+
+// ── HELPER: Robust Facility Fetcher (Overpass API) ────────────────────────────
+async function fetchOsmFacilities(lat, lon) {
+  try {
+    const overpassQuery = `
+      [out:json][timeout:25];
+      (
+        node["amenity"="hospital"](around:5000,${lat},${lon});
+        way["amenity"="hospital"](around:5000,${lat},${lon});
+        node["amenity"="clinic"](around:5000,${lat},${lon});
+        way["amenity"="clinic"](around:5000,${lat},${lon});
+        node["amenity"="doctors"](around:5000,${lat},${lon});
+        node["amenity"="pharmacy"](around:5000,${lat},${lon});
+      );
+      out center;
+    `;
+    const overpassRes = await axios.post(
+      "https://overpass-api.de/api/interpreter",
+      `data=${encodeURIComponent(overpassQuery)}`,
+    );
+
+    let facilities = [];
+    if (overpassRes.data && overpassRes.data.elements) {
+      facilities = overpassRes.data.elements.map((el) => {
+        const centerLat = el.lat || el.center?.lat;
+        const centerLon = el.lon || el.center?.lon;
+        const tags = el.tags || {};
+
+        // Capitalize correctly for frontend tabs!
+        let type = "Hospital";
+        if (tags.amenity === "clinic") type = "Clinic";
+        if (tags.amenity === "doctors") type = "Doctor";
+        if (tags.amenity === "pharmacy") type = "Pharmacy";
+
+        return {
+          name: tags.name || `Unnamed ${type}`,
+          type: type,
+          distanceKm: getDistance(lat, lon, centerLat, centerLon),
+          address: tags["addr:street"]
+            ? `${tags["addr:street"]} ${tags["addr:city"] || ""}`.trim()
+            : null,
+          phone: tags.phone || tags["contact:phone"] || null,
+          mapsUrl: `https://www.google.com/maps/search/?api=1&query=${centerLat},${centerLon}`,
+        };
+      });
+
+      facilities = facilities
+        .filter((f) => !f.name.startsWith("Unnamed"))
+        .sort((a, b) => parseFloat(a.distanceKm) - parseFloat(b.distanceKm));
+    }
+    return facilities;
+  } catch (error) {
+    console.error("Overpass API Error:", error.message);
+    return [];
+  }
+}
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
 async function getMLPrediction(text, symptoms) {
@@ -33,11 +105,71 @@ async function getMLPrediction(text, symptoms) {
   }
 }
 
+// ── Geographical Epidemiology Filter ───────────────────────────────────────────
+function applyGeoWeighting(mlResult, userAddress) {
+  if (!mlResult || !mlResult.predictions || !userAddress) return mlResult;
+
+  const addressLower = userAddress.toLowerCase();
+
+  const jkLocations = [
+    "kashmir",
+    "srinagar",
+    "j&k",
+    "jammu",
+    "j and k",
+    "anantnag",
+    "baramulla",
+    "kupwara",
+    "pulwama",
+    "budgam",
+    "kulgam",
+    "shopian",
+    "bandipora",
+    "ganderbal",
+    "pahalgam",
+    "gulmarg",
+    "sonamarg",
+    "sopore",
+    "tral",
+    "samba",
+    "kathua",
+    "udhampur",
+    "reasi",
+    "ramban",
+    "poonch",
+    "doda",
+    "kishtwar",
+    "rajouri",
+    "bhaderwah",
+    "katra",
+  ];
+
+  const isKashmir = jkLocations.some((location) =>
+    addressLower.includes(location),
+  );
+
+  if (isKashmir) {
+    let adjustedPredictions = mlResult.predictions.map((p) => {
+      let diseaseName = p.disease.toLowerCase();
+      let newConf = p.confidence;
+      if (diseaseName === "malaria" || diseaseName === "dengue")
+        newConf = Math.max(1, newConf - 45);
+      if (
+        diseaseName === "typhoid" ||
+        diseaseName === "common cold" ||
+        diseaseName === "flu" ||
+        diseaseName === "pneumonia"
+      )
+        newConf = Math.min(99, newConf + 15);
+      return { ...p, confidence: newConf };
+    });
+    adjustedPredictions.sort((a, b) => b.confidence - a.confidence);
+    mlResult.predictions = adjustedPredictions;
+  }
+  return mlResult;
+}
+
 // ── NL Map ────────────────────────────────────────────────────────────────────
-// A couple of symptom IDs read oddly once auto-capitalized — e.g. "fever"
-// alone maps to the ID high_fever (the dataset has no neutral "fever"
-// option), but showing the user "High Fever" back when they only said
-// "fever" reads as the bot claiming more than they said.
 const LABEL_OVERRIDES = {
   high_fever: "Fever",
   mild_fever: "Mild Fever",
@@ -358,11 +490,22 @@ function detectIntent(text) {
     return "farewell";
   if (
     [
-      "find a doctor", "find doctor", "find a clinic", "find clinic",
-      "nearby hospital", "nearest hospital", "nearby clinic", "nearest clinic",
-      "doctor near me", "hospital near me", "clinic near me",
-      "need a doctor", "recommend a doctor", "suggest a doctor",
-      "where can i find a doctor", "where can i see a doctor",
+      "find a doctor",
+      "find doctor",
+      "find a clinic",
+      "find clinic",
+      "nearby hospital",
+      "nearest hospital",
+      "nearby clinic",
+      "nearest clinic",
+      "doctor near me",
+      "hospital near me",
+      "clinic near me",
+      "need a doctor",
+      "recommend a doctor",
+      "suggest a doctor",
+      "where can i find a doctor",
+      "where can i see a doctor",
     ].some((p) => lower.includes(p))
   )
     return "find_doctor";
@@ -420,19 +563,37 @@ function buildMLSection(mlResult, symptoms, forceThrough = false) {
 
   if (mlResult.low_confidence && symptoms.length < 2 && !forceThrough) {
     const suggestionPool = [
-      { label: "Fever or chills", id: "high_fever", keys: ["high_fever", "mild_fever", "chills"] },
-      { label: "Headache or body ache", id: "headache", keys: ["headache", "severe_headache", "muscle_pain"] },
-      { label: "Nausea or vomiting", id: "nausea", keys: ["nausea", "vomiting"] },
-      { label: "Cough or sore throat", id: "cough", keys: ["cough", "throat_irritation"] },
-      { label: "Fatigue or weakness", id: "fatigue", keys: ["fatigue", "lethargy"] },
+      {
+        label: "Fever or chills",
+        id: "high_fever",
+        keys: ["high_fever", "mild_fever", "chills"],
+      },
+      {
+        label: "Headache or body ache",
+        id: "headache",
+        keys: ["headache", "severe_headache", "muscle_pain"],
+      },
+      {
+        label: "Nausea or vomiting",
+        id: "nausea",
+        keys: ["nausea", "vomiting"],
+      },
+      {
+        label: "Cough or sore throat",
+        id: "cough",
+        keys: ["cough", "throat_irritation"],
+      },
+      {
+        label: "Fatigue or weakness",
+        id: "fatigue",
+        keys: ["fatigue", "lethargy"],
+      },
     ];
     const suggested = suggestionPool
       .filter((s) => !s.keys.some((k) => symptoms.includes(k)))
       .slice(0, 3)
       .map((s) => ({ id: s.id, label: s.label }));
 
-    // needsMore, not a text block — the caller shows this as tappable
-    // suggestion chips instead of asking the user to type more.
     return { summary: null, needsMore: true, suggested };
   }
 
@@ -476,7 +637,6 @@ router.post("/message", auth, async (req, res) => {
     let emergency = false;
     let facilities = null;
 
-    // Load history ONLY if saveHistory is true (Incognito Mode logic)
     let conv = null;
     let recentHistory = [];
     if (saveHistory) {
@@ -510,21 +670,21 @@ router.post("/message", auth, async (req, res) => {
       }
 
       mlResult = await getMLPrediction(text, []);
+      if (user && user.address) {
+        mlResult = applyGeoWeighting(mlResult, user.address);
+      }
       const ml = buildMLSection(mlResult, symptoms);
 
       if (process.env.GROQ_API_KEY && ml && ml.summary) {
         try {
-          console.log("Calling Groq AI...");
           const aiText = await getGroqResponse(
             text,
             ml.summary,
             userName,
             recentHistory,
           );
-          console.log("Groq:", aiText ? "SUCCESS" : "NULL");
           botReply = aiText ? `${aiText}\n\n${ml.block}` : ml.block;
         } catch (err) {
-          console.error("Groq failed:", err.message);
           botReply = ml.block;
         }
       } else {
@@ -541,20 +701,22 @@ router.post("/message", auth, async (req, res) => {
       botReply = getFallbackReply(intent, userName);
     } else if (intent === "find_doctor") {
       if (!user || !user.address) {
-        botReply = `I'd like to help you find a nearby doctor or hospital, ${userName.split(" ")[0]}, but I don't have an address on file for you yet. Add one in your Profile, or use the dedicated Find a Doctor tab which can use your live GPS location instead.`;
+        botReply = `I'd like to help you find a nearby facility, ${userName.split(" ")[0]}, but I don't have an address on file for you yet. Add one in your Profile, or use the dedicated Care Locator tab which can use your live GPS location instead.`;
       } else {
         const geo = await geocodeAddress(user.address);
         if (!geo) {
-          botReply = `I couldn't pinpoint your saved address (${user.address}) on the map, ${userName.split(" ")[0]}. Try the Find a Doctor tab, or double-check your address in Profile settings.`;
+          botReply = `I couldn't pinpoint your saved address (${user.address}) on the map, ${userName.split(" ")[0]}. Try the Care Locator tab, or double-check your address in Profile settings.`;
         } else {
-          facilities = await findNearbyFacilities(geo.latitude, geo.longitude);
+          // Use the robust fetchOsmFacilities function instead of findNearbyFacilities
+          facilities = await fetchOsmFacilities(geo.latitude, geo.longitude);
           if (!facilities.length) {
-            botReply = `I couldn't find any listed hospitals or clinics near ${user.address} in OpenStreetMap's data — coverage can be thin for some areas. Try the Find a Doctor tab for a wider search, or search nearby facilities directly on Google Maps.`;
+            botReply = `I couldn't find any listed hospitals or clinics near ${user.address} in OpenStreetMap's data. Try the Care Locator tab for a wider search, or search nearby facilities directly on Google Maps.`;
           } else {
-            const top3 = facilities.slice(0, 3)
+            const top3 = facilities
+              .slice(0, 3)
               .map((f) => `${f.name} (${f.type}, ${f.distanceKm} km away)`)
               .join(", ");
-            botReply = `Here are the nearest facilities to ${user.address}, ${userName.split(" ")[0]}: ${top3}. See the Find a Doctor tab for the full list with directions.`;
+            botReply = `Here are the nearest facilities to ${user.address}, ${userName.split(" ")[0]}: ${top3}. See the Care Locator tab for the full list with directions.`;
           }
         }
       }
@@ -567,17 +729,14 @@ router.post("/message", auth, async (req, res) => {
         botReply = `That's outside what I can help with, ${userName.split(" ")[0]} — I'm a medical symptom assistant, so I can only help with health, symptoms, and wellness questions. Is there anything going on with your health I can help you with?`;
       } else if (process.env.GROQ_API_KEY) {
         try {
-          console.log("Calling Groq AI for conversation...");
           const aiText = await getGroqResponse(
             text,
             null,
             userName,
             recentHistory,
           );
-          console.log("Groq conversation:", aiText ? "SUCCESS" : "NULL");
           botReply = aiText || getFallbackReply(intent, userName);
         } catch (err) {
-          console.error("Groq conversation failed:", err.message);
           botReply = getFallbackReply(intent, userName);
         }
       } else {
@@ -585,7 +744,6 @@ router.post("/message", auth, async (req, res) => {
       }
     }
 
-    // ── Save to database ONLY if saveHistory is true ───────────────────────────
     if (saveHistory) {
       if (!conv) conv = new Conversation({ userId: req.user.id, messages: [] });
       conv.messages.push({ sender: "user", text });
@@ -641,27 +799,21 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
       recentHistory = conv ? conv.messages.slice(-12) : [];
     }
 
-    // Deliberately pass an EMPTY text here, not the raw original message.
-    // The ML engine's /predict endpoint unions any symptoms it independently
-    // extracts from `text` with the explicit `symptoms` list — which meant a
-    // symptom the user just removed from the confirmation checklist would
-    // silently reappear in the prediction anyway, since the raw text (still
-    // containing that symptom) got re-extracted and merged back in. Passing
-    // no text means the ML engine trusts the confirmed list exactly as given.
-    const mlResult = await getMLPrediction("", symptoms);
-    // Only one round of "add a suggested symptom" is ever offered — round 2
-    // forces a real answer through regardless of confidence, so the
-    // checklist can never reappear indefinitely.
+    let mlResult = await getMLPrediction("", symptoms);
+    if (user && user.address) {
+      mlResult = applyGeoWeighting(mlResult, user.address);
+    }
+
     const ml = buildMLSection(mlResult, symptoms, round >= 2);
 
     if (ml && ml.needsMore) {
-      // Not enough symptoms for a confident prediction yet — show the same
-      // checklist UI again (with quick-add suggestions) instead of asking
-      // the user to type more.
       return res.json({
         needsConfirmation: true,
         originalText: text,
-        detectedSymptoms: symptoms.map((id) => ({ id, label: readableSymptom(id) })),
+        detectedSymptoms: symptoms.map((id) => ({
+          id,
+          label: readableSymptom(id),
+        })),
         suggestedSymptoms: ml.suggested,
         intent: "symptoms",
         emergency: false,
@@ -679,7 +831,6 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
         );
         botReply = aiText ? `${aiText}\n\n${ml.block}` : ml.block;
       } catch (err) {
-        console.error("Groq failed:", err.message);
         botReply = ml.block;
       }
     } else {
@@ -742,17 +893,18 @@ router.post("/email-reminder", auth, async (req, res) => {
 });
 
 // ── Notify Emergency Contact ──────────────────────────────────────────────────
-// Fired when the frontend's emergency alert triggers. Sends SMS + email to
-// the user's registered emergency contact (Profile settings, not
-// registration), including a Google Maps link built from the browser's
-// geolocation when available, falling back to the user's saved address.
 router.post("/notify-emergency", auth, async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const { emergencyContactName, emergencyContactPhone, emergencyContactEmail, address } = user;
+    const {
+      emergencyContactName,
+      emergencyContactPhone,
+      emergencyContactEmail,
+      address,
+    } = user;
     if (!emergencyContactPhone && !emergencyContactEmail) {
       return res.status(400).json({
         message: "No emergency contact on file",
@@ -820,7 +972,8 @@ router.get("/find-doctors", auth, async (req, res) => {
       });
     }
 
-    const facilities = await findNearbyFacilities(latitude, longitude);
+    // Use the robust fetchOsmFacilities function instead of findNearbyFacilities
+    const facilities = await fetchOsmFacilities(latitude, longitude);
     res.json({
       facilities,
       locationSource,
