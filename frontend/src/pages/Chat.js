@@ -1081,8 +1081,6 @@ export function ChatDashboard() {
     useState(null);
   const [facilityTypeFilter, setFacilityTypeFilter] = useState("all");
   const [facilitiesFetchedOnce, setFacilitiesFetchedOnce] = useState(false);
-
-  // NEW: Search Query for Facilities
   const [facilitySearchQuery, setFacilitySearchQuery] = useState("");
 
   const isDark = appSettings.darkMode;
@@ -1572,22 +1570,112 @@ export function ChatDashboard() {
     setFacilitiesLoading(true);
     setFacilitiesError("");
     try {
-      const token = localStorage.getItem("token");
-      const params = coords
-        ? { lat: coords.latitude, lon: coords.longitude }
-        : {};
-      const res = await axios.get(API.FIND_DOCTORS, {
-        headers: { Authorization: `Bearer ${token}` },
-        params,
-      });
-      setFacilitiesData(res.data.facilities || []);
-      setFacilitiesLocationSource(res.data.locationSource || null);
+      let lat, lon;
+      let source = "gps";
+
+      if (coords) {
+        lat = coords.latitude;
+        lon = coords.longitude;
+      } else if (user?.address) {
+        source = "address";
+        const geoRes = await axios.get(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(user.address)}`,
+        );
+        if (geoRes.data && geoRes.data.length > 0) {
+          lat = parseFloat(geoRes.data[0].lat);
+          lon = parseFloat(geoRes.data[0].lon);
+        } else {
+          throw new Error(
+            "Could not find map coordinates for your saved address.",
+          );
+        }
+      } else {
+        throw new Error(
+          "No location provided. Please click 'Use My Location'.",
+        );
+      }
+
+      // CLIENT-SIDE OVERPASS CALL
+      // Using broad, case-insensitive Regex to catch Indian clinics and pharmacies!
+      const overpassQuery = `
+        [out:json][timeout:25];
+        (
+          nwr["amenity"~"(?i)(hospital|clinic|doctors|pharmacy)"](around:15000,${lat},${lon});
+          nwr["healthcare"~"(?i)(hospital|clinic|doctor|pharmacy|centre)"](around:15000,${lat},${lon});
+        );
+        out center;
+      `;
+
+      const overpassRes = await axios.post(
+        "https://overpass-api.de/api/interpreter",
+        `data=${encodeURIComponent(overpassQuery)}`,
+        { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+      );
+
+      let facilities = [];
+      if (overpassRes.data && overpassRes.data.elements) {
+        facilities = overpassRes.data.elements.map((el) => {
+          const centerLat = el.lat || el.center?.lat;
+          const centerLon = el.lon || el.center?.lon;
+          const tags = el.tags || {};
+
+          let type = "Hospital";
+          const am = (tags.amenity || "").toLowerCase();
+          const hc = (tags.healthcare || "").toLowerCase();
+
+          if (
+            am.includes("clinic") ||
+            hc.includes("clinic") ||
+            hc.includes("centre")
+          )
+            type = "Clinic";
+          else if (am.includes("doctor") || hc.includes("doctor"))
+            type = "Doctor";
+          else if (am.includes("pharmacy") || hc.includes("pharmacy"))
+            type = "Pharmacy";
+          else type = "Hospital";
+
+          // Calculate Distance
+          const R = 6371;
+          const dLat = ((centerLat - lat) * Math.PI) / 180;
+          const dLon = ((centerLon - lon) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos((lat * Math.PI) / 180) *
+              Math.cos((centerLat * Math.PI) / 180) *
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2);
+          const distanceKm = (
+            R *
+            2 *
+            Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+          ).toFixed(1);
+
+          return {
+            name: tags.name || `Unnamed ${type}`,
+            type: type,
+            distanceKm,
+            address: tags["addr:street"]
+              ? `${tags["addr:street"]} ${tags["addr:city"] || ""}`.trim()
+              : null,
+            phone: tags.phone || tags["contact:phone"] || null,
+            mapsUrl: `https://www.google.com/maps/search/?api=1&query=${centerLat},${centerLon}`,
+          };
+        });
+
+        facilities = facilities
+          .filter((f) => !f.name.startsWith("Unnamed"))
+          .sort((a, b) => parseFloat(a.distanceKm) - parseFloat(b.distanceKm));
+      }
+
+      setFacilitiesData(facilities);
+      setFacilitiesLocationSource(source);
       setFacilitiesFetchedOnce(true);
     } catch (err) {
-      const msg =
-        err.response?.data?.message || "Could not load nearby facilities.";
-      const hint = err.response?.data?.hint;
-      setFacilitiesError(hint ? `${msg} ${hint}` : msg);
+      setFacilitiesError(
+        err.message ||
+          "Failed to load facilities. OpenStreetMap might be busy.",
+      );
       setFacilitiesData([]);
     } finally {
       setFacilitiesLoading(false);
@@ -2322,7 +2410,7 @@ export function ChatDashboard() {
       {isReminderModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
           <div
-            className={`w-full max-w-md p-6 rounded-3xl shadow-2xl ${isDark ? "bg-[#111827] border border-slate-700/50" : "bg-white border-slate-200"}`}
+            className={`w-full max-w-md p-6 rounded-3xl shadow-2xl ${isDark ? "bg-[#111827] border border-slate-700/50" : "bg-white border border-slate-200"}`}
           >
             <div className="flex justify-between items-center mb-6">
               <h3
@@ -2978,7 +3066,6 @@ export function ChatDashboard() {
                     )}
                   </div>
 
-                  {/* --- NEW: Auto-Detect GPS Address Section --- */}
                   <div className="flex flex-col gap-2 sm:col-span-2">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
@@ -3108,9 +3195,9 @@ export function ChatDashboard() {
               <div
                 className={`border rounded-3xl p-6 sm:p-8 mt-6 transition-colors duration-300 ${isDark ? "bg-[#111827]/80 backdrop-blur-xl border-slate-700/50" : "bg-white border-slate-200 shadow-sm"}`}
               >
-                <div className="flex items-center gap-3 mb-6">
-                  <Shield className="h-5 w-5 text-teal-500" />
-                  <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-5 w-5 text-teal-500" />
                     <h2
                       className={`text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`}
                     >
