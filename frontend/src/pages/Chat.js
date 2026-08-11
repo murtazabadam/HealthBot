@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { useNavigate, MemoryRouter } from "react-router-dom";
-import { API } from "../config";
 import {
   Activity,
   MessageSquare,
@@ -51,6 +50,19 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
+
+const API_BASE_URL = "http://localhost:5000/api";
+const API = {
+  PROFILE: `${API_BASE_URL}/auth/profile`,
+  CHANGE_PASSWORD: `${API_BASE_URL}/auth/change-password`,
+  DELETE_ACCOUNT: `${API_BASE_URL}/auth/delete-account`,
+  CHAT_MESSAGE: `${API_BASE_URL}/chat/message`,
+  CHAT_CONFIRM_SYMPTOMS: `${API_BASE_URL}/chat/confirm-symptoms`,
+  CHAT_SYMPTOM_OPTIONS: `${API_BASE_URL}/chat/symptom-options`,
+  CHAT_EMAIL_REMINDER: `${API_BASE_URL}/chat/email-reminder`,
+  FACILITIES: `${API_BASE_URL}/chat/facilities`,
+  NOTIFY_EMERGENCY: `${API_BASE_URL}/chat/notify-emergency`,
+};
 
 function SymptomConfirmationCard({
   msg,
@@ -923,7 +935,6 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
-          {/* Ambulance Card */}
           <div
             className={`p-4 sm:p-5 rounded-2xl border ${isDark ? "bg-red-500/5 border-red-500/20" : "bg-red-50 border-red-200"} flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
           >
@@ -950,7 +961,6 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
             </a>
           </div>
 
-          {/* Personal Contact Details */}
           <div
             className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
@@ -985,7 +995,6 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
             </div>
           </div>
 
-          {/* Registered Location */}
           <div
             className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
@@ -1073,7 +1082,6 @@ export function ChatDashboard() {
 
   const [emergencyAlert, setEmergencyAlert] = useState(false);
 
-  // ── Find a Doctor / Facilities ─────────────────────────────────────────
   const [facilitiesData, setFacilitiesData] = useState([]);
   const [facilitiesLoading, setFacilitiesLoading] = useState(false);
   const [facilitiesError, setFacilitiesError] = useState("");
@@ -1566,16 +1574,11 @@ export function ChatDashboard() {
     );
   };
 
-  // ✅ UPDATED: Proxy fetch through the backend to bypass ad-blockers and CORS
   const fetchFacilities = async (coords = null) => {
     setFacilitiesLoading(true);
     setFacilitiesError("");
     try {
-      // Safely determine base URL dynamically if FACILITIES isn't hardcoded in API config
-      const baseUrl = API.CHAT_MESSAGE
-        ? API.CHAT_MESSAGE.replace("/message", "")
-        : "http://localhost:5000/api/chat";
-      let url = API.FACILITIES || `${baseUrl}/facilities`;
+      let url = API.FACILITIES;
 
       if (coords) {
         url += `?lat=${coords.latitude}&lon=${coords.longitude}`;
@@ -2551,7 +2554,6 @@ export function ChatDashboard() {
                   >
                     HealthBot
                   </h3>
-                  {/* --- NEW: Regional AI Badge --- */}
                   {isRegionActive(user?.address) && (
                     <span
                       className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-bold uppercase tracking-widest mt-0.5 transition-colors ${isDark ? "bg-teal-500/10 border-teal-500/20 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-600"}`}
@@ -3569,7 +3571,6 @@ export function ChatDashboard() {
                       <RealFacilityCard key={i} facility={f} isDark={isDark} />
                     ))}
 
-                  {/* Fallback if search filter hides all facilities */}
                   {facilitySearchQuery &&
                     facilitiesData
                       .filter(
