@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { useNavigate, MemoryRouter } from "react-router-dom";
+import { API } from "../config";
 import {
   Activity,
   MessageSquare,
@@ -50,18 +51,6 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
-
-const API_BASE = "http://localhost:5000/api";
-const API = {
-  PROFILE: `${API_BASE}/auth/profile`,
-  CHANGE_PASSWORD: `${API_BASE}/auth/change-password`,
-  DELETE_ACCOUNT: `${API_BASE}/auth/delete-account`,
-  CHAT_SYMPTOM_OPTIONS: `${API_BASE}/chat/symptom-options`,
-  CHAT_CONFIRM_SYMPTOMS: `${API_BASE}/chat/confirm-symptoms`,
-  NOTIFY_EMERGENCY: `${API_BASE}/chat/notify-emergency`,
-  CHAT_MESSAGE: `${API_BASE}/chat/message`,
-  CHAT_EMAIL_REMINDER: `${API_BASE}/chat/email-reminder`,
-};
 
 function SymptomConfirmationCard({
   msg,
@@ -1577,128 +1566,43 @@ export function ChatDashboard() {
     );
   };
 
+  // ✅ UPDATED: Proxy fetch through the backend to bypass ad-blockers and CORS
   const fetchFacilities = async (coords = null) => {
     setFacilitiesLoading(true);
     setFacilitiesError("");
     try {
-      let lat, lon;
-      let source = "gps";
+      // Safely determine base URL dynamically if FACILITIES isn't hardcoded in API config
+      const baseUrl = API.CHAT_MESSAGE
+        ? API.CHAT_MESSAGE.replace("/message", "")
+        : "http://localhost:5000/api/chat";
+      let url = API.FACILITIES || `${baseUrl}/facilities`;
 
       if (coords) {
-        lat = coords.latitude;
-        lon = coords.longitude;
-      } else if (user?.address) {
-        source = "address";
-        // Using native fetch instead of axios to avoid sending global Auth headers to nominatim
-        const geoRes = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(user.address)}`,
-        );
-        const geoData = await geoRes.json();
-        if (geoData && geoData.length > 0) {
-          lat = parseFloat(geoData[0].lat);
-          lon = parseFloat(geoData[0].lon);
-        } else {
-          throw new Error(
-            "Could not find map coordinates for your saved address.",
-          );
-        }
-      } else {
-        throw new Error(
-          "No location provided. Please click 'Use My Location'.",
-        );
+        url += `?lat=${coords.latitude}&lon=${coords.longitude}`;
       }
 
-      // CLIENT-SIDE OVERPASS CALL
-      // Using broad, case-insensitive Regex to catch clinics and pharmacies
-      const overpassQuery = `
-        [out:json][timeout:25];
-        (
-          nwr["amenity"~"(?i)(hospital|clinic|doctors|pharmacy)"](around:15000,${lat},${lon});
-          nwr["healthcare"~"(?i)(hospital|clinic|doctor|pharmacy|centre)"](around:15000,${lat},${lon});
-        );
-        out center;
-      `;
-
-      // Using native fetch instead of axios to avoid sending global Auth headers to overpass API
-      const overpassRes = await fetch(
-        "https://overpass-api.de/api/interpreter",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `data=${encodeURIComponent(overpassQuery)}`,
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      );
+      });
 
-      let facilities = [];
-      if (overpassRes.ok) {
-        const overpassData = await overpassRes.json();
-        if (overpassData && overpassData.elements) {
-          facilities = overpassData.elements.map((el) => {
-            const centerLat = el.lat || el.center?.lat;
-            const centerLon = el.lon || el.center?.lon;
-            const tags = el.tags || {};
+      const data = await res.json();
 
-            let type = "Hospital";
-            const am = (tags.amenity || "").toLowerCase();
-            const hc = (tags.healthcare || "").toLowerCase();
-
-            if (
-              am.includes("clinic") ||
-              hc.includes("clinic") ||
-              hc.includes("centre")
-            )
-              type = "Clinic";
-            else if (am.includes("doctor") || hc.includes("doctor"))
-              type = "Doctor";
-            else if (am.includes("pharmacy") || hc.includes("pharmacy"))
-              type = "Pharmacy";
-            else type = "Hospital";
-
-            // Calculate Distance
-            const R = 6371;
-            const dLat = ((centerLat - lat) * Math.PI) / 180;
-            const dLon = ((centerLon - lon) * Math.PI) / 180;
-            const a =
-              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos((lat * Math.PI) / 180) *
-                Math.cos((centerLat * Math.PI) / 180) *
-                Math.sin(dLon / 2) *
-                Math.sin(dLon / 2);
-            const distanceKm = (
-              R *
-              2 *
-              Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-            ).toFixed(1);
-
-            return {
-              name: tags.name || `Unnamed ${type}`,
-              type: type,
-              distanceKm,
-              address: tags["addr:street"]
-                ? `${tags["addr:street"]} ${tags["addr:city"] || ""}`.trim()
-                : null,
-              phone: tags.phone || tags["contact:phone"] || null,
-              mapsUrl: `https://www.google.com/maps/search/?api=1&query=${centerLat},${centerLon}`,
-            };
-          });
-
-          facilities = facilities
-            .filter((f) => !f.name.startsWith("Unnamed"))
-            .sort(
-              (a, b) => parseFloat(a.distanceKm) - parseFloat(b.distanceKm),
-            );
-        }
-      } else {
-        throw new Error("Failed to load facilities. Map API might be busy.");
+      if (!res.ok) {
+        throw new Error(
+          data.message || data.hint || "Failed to fetch nearby facilities.",
+        );
       }
 
-      setFacilitiesData(facilities);
-      setFacilitiesLocationSource(source);
+      setFacilitiesData(data.facilities || []);
+      setFacilitiesLocationSource(data.locationSource || "gps");
       setFacilitiesFetchedOnce(true);
     } catch (err) {
       setFacilitiesError(
-        err.message ||
-          "Failed to load facilities. OpenStreetMap might be busy.",
+        err.message || "Failed to load facilities. The server might be busy.",
       );
       setFacilitiesData([]);
     } finally {
@@ -2647,7 +2551,7 @@ export function ChatDashboard() {
                   >
                     HealthBot
                   </h3>
-                  {/* --- Regional AI Badge --- */}
+                  {/* --- NEW: Regional AI Badge --- */}
                   {isRegionActive(user?.address) && (
                     <span
                       className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-bold uppercase tracking-widest mt-0.5 transition-colors ${isDark ? "bg-teal-500/10 border-teal-500/20 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-600"}`}
@@ -4302,4 +4206,3 @@ export default function App() {
     );
   return <ChatDashboard />;
 }
-
