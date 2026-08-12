@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { useNavigate, MemoryRouter } from "react-router-dom";
-import { API, API_BASE_URL } from "../config.js";
+import { API } from "../config.js";
 import {
   Activity,
   MessageSquare,
@@ -772,6 +772,7 @@ export function ChatDashboard() {
 
   const [playingMessageId, setPlayingMessageId] = useState(null);
 
+  // Always start with a fresh blank session
   const [activeSessionId, setActiveSessionId] = useState(Date.now());
   const [chatHistoryList, setChatHistoryList] = useState(() => {
     try {
@@ -844,8 +845,7 @@ export function ChatDashboard() {
   const [facilitiesData, setFacilitiesData] = useState([]);
   const [facilitiesLoading, setFacilitiesLoading] = useState(false);
   const [facilitiesError, setFacilitiesError] = useState("");
-  const [facilitiesLocationSource, setFacilitiesLocationSource] =
-    useState(null);
+  const [facilitiesLocationSource, setFacilitiesLocationSource] = useState(null);
   const [facilityTypeFilter, setFacilityTypeFilter] = useState("all");
   const [facilitiesFetchedOnce, setFacilitiesFetchedOnce] = useState(false);
   const [facilitySearchQuery, setFacilitySearchQuery] = useState("");
@@ -855,36 +855,11 @@ export function ChatDashboard() {
   const isRegionActive = (address) => {
     if (!address) return false;
     const jkLocations = [
-      "kashmir",
-      "srinagar",
-      "j&k",
-      "jammu",
-      "j and k",
-      "anantnag",
-      "baramulla",
-      "kupwara",
-      "pulwama",
-      "budgam",
-      "kulgam",
-      "shopian",
-      "bandipora",
-      "ganderbal",
-      "pahalgam",
-      "gulmarg",
-      "sonamarg",
-      "sopore",
-      "tral",
-      "samba",
-      "kathua",
-      "udhampur",
-      "reasi",
-      "ramban",
-      "poonch",
-      "doda",
-      "kishtwar",
-      "rajouri",
-      "bhaderwah",
-      "katra",
+      "kashmir", "srinagar", "j&k", "jammu", "j and k", "anantnag", "baramulla",
+      "kupwara", "pulwama", "budgam", "kulgam", "shopian", "bandipora",
+      "ganderbal", "pahalgam", "gulmarg", "sonamarg", "sopore", "tral", "samba",
+      "kathua", "udhampur", "reasi", "ramban", "poonch", "doda", "kishtwar",
+      "rajouri", "bhaderwah", "katra",
     ];
     return jkLocations.some((loc) => address.toLowerCase().includes(loc));
   };
@@ -1121,9 +1096,8 @@ export function ChatDashboard() {
   const rawFirstName = rawFullName.trim().split(" ")[0];
   const firstName = formatName(rawFirstName);
 
-  const isNewUser = user?.createdAt
-    ? Date.now() - new Date(user.createdAt).getTime() < 5 * 60 * 1000
-    : chatHistoryList.length === 0;
+  // If there are no saved histories, the user is considered new.
+  const isNewUser = chatHistoryList.length === 0;
 
   useEffect(() => {
     if (window.innerWidth < 1024) setIsSidebarOpen(false);
@@ -1156,16 +1130,6 @@ export function ChatDashboard() {
       });
     }
   }, [messages, activeSessionId, appSettings?.saveHistory]);
-
-  // Auto-load latest session
-  useEffect(() => {
-    if (chatHistoryList.length > 0 && messages.length === 0) {
-      const latestSession = chatHistoryList[0];
-      setActiveSessionId(latestSession.id);
-      setMessages(latestSession.messages || []);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     if (page === "chat") {
@@ -1343,30 +1307,28 @@ export function ChatDashboard() {
     );
   };
 
-  // ── CLEANED UP FETCH FACILITIES ──────────────────────────────────────
+  // ── 100% FIXED FETCH FACILITIES ──────────────────────────────────────────
   const fetchFacilities = async (coords = null) => {
     setFacilitiesLoading(true);
     setFacilitiesError("");
     try {
       const token = localStorage.getItem("token");
-      let url = API_BASE_URL ? `${API_BASE_URL}/api/chat/facilities` : "https://healthbot-backend-ezxv.onrender.com/api/chat/facilities";
-      
       const params = coords
         ? { lat: coords.latitude, lon: coords.longitude }
         : {};
       
-      const res = await axios.get(url, {
+      // Calls your original FIND_DOCTORS endpoint that already works on Render
+      const res = await axios.get(API.FIND_DOCTORS, {
         headers: { Authorization: `Bearer ${token}` },
         params,
       });
-      
+
       setFacilitiesData(res.data.facilities || []);
       setFacilitiesLocationSource(res.data.locationSource || null);
       setFacilitiesFetchedOnce(true);
     } catch (err) {
       const msg =
         err.response?.data?.message ||
-        err.message || 
         "Could not load nearby facilities. The server might be busy.";
       const hint = err.response?.data?.hint;
       setFacilitiesError(hint ? `${msg} ${hint}` : msg);
@@ -2317,6 +2279,7 @@ export function ChatDashboard() {
                   >
                     HealthBot
                   </h3>
+                  {/* --- NEW: Regional AI Badge --- */}
                   {isRegionActive(user?.address) && (
                     <span
                       className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-bold uppercase tracking-widest mt-0.5 transition-colors ${isDark ? "bg-teal-500/10 border-teal-500/20 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-600"}`}
