@@ -5,11 +5,8 @@ const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const { getGroqResponse, isOffTopic } = require("../config/groq");
 const nodemailer = require("nodemailer");
-<<<<<<< HEAD
 const { geocodeAddress, findNearbyFacilities } = require("../config/facilityFinder");
-=======
 const axios = require("axios"); // Using axios for safe Node.js compatibility
->>>>>>> d3148a6babc5cde9ad733250c505bdf26b9dfe2e
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
 async function getMLPrediction(text, symptoms) {
@@ -400,6 +397,16 @@ function detectIntent(text) {
   )
     return "farewell";
   if (
+    [
+      "find a doctor", "find doctor", "find a clinic", "find clinic",
+      "nearby hospital", "nearest hospital", "nearby clinic", "nearest clinic",
+      "doctor near me", "hospital near me", "clinic near me",
+      "need a doctor", "recommend a doctor", "suggest a doctor",
+      "where can i find a doctor", "where can i see a doctor",
+    ].some((p) => lower.includes(p))
+  )
+    return "find_doctor";
+  if (
     extractSymptoms(text).length > 0 &&
     !isHypotheticalQuestion(text) &&
     !hasNonPersonSubject(text)
@@ -555,7 +562,6 @@ function buildMLSection(mlResult, symptoms, rawText) {
   };
 }
 
-<<<<<<< HEAD
 // ── GET /api/chat/find-doctors ────────────────────────────────────────────────
 router.get("/find-doctors", auth, async (req, res) => {
   try {
@@ -599,8 +605,6 @@ router.get("/find-doctors", auth, async (req, res) => {
   }
 });
 
-=======
->>>>>>> d3148a6babc5cde9ad733250c505bdf26b9dfe2e
 // ── Message Route ──────────────────────────────────────────────────────────────
 router.post("/message", auth, async (req, res) => {
   try {
@@ -620,6 +624,7 @@ router.post("/message", auth, async (req, res) => {
     let botReply = "";
     let mlResult = null;
     let emergency = false;
+    let facilities = null;
 
     if (intent === "symptoms") {
       const newSymptoms = extractSymptoms(text);
@@ -652,10 +657,6 @@ router.post("/message", auth, async (req, res) => {
         });
       }
 
-<<<<<<< HEAD
-      mlResult = await getMLPrediction(text, []);
-      const ml = buildMLSection(mlResult, symptoms);
-=======
       mlResult = await getMLPrediction(
         historyText + " " + text,
         combinedSymptoms,
@@ -665,7 +666,6 @@ router.post("/message", auth, async (req, res) => {
         combinedSymptoms,
         historyText + " " + text,
       );
->>>>>>> d3148a6babc5cde9ad733250c505bdf26b9dfe2e
 
       if (process.env.GROQ_API_KEY && ml && ml.summary) {
         try {
@@ -703,7 +703,6 @@ router.post("/message", auth, async (req, res) => {
       !hasConversation
     ) {
       botReply = getFallbackReply(intent, userName);
-<<<<<<< HEAD
     } else if (intent === "find_doctor") {
       if (!user || !user.address) {
         botReply = `I'd like to help you find a nearby facility, ${userName.split(" ")[0]}, but I don't have an address on file for you yet. Add one in your Profile, or use the dedicated Care Locator tab which can use your live GPS location instead.`;
@@ -724,8 +723,6 @@ router.post("/message", auth, async (req, res) => {
           }
         }
       }
-=======
->>>>>>> d3148a6babc5cde9ad733250c505bdf26b9dfe2e
     } else {
       const offTopic = process.env.GROQ_API_KEY
         ? await isOffTopic(text, recentHistory)
@@ -787,7 +784,7 @@ router.post("/message", auth, async (req, res) => {
       await conv.save();
     }
 
-    res.json({ reply: botReply, mlResult, intent, emergency });
+    res.json({ reply: botReply, mlResult, intent, emergency, facilities });
   } catch (err) {
     console.error("Chat error:", err);
     res.status(500).json({ message: "Server error" });
@@ -835,16 +832,12 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
       recentHistory = conv ? conv.messages.slice(-12) : [];
     }
 
-<<<<<<< HEAD
-    let mlResult = await getMLPrediction("", symptoms);
-=======
     const historyText = recentHistory
       .filter((m) => m.sender === "user")
       .map((m) => m.text)
       .join(" ");
     const historicalSymptoms = extractSymptoms(historyText + " " + text);
     const combinedSymptoms = [...new Set([...symptoms, ...historicalSymptoms])];
->>>>>>> d3148a6babc5cde9ad733250c505bdf26b9dfe2e
 
     const mlResult = await getMLPrediction(
       historyText + " " + text,
