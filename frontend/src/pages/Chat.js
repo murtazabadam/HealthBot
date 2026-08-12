@@ -772,7 +772,7 @@ export function ChatDashboard() {
 
   const [playingMessageId, setPlayingMessageId] = useState(null);
 
-  // Always start with a fresh blank session
+  // Ensure active session starts fresh every time the app opens
   const [activeSessionId, setActiveSessionId] = useState(Date.now());
   const [chatHistoryList, setChatHistoryList] = useState(() => {
     try {
@@ -845,7 +845,8 @@ export function ChatDashboard() {
   const [facilitiesData, setFacilitiesData] = useState([]);
   const [facilitiesLoading, setFacilitiesLoading] = useState(false);
   const [facilitiesError, setFacilitiesError] = useState("");
-  const [facilitiesLocationSource, setFacilitiesLocationSource] = useState(null);
+  const [facilitiesLocationSource, setFacilitiesLocationSource] =
+    useState(null);
   const [facilityTypeFilter, setFacilityTypeFilter] = useState("all");
   const [facilitiesFetchedOnce, setFacilitiesFetchedOnce] = useState(false);
   const [facilitySearchQuery, setFacilitySearchQuery] = useState("");
@@ -855,11 +856,36 @@ export function ChatDashboard() {
   const isRegionActive = (address) => {
     if (!address) return false;
     const jkLocations = [
-      "kashmir", "srinagar", "j&k", "jammu", "j and k", "anantnag", "baramulla",
-      "kupwara", "pulwama", "budgam", "kulgam", "shopian", "bandipora",
-      "ganderbal", "pahalgam", "gulmarg", "sonamarg", "sopore", "tral", "samba",
-      "kathua", "udhampur", "reasi", "ramban", "poonch", "doda", "kishtwar",
-      "rajouri", "bhaderwah", "katra",
+      "kashmir",
+      "srinagar",
+      "j&k",
+      "jammu",
+      "j and k",
+      "anantnag",
+      "baramulla",
+      "kupwara",
+      "pulwama",
+      "budgam",
+      "kulgam",
+      "shopian",
+      "bandipora",
+      "ganderbal",
+      "pahalgam",
+      "gulmarg",
+      "sonamarg",
+      "sopore",
+      "tral",
+      "samba",
+      "kathua",
+      "udhampur",
+      "reasi",
+      "ramban",
+      "poonch",
+      "doda",
+      "kishtwar",
+      "rajouri",
+      "bhaderwah",
+      "katra",
     ];
     return jkLocations.some((loc) => address.toLowerCase().includes(loc));
   };
@@ -1096,7 +1122,7 @@ export function ChatDashboard() {
   const rawFirstName = rawFullName.trim().split(" ")[0];
   const firstName = formatName(rawFirstName);
 
-  // If there are no saved histories, the user is considered new.
+  // Only consider new if chat is genuinely empty. Since we deleted auto-load, this is perfect.
   const isNewUser = chatHistoryList.length === 0;
 
   useEffect(() => {
@@ -1130,6 +1156,8 @@ export function ChatDashboard() {
       });
     }
   }, [messages, activeSessionId, appSettings?.saveHistory]);
+
+  // NOTE: The auto-load latest session code has been completely removed to fix the "Welcome Back" issue.
 
   useEffect(() => {
     if (page === "chat") {
@@ -1307,31 +1335,49 @@ export function ChatDashboard() {
     );
   };
 
-  // ── 100% FIXED FETCH FACILITIES ──────────────────────────────────────────
+  // ── 🚨 THE FINAL FIX FOR CARE LOCATOR 🚨 ──
   const fetchFacilities = async (coords = null) => {
     setFacilitiesLoading(true);
     setFacilitiesError("");
     try {
+      let lat, lon;
+      let source = "gps";
+
+      if (coords) {
+        lat = coords.latitude;
+        lon = coords.longitude;
+      } else if (user?.address) {
+        source = "address";
+        
+        // 1. Geocode locally on the frontend first to ensure we get exactly matched coordinates, bypassing backend text-search bugs
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(user.address)}`);
+        const geoData = await geoRes.json();
+        
+        if (geoData && geoData.length > 0) {
+          lat = parseFloat(geoData[0].lat);
+          lon = parseFloat(geoData[0].lon);
+        } else {
+          throw new Error(`Could not find precise map coordinates for "${user.address}". Try clicking 'Use My Location' instead.`);
+        }
+      } else {
+        throw new Error("No location provided. Please click 'Use My Location'.");
+      }
+
+      // 2. Now call the backend endpoint exactly as defined in your config.js
+      // Passing exact lat/lon completely skips the backend's internal geocoding that causes the 400 error.
       const token = localStorage.getItem("token");
-      const params = coords
-        ? { lat: coords.latitude, lon: coords.longitude }
-        : {};
-      
-      // Calls your original FIND_DOCTORS endpoint that already works on Render
       const res = await axios.get(API.FIND_DOCTORS, {
         headers: { Authorization: `Bearer ${token}` },
-        params,
+        params: { lat, lon }
       });
 
       setFacilitiesData(res.data.facilities || []);
-      setFacilitiesLocationSource(res.data.locationSource || null);
+      setFacilitiesLocationSource(res.data.locationSource || source);
       setFacilitiesFetchedOnce(true);
     } catch (err) {
-      const msg =
-        err.response?.data?.message ||
-        "Could not load nearby facilities. The server might be busy.";
-      const hint = err.response?.data?.hint;
-      setFacilitiesError(hint ? `${msg} ${hint}` : msg);
+      const msg = err.response?.data?.message || err.message || "Could not load nearby facilities. The server might be busy.";
+      const hint = err.response?.data?.hint || "";
+      setFacilitiesError((msg + " " + hint).trim());
       setFacilitiesData([]);
     } finally {
       setFacilitiesLoading(false);
