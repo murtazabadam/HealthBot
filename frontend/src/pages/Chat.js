@@ -1578,7 +1578,6 @@ export function ChatDashboard() {
     );
   };
 
-  // ── 🗺 THE FINAL, 100% FRONTEND MAP FETCH FIX 🗺 ──
   const fetchFacilities = async (coords = null) => {
     setFacilitiesLoading(true);
     setFacilitiesError("");
@@ -1609,101 +1608,20 @@ export function ChatDashboard() {
         );
       }
 
-      // Safe, explicit Overpass Query with massive 30km radius
-      const radius = 30000;
-      const query = `[out:json][timeout:20];
-(
-  nwr["amenity"="hospital"](around:${radius},${lat},${lon});
-  nwr["amenity"="clinic"](around:${radius},${lat},${lon});
-  nwr["amenity"="doctors"](around:${radius},${lat},${lon});
-  nwr["amenity"="pharmacy"](around:${radius},${lat},${lon});
-  nwr["healthcare"="hospital"](around:${radius},${lat},${lon});
-  nwr["healthcare"="clinic"](around:${radius},${lat},${lon});
-  nwr["healthcare"="centre"](around:${radius},${lat},${lon});
-  nwr["healthcare"="doctor"](around:${radius},${lat},${lon});
-  nwr["healthcare"="pharmacy"](around:${radius},${lat},${lon});
-);
-out center tags;`;
+      const token = localStorage.getItem("token");
+      const res = await axios.get(API.FIND_DOCTORS, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { lat, lon },
+      });
 
-      // Fetch DIRECTLY from frontend to bypass Render IP block
-      const overpassRes = await axios.post(
-        "https://overpass-api.de/api/interpreter",
-        "data=" + encodeURIComponent(query),
-        {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          timeout: 15000,
-        },
-      );
-
-      const elements = overpassRes.data.elements || [];
-      const seen = new Set();
-      const R = 6371; // Earth radius in km
-
-      let formattedFacilities = elements
-        .map((el) => {
-          const elLat = el.lat ?? el.center?.lat;
-          const elLon = el.lon ?? el.center?.lon;
-          if (elLat == null || elLon == null) return null;
-
-          const tags = el.tags || {};
-          let name = tags.name || tags["name:en"] || null;
-
-          let type = "Health Facility";
-          const am = (tags.amenity || "").toLowerCase();
-          const hc = (tags.healthcare || "").toLowerCase();
-          if (am === "hospital" || hc === "hospital") type = "Hospital";
-          else if (am === "clinic" || hc === "clinic" || hc === "centre")
-            type = "Clinic";
-          else if (am === "doctors" || hc === "doctor") type = "Doctor";
-          else if (am === "pharmacy" || hc === "pharmacy") type = "Pharmacy";
-
-          if (!name) name = `${type} (Unnamed)`;
-
-          // Calculate distance
-          const dLat = ((elLat - lat) * Math.PI) / 180;
-          const dLon = ((elLon - lon) * Math.PI) / 180;
-          const a =
-            Math.sin(dLat / 2) ** 2 +
-            Math.cos((lat * Math.PI) / 180) *
-              Math.cos((elLat * Math.PI) / 180) *
-              Math.sin(dLon / 2) ** 2;
-          const distKm =
-            Math.round(
-              R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10,
-            ) / 10;
-
-          const dedupeKey = `${name}_${elLat.toFixed(4)}_${elLon.toFixed(4)}`;
-          if (seen.has(dedupeKey)) return null;
-          seen.add(dedupeKey);
-
-          return {
-            name,
-            type,
-            latitude: elLat,
-            longitude: elLon,
-            distanceKm: distKm,
-            phone: tags.phone || tags["contact:phone"] || null,
-            address:
-              tags["addr:full"] ||
-              [tags["addr:housenumber"], tags["addr:street"], tags["addr:city"]]
-                .filter(Boolean)
-                .join(", ") ||
-              null,
-            mapsUrl: `https://www.google.com/maps?q=${elLat},${elLon}`,
-          };
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.distanceKm - b.distanceKm)
-        .slice(0, 20);
-
-      setFacilitiesData(formattedFacilities);
-      setFacilitiesLocationSource(source);
+      setFacilitiesData(res.data.facilities || []);
+      setFacilitiesLocationSource(res.data.locationSource || source);
       setFacilitiesFetchedOnce(true);
     } catch (err) {
       const msg =
         err.response?.data?.message ||
         err.message ||
-        "Could not load nearby facilities. The map server might be busy.";
+        "Could not load nearby facilities. The server might be busy.";
       setFacilitiesError(msg);
       setFacilitiesData([]);
     } finally {
