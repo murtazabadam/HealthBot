@@ -3569,6 +3569,7 @@ export function ChatDashboard() {
                   </div>
                 )}
 
+              {/* Replace the existing facilities mapping block with this: */}
               {!facilitiesLoading && facilitiesData.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {facilitiesData
@@ -3583,7 +3584,8 @@ export function ChatDashboard() {
                       return (
                         (f.name && f.name.toLowerCase().includes(q)) ||
                         (f.type && f.type.toLowerCase().includes(q)) ||
-                        (f.address && f.address.toLowerCase().includes(q))
+                        (f.address && f.address.toLowerCase().includes(q)) ||
+                        (f.specialty && f.specialty.toLowerCase().includes(q)) // <-- Added Specialty Search
                       );
                     })
                     .map((f, i) => (
@@ -3603,7 +3605,8 @@ export function ChatDashboard() {
                         return (
                           (f.name && f.name.toLowerCase().includes(q)) ||
                           (f.type && f.type.toLowerCase().includes(q)) ||
-                          (f.address && f.address.toLowerCase().includes(q))
+                          (f.address && f.address.toLowerCase().includes(q)) ||
+                          (f.specialty && f.specialty.toLowerCase().includes(q)) // <-- Added Specialty Search
                         );
                       }).length === 0 && (
                       <div className="col-span-1 md:col-span-2 text-center py-10 text-slate-500 text-sm">
@@ -4091,9 +4094,20 @@ const RealFacilityCard = ({ facility, isDark }) => {
             >
               {facility.name}
             </h4>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-500">
-              {facility.type}
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-teal-500">
+                {facility.type}
+              </span>
+              {/* --- ADDED SPECIALTY BADGE --- */}
+              {facility.specialty && (
+                <>
+                  <span className="text-slate-600 text-[10px]">•</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 truncate max-w-[150px]">
+                    {facility.specialty}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         </div>
         <span
@@ -4126,7 +4140,6 @@ const RealFacilityCard = ({ facility, isDark }) => {
     </div>
   );
 };
-
 const SettingToggle = ({ label, desc, checked, onChange, isDark }) => {
   return (
     <div className="flex items-center justify-between">

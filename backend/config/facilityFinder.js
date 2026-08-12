@@ -1,9 +1,4 @@
 // ── Doctor / Facility Finder (OpenStreetMap) ────────────────────────────────
-// Uses two free, card-free OSM services:
-//   - Nominatim: turns a saved text address into coordinates when the
-//     frontend doesn't have a live GPS fix.
-//   - Overpass: the actual nearby-facility query.
-
 const axios = require('axios');
 
 const USER_AGENT = "HealthBot-MCA-Project/1.0 (contact: murtazabadam@gmail.com)";
@@ -25,10 +20,7 @@ async function geocodeAddress(address) {
   if (!address) return null;
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`;
-    const res = await axios.get(url, { 
-      headers: { "User-Agent": USER_AGENT },
-      timeout: 15000 
-    });
+    const res = await axios.get(url, { headers: { "User-Agent": USER_AGENT } });
     const data = res.data;
     if (!data || !data.length) return null;
     return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
@@ -67,27 +59,31 @@ out center tags;`;
     );
     
     const data = res.data;
-    if (!data || !data.elements) return [];
-
     const seen = new Set();
     const facilities = [];
 
-    for (const el of data.elements) {
+    for (const el of data.elements || []) {
       const lat = el.lat ?? el.center?.lat;
       const lon = el.lon ?? el.center?.lon;
       if (lat == null || lon == null) continue;
 
       const tags = el.tags || {};
       const name = tags.name || null;
-      
-      let type = "Health Facility";
-      if (tags.amenity === "hospital" || tags.healthcare === "hospital") type = "Hospital";
-      else if (tags.amenity === "clinic" || tags.healthcare === "clinic" || tags.healthcare === "centre") type = "Clinic";
-      else if (tags.amenity === "doctors" || tags.healthcare === "doctor") type = "Doctor";
-      else if (tags.amenity === "pharmacy" || tags.healthcare === "pharmacy") type = "Pharmacy";
+      const type = tags.amenity === "hospital" ? "Hospital"
+        : tags.amenity === "clinic" ? "Clinic"
+        : tags.amenity === "doctors" ? "Doctor"
+        : tags.amenity === "pharmacy" ? "Pharmacy"
+        : tags.healthcare === "hospital" ? "Hospital"
+        : tags.healthcare === "clinic" ? "Clinic"
+        : tags.healthcare === "centre" ? "Clinic"
+        : tags.healthcare === "doctor" ? "Doctor"
+        : tags.healthcare === "pharmacy" ? "Pharmacy"
+        : "Health Facility";
 
-      // Dedupe: the same physical place is sometimes tagged as both a node
-      // and a way (building outline) — keep only one entry per name+location.
+      // Extract specialty from OSM tags
+      const specialtyRaw = tags["healthcare:speciality"] || tags["medical_specialty"] || tags["speciality"] || null;
+      const specialty = specialtyRaw ? specialtyRaw.replace(/_/g, " ") : null;
+
       const dedupeKey = `${name || "unnamed"}_${lat.toFixed(4)}_${lon.toFixed(4)}`;
       if (seen.has(dedupeKey)) continue;
       seen.add(dedupeKey);
@@ -95,6 +91,7 @@ out center tags;`;
       facilities.push({
         name: name || `${type} (unnamed)`,
         type,
+        specialty,
         latitude: lat,
         longitude: lon,
         distanceKm: Math.round(haversineKm(latitude, longitude, lat, lon) * 10) / 10,
@@ -108,8 +105,8 @@ out center tags;`;
 
     facilities.sort((a, b) => a.distanceKm - b.distanceKm);
     
-    // Increased from 20 to 60 so Doctors and Pharmacies don't get choked out by closer clinics
-    return facilities.slice(0, 60); 
+    // Increased to 250 so Doctors and Pharmacies don't get choked out by clinics
+    return facilities.slice(0, 250); 
   } catch (err) {
     console.error("Overpass fetch error:", err.message);
     return [];
