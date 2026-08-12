@@ -3500,27 +3500,30 @@ export function ChatDashboard() {
                 )}
               </div>
 
-              {facilitiesData.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {["all", "Hospital", "Clinic", "Doctor", "Pharmacy"].map(
-                    (t) => (
-                      <button
-                        key={t}
-                        onClick={() => setFacilityTypeFilter(t)}
-                        className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-colors ${
-                          facilityTypeFilter === t
-                            ? "bg-teal-500 text-white"
-                            : isDark
-                              ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        }`}
-                      >
-                        {t === "all" ? "All" : `${t}s`}
-                      </button>
-                    ),
-                  )}
-                </div>
-              )}
+              {/* ALWAYS VISIBLE FILTERS (Fixed spelling & rendering) */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                {[
+                  { id: "all", label: "All" },
+                  { id: "Hospital", label: "Hospitals" },
+                  { id: "Clinic", label: "Clinics" },
+                  { id: "Doctor", label: "Doctors" },
+                  { id: "Pharmacy", label: "Pharmacies" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => setFacilityTypeFilter(t.id)}
+                    className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide transition-colors ${
+                      facilityTypeFilter === t.id
+                        ? "bg-teal-500 text-white"
+                        : isDark
+                          ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
 
               {facilitiesLoading && (
                 <div className="flex flex-col items-center justify-center py-20 text-slate-500">
@@ -3531,7 +3534,6 @@ export function ChatDashboard() {
                   Finding nearby facilities...
                 </div>
               )}
-
               {!facilitiesLoading && facilitiesError && (
                 <div
                   className={`rounded-2xl p-6 border flex items-start gap-3 ${isDark ? "bg-red-500/10 border-red-500/30" : "bg-red-50 border-red-200"}`}
