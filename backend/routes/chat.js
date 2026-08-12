@@ -6,7 +6,7 @@ const User = require("../models/User");
 const { getGroqResponse, isOffTopic } = require("../config/groq");
 const nodemailer = require("nodemailer");
 const { geocodeAddress, findNearbyFacilities } = require("../config/facilityFinder");
-const axios = require("axios"); // Using axios for safe Node.js compatibility
+const axios = require("axios");
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
 async function getMLPrediction(text, symptoms) {
@@ -15,7 +15,6 @@ async function getMLPrediction(text, symptoms) {
       process.env.ML_ENGINE_URL ||
       "https://murtazabadam-healthbot-ml.hf.space/predict";
 
-    // Replaced native fetch/AbortController with axios + timeout parameter
     const res = await axios.post(mlUrl, { text, symptoms }, { timeout: 30000 });
     console.log("ML:", JSON.stringify(res.data).substring(0, 200));
     return res.data;
@@ -187,7 +186,7 @@ const NL_MAP = {
   disoriented: "altered_sensorium",
   // --- SHORT-ANSWER CLARIFICATIONS ---
   mild: "mild_fever",
-  moderate: "high_fever", // Mapped to high fever mathematically, but AI will recognize it
+  moderate: "high_fever",
   high: "high_fever",
   severe: "severe_headache",
   dry: "cough",
@@ -260,85 +259,16 @@ function isHypotheticalQuestion(text) {
 function hasNonPersonSubject(text) {
   const lower = text.toLowerCase().trim();
   const nonPersonNouns = [
-    "book",
-    "chair",
-    "table",
-    "wall",
-    "door",
-    "window",
-    "house",
-    "building",
-    "rock",
-    "shoe",
-    "bag",
-    "pen",
-    "bottle",
-    "cup",
-    "plate",
-    "roof",
-    "tv",
-    "television",
-    "fridge",
-    "fan",
-    "clock",
-    "watch",
-    "shirt",
-    "sofa",
-    "couch",
-    "bed",
-    "shelf",
-    "cabinet",
-    "drawer",
-    "mirror",
-    "lamp",
-    "umbrella",
-    "plant",
-    "tree",
-    "mouse",
-    "keyboard",
-    "monitor",
-    "speaker",
-    "remote",
-    "charger",
-    "router",
-    "printer",
-    "tablet",
-    "camera",
-    "headphone",
-    "headphones",
-    "earphone",
-    "earphones",
-    "laptop",
-    "computer",
-    "phone",
-    "car",
-    "bike",
-    "bus",
-    "train",
-    "truck",
-    "scooter",
-    "plane",
-    "boat",
-    "ship",
-    "rat",
-    "dog",
-    "cat",
-    "cow",
-    "goat",
-    "horse",
-    "bird",
-    "fish",
-    "lizard",
-    "snake",
-    "frog",
-    "ant",
-    "bee",
-    "insect",
-    "hamster",
-    "rabbit",
-    "parrot",
-    "chicken",
-    "goose",
+    "book", "chair", "table", "wall", "door", "window", "house", "building",
+    "rock", "shoe", "bag", "pen", "bottle", "cup", "plate", "roof", "tv",
+    "television", "fridge", "fan", "clock", "watch", "shirt", "sofa", "couch",
+    "bed", "shelf", "cabinet", "drawer", "mirror", "lamp", "umbrella", "plant",
+    "tree", "mouse", "keyboard", "monitor", "speaker", "remote", "charger",
+    "router", "printer", "tablet", "camera", "headphone", "headphones",
+    "earphone", "earphones", "laptop", "computer", "phone", "car", "bike",
+    "bus", "train", "truck", "scooter", "plane", "boat", "ship", "rat", "dog",
+    "cat", "cow", "goat", "horse", "bird", "fish", "lizard", "snake", "frog",
+    "ant", "bee", "insect", "hamster", "rabbit", "parrot", "chicken", "goose",
     "duck",
   ];
   const nounsPattern = nonPersonNouns.join("|");
@@ -354,47 +284,18 @@ function hasNonPersonSubject(text) {
 function detectIntent(text) {
   const lower = text.toLowerCase().trim();
   const greetings = [
-    "hi",
-    "hello",
-    "hey",
-    "good morning",
-    "good evening",
-    "good afternoon",
-    "good night",
-    "salam",
-    "assalam",
-    "namaste",
+    "hi", "hello", "hey", "good morning", "good evening", "good afternoon",
+    "good night", "salam", "assalam", "namaste",
   ];
-  if (
-    greetings.some(
-      (g) =>
-        lower === g || lower.startsWith(g + " ") || lower.startsWith(g + ","),
-    )
-  )
+  if (greetings.some((g) => lower === g || lower.startsWith(g + " ") || lower.startsWith(g + ",")))
     return "greeting";
-  if (
-    ["how are you", "how r u", "whats up", "what's up"].some((p) =>
-      lower.includes(p),
-    )
-  )
+  if (["how are you", "how r u", "whats up", "what's up"].some((p) => lower.includes(p)))
     return "how_are_you";
-  if (
-    ["thank", "thanks", "jazakallah", "shukriya", "thx"].some((t) =>
-      lower.includes(t),
-    )
-  )
+  if (["thank", "thanks", "jazakallah", "shukriya", "thx"].some((t) => lower.includes(t)))
     return "thanks";
-  if (
-    ["help", "what can you do", "how does this work"].some((h) =>
-      lower.includes(h),
-    )
-  )
+  if (["help", "what can you do", "how does this work"].some((h) => lower.includes(h)))
     return "help";
-  if (
-    ["bye", "goodbye", "khuda hafiz", "allah hafiz", "take care"].some((f) =>
-      lower.includes(f),
-    )
-  )
+  if (["bye", "goodbye", "khuda hafiz", "allah hafiz", "take care"].some((f) => lower.includes(f)))
     return "farewell";
   if (
     [
@@ -406,11 +307,7 @@ function detectIntent(text) {
     ].some((p) => lower.includes(p))
   )
     return "find_doctor";
-  if (
-    extractSymptoms(text).length > 0 &&
-    !isHypotheticalQuestion(text) &&
-    !hasNonPersonSubject(text)
-  )
+  if (extractSymptoms(text).length > 0 && !isHypotheticalQuestion(text) && !hasNonPersonSubject(text))
     return "symptoms";
   return "conversational";
 }
@@ -449,26 +346,15 @@ function getFallbackReply(intent, userName) {
 
 // ── Build ML Section & Clinical Intake Logic ────────────────────────────────────
 function buildMLSection(mlResult, symptoms, rawText) {
-  if (
-    !mlResult ||
-    mlResult.error ||
-    !mlResult.predictions ||
-    mlResult.predictions.length === 0
-  )
+  if (!mlResult || mlResult.error || !mlResult.predictions || mlResult.predictions.length === 0)
     return null;
 
   const top = mlResult.predictions[0];
-  const matched = (mlResult.matched_symptoms || symptoms).map((s) =>
-    s.replace(/_/g, " "),
-  );
-
+  const matched = (mlResult.matched_symptoms || symptoms).map((s) => s.replace(/_/g, " "));
   const lowerText = (rawText || "").toLowerCase();
 
   // 1. DURATION TRACKER
-  const hasDuration =
-    /\b(days?|weeks?|months?|hours?|mins?|minutes?|since|yesterday|today|morning|night|evening)\b/.test(
-      lowerText,
-    ) || /\d+/.test(lowerText);
+  const hasDuration = /\b(days?|weeks?|months?|hours?|mins?|minutes?|since|yesterday|today|morning|night|evening)\b/.test(lowerText) || /\d+/.test(lowerText);
 
   // 2. CLARIFICATION ENGINE
   let mustHideBox = false;
@@ -476,58 +362,35 @@ function buildMLSection(mlResult, symptoms, rawText) {
 
   if (!hasDuration) {
     mustHideBox = true;
-    doctorInstructions +=
-      " The patient hasn't mentioned a timeline. Ask them exactly how long they have been experiencing these symptoms.";
+    doctorInstructions += " The patient hasn't mentioned a timeline. Ask them exactly how long they have been experiencing these symptoms.";
   }
 
-  if (
-    /\bfever(ish)?\b/.test(lowerText) &&
-    !/high fever|mild fever|moderate/.test(lowerText)
-  ) {
+  if (/\bfever(ish)?\b/.test(lowerText) && !/high fever|mild fever|moderate/.test(lowerText)) {
     mustHideBox = true;
-    doctorInstructions +=
-      " They mentioned a fever. Ask: 'Is your fever mild, moderate, or high?'";
+    doctorInstructions += " They mentioned a fever. Ask: 'Is your fever mild, moderate, or high?'";
   }
   if (/\bheadache\b/.test(lowerText) && !/severe headache/.test(lowerText)) {
     mustHideBox = true;
-    doctorInstructions +=
-      " They mentioned a headache. Ask: 'Is your headache a normal headache, or is it severe?'";
+    doctorInstructions += " They mentioned a headache. Ask: 'Is your headache a normal headache, or is it severe?'";
   }
-  if (
-    /\bcough(ing)?\b/.test(lowerText) &&
-    !/mucus|phlegm|dry|blood/.test(lowerText)
-  ) {
+  if (/\bcough(ing)?\b/.test(lowerText) && !/mucus|phlegm|dry|blood/.test(lowerText)) {
     mustHideBox = true;
-    doctorInstructions +=
-      " They mentioned a cough. Ask: 'Is it a dry cough, or are you coughing up mucus/phlegm?'";
+    doctorInstructions += " They mentioned a cough. Ask: 'Is it a dry cough, or are you coughing up mucus/phlegm?'";
   }
-  if (
-    /\b(swell|swelling|swollen)\b/.test(lowerText) &&
-    !/joint|gland|lymph/.test(lowerText)
-  ) {
+  if (/\b(swell|swelling|swollen)\b/.test(lowerText) && !/joint|gland|lymph/.test(lowerText)) {
     mustHideBox = true;
-    doctorInstructions +=
-      " They mentioned swelling. Ask: 'Where exactly is the swelling located (e.g., joints, face, throat, glands)?'";
+    doctorInstructions += " They mentioned swelling. Ask: 'Where exactly is the swelling located (e.g., joints, face, throat, glands)?'";
   }
-  if (
-    /\bpain\b|\bhurts\b|\bache\b/.test(lowerText) &&
-    !/chest|stomach|joint|muscle|back|neck|knee|hip|eye|throat|head|body|ear|tooth/.test(
-      lowerText,
-    )
-  ) {
+  if (/\bpain\b|\bhurts\b|\bache\b/.test(lowerText) && !/chest|stomach|joint|muscle|back|neck|knee|hip|eye|throat|head|body|ear|tooth/.test(lowerText)) {
     mustHideBox = true;
-    doctorInstructions +=
-      " They mentioned pain but didn't specify where. Ask: 'Which specific part of your body hurts?'";
+    doctorInstructions += " They mentioned pain but didn't specify where. Ask: 'Which specific part of your body hurts?'";
   }
 
   // 3. THE 3-PILLAR SECURITY LOCK
   if (symptoms.length < 3 || top.confidence < 60 || mustHideBox) {
-    const suggested =
-      mlResult.followup_question || "fatigue, dizziness, or nausea";
-
+    const suggested = mlResult.followup_question || "fatigue, dizziness, or nausea";
     if (symptoms.length > 0 && doctorInstructions === "") {
-      doctorInstructions +=
-        " Ask them to elaborate on the severity of their symptoms (are they mild, moderate, or severe?).";
+      doctorInstructions += " Ask them to elaborate on the severity of their symptoms (are they mild, moderate, or severe?).";
     }
 
     return {
@@ -544,10 +407,7 @@ function buildMLSection(mlResult, symptoms, rawText) {
     .join(", ");
   const description = top.description ? `\n📖 ${top.description}` : "";
   const precautions = top.precautions?.length
-    ? `\n\n💡 Precautions:\n${top.precautions
-        .slice(0, 3)
-        .map((p) => `• ${p}`)
-        .join("\n")}`
+    ? `\n\n💡 Precautions:\n${top.precautions.slice(0, 3).map((p) => `• ${p}`).join("\n")}`
     : "";
   const tip = mlResult.low_confidence
     ? `\n\n⚡ Tip: Describe more symptoms for better accuracy.`
@@ -571,16 +431,18 @@ router.get("/find-doctors", auth, async (req, res) => {
 
     let latitude, longitude, locationSource;
 
+    // Use passed coordinates if "Use My Location" was clicked
     if (lat && lon) {
       latitude = parseFloat(lat);
       longitude = parseFloat(lon);
       locationSource = "gps";
     } else if (user.address) {
+      // Fallback to saving address via Nominatim
       const geo = await geocodeAddress(user.address);
       if (!geo) {
         return res.status(400).json({
-          message: "Could not determine your location from your saved address",
-          hint: "Try enabling GPS, or update your address in Profile settings",
+          message: "Could not determine the exact location from your saved address.",
+          hint: "Try clicking 'Use My Location', or update your address in your Profile settings.",
         });
       }
       latitude = geo.latitude;
@@ -588,20 +450,32 @@ router.get("/find-doctors", auth, async (req, res) => {
       locationSource = "address";
     } else {
       return res.status(400).json({
-        message: "No location available",
-        hint: "Enable GPS or add an address in Profile settings",
+        message: "No location available.",
+        hint: "Please enable GPS or add an address in your Profile settings.",
       });
     }
 
     const facilities = await findNearbyFacilities(latitude, longitude);
+    
+    if (!facilities || facilities.length === 0) {
+      return res.json({
+        facilities: [],
+        locationSource,
+        message: "No facilities found nearby in OpenStreetMap data."
+      });
+    }
+
     res.json({
       facilities,
       locationSource,
       resolvedLocation: { latitude, longitude },
     });
   } catch (err) {
-    console.error("Find-doctors error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Find-doctors route error:", err.message);
+    res.status(500).json({ 
+      message: "The map server took too long to respond or is currently unavailable.", 
+      hint: "Please try again in a few moments." 
+    });
   }
 });
 
@@ -925,123 +799,6 @@ router.post("/email-reminder", auth, async (req, res) => {
   } catch (err) {
     console.error("Email error:", err);
     res.status(500).json({ message: "Server error" });
-  }
-});
-
-// Helper function to calculate distance between two coordinates in km
-function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radius of the earth in km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// ── Find Nearby Facilities Route ──────────────────────────────────────────────
-router.get("/facilities", auth, async (req, res) => {
-  try {
-    let { lat, lon } = req.query;
-    let locationSource = "gps";
-
-    // If no exact coordinates provided, fallback to user's saved profile address
-    if (!lat || !lon) {
-      const user = await User.findById(req.user.id);
-      if (!user || !user.address) {
-        return res.status(400).json({
-          message: "No location provided.",
-          hint: "Please enable GPS or add an address in your Profile.",
-        });
-      }
-
-      // Replaced native fetch with axios
-      const geoRes = await axios.get(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(user.address)}`,
-        {
-          headers: { "User-Agent": "HealthBot/1.0" },
-        },
-      );
-      const geoData = geoRes.data;
-
-      if (!geoData || geoData.length === 0) {
-        return res.status(400).json({
-          message: "Could not locate your saved address.",
-          hint: "Please click 'Use My Location' or update your address in your Profile.",
-        });
-      }
-      lat = geoData[0].lat;
-      lon = geoData[0].lon;
-      locationSource = "address";
-    }
-
-    // Query Overpass API for nearby medical facilities (5km radius)
-    const radius = 5000;
-    const overpassQuery = `
-      [out:json];
-      (
-        node["amenity"~"hospital|clinic|doctors|pharmacy"](around:${radius},${lat},${lon});
-        way["amenity"~"hospital|clinic|doctors|pharmacy"](around:${radius},${lat},${lon});
-      );
-      out center;
-    `;
-
-    // Replaced native fetch with axios and implemented safe native timeout
-    const overpassRes = await axios.post(
-      "https://overpass-api.de/api/interpreter",
-      overpassQuery,
-      {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        timeout: 15000, // 15 seconds timeout
-      },
-    );
-
-    const overpassData = overpassRes.data;
-    const elements = overpassData.elements || [];
-
-    // Map and format the results for the frontend
-    const facilities = elements
-      .map((el) => {
-        const tags = el.tags || {};
-        const elLat = el.lat || el.center?.lat;
-        const elLon = el.lon || el.center?.lon;
-
-        let type = "Clinic";
-        if (tags.amenity === "hospital") type = "Hospital";
-        else if (tags.amenity === "pharmacy") type = "Pharmacy";
-        else if (tags.amenity === "doctors") type = "Doctor";
-
-        const name = tags.name || `${type} (Unnamed)`;
-        const distanceKm = getDistanceFromLatLonInKm(
-          lat,
-          lon,
-          elLat,
-          elLon,
-        ).toFixed(1);
-        const address =
-          [tags["addr:street"], tags["addr:city"]].filter(Boolean).join(", ") ||
-          null;
-
-        return {
-          name,
-          type,
-          distanceKm,
-          address,
-          phone: tags.phone || tags["contact:phone"] || null,
-          mapsUrl: `https://www.google.com/maps/search/?api=1&query=${elLat},${elLon}`,
-        };
-      })
-      .sort((a, b) => parseFloat(a.distanceKm) - parseFloat(b.distanceKm))
-      .slice(0, 20); // Return top 20 closest
-
-    res.json({ facilities, locationSource });
-  } catch (err) {
-    console.error("Facilities route error:", err.message);
-    res.status(500).json({ message: "Failed to fetch nearby facilities." });
   }
 });
 
