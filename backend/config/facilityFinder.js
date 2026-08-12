@@ -107,7 +107,9 @@ out center tags;`;
     }
 
     facilities.sort((a, b) => a.distanceKm - b.distanceKm);
-    return facilities.slice(0, 20);
+    
+    // Increased from 20 to 60 so Doctors and Pharmacies don't get choked out by closer clinics
+    return facilities.slice(0, 60); 
   } catch (err) {
     console.error("Overpass fetch error:", err.message);
     return [];
