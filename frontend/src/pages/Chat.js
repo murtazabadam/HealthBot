@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { useNavigate, MemoryRouter } from "react-router-dom";
+import { API } from "../config.js";
 import {
   Activity,
   MessageSquare,
@@ -50,20 +51,6 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
-
-// Inline API configuration to resolve import errors in the build environment
-const API_BASE_URL = "https://healthbot-backend-ezxv.onrender.com";
-const API = {
-  PROFILE: `${API_BASE_URL}/api/auth/profile`,
-  CHANGE_PASSWORD: `${API_BASE_URL}/api/auth/change-password`,
-  DELETE_ACCOUNT: `${API_BASE_URL}/api/auth/delete-account`,
-  CHAT_MESSAGE: `${API_BASE_URL}/api/chat/message`,
-  CHAT_CONFIRM_SYMPTOMS: `${API_BASE_URL}/api/chat/confirm-symptoms`,
-  CHAT_SYMPTOM_OPTIONS: `${API_BASE_URL}/api/chat/symptom-options`,
-  CHAT_EMAIL_REMINDER: `${API_BASE_URL}/api/chat/email-reminder`,
-  NOTIFY_EMERGENCY: `${API_BASE_URL}/api/chat/notify-emergency`,
-  FACILITIES: `${API_BASE_URL}/api/chat/facilities`,
-};
 
 function SymptomConfirmationCard({
   msg,
@@ -1033,31 +1020,49 @@ export function ChatDashboard() {
   const [playingMessageId, setPlayingMessageId] = useState(null);
 
   const [activeSessionId, setActiveSessionId] = useState(Date.now());
-  const [chatHistoryList, setChatHistoryList] = useState(() =>
-    JSON.parse(localStorage.getItem("chatHistory") || "[]"),
-  );
-  const [appSettings, setAppSettings] = useState(() =>
-    JSON.parse(
-      localStorage.getItem("appSettings") ||
-        '{"darkMode":true,"emailNotif":true,"smsAlerts":false,"saveHistory":true}',
-    ),
-  );
+  const [chatHistoryList, setChatHistoryList] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("chatHistory") || "[]");
+    } catch {
+      return [];
+    }
+  });
 
-  const [user, setUser] = useState(() =>
-    JSON.parse(localStorage.getItem("user") || "{}"),
-  );
+  const [appSettings, setAppSettings] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("appSettings") ||
+          '{"darkMode":true,"emailNotif":true,"smsAlerts":false,"saveHistory":true}',
+      );
+    } catch {
+      return {
+        darkMode: true,
+        emailNotif: true,
+        smsAlerts: false,
+        saveHistory: true,
+      };
+    }
+  });
+
+  const [user, setUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  });
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
-    name: user.name || "",
-    age: user.age || "",
-    gender: user.gender || "",
-    bloodGroup: user.bloodGroup || "",
-    address: user.address || "",
-    phoneNumber: user.phoneNumber || "",
-    emergencyContactName: user.emergencyContactName || "",
-    emergencyContactPhone: user.emergencyContactPhone || "",
-    emergencyContactEmail: user.emergencyContactEmail || "",
+    name: user?.name || "",
+    age: user?.age || "",
+    gender: user?.gender || "",
+    bloodGroup: user?.bloodGroup || "",
+    address: user?.address || "",
+    phoneNumber: user?.phoneNumber || "",
+    emergencyContactName: user?.emergencyContactName || "",
+    emergencyContactPhone: user?.emergencyContactPhone || "",
+    emergencyContactEmail: user?.emergencyContactEmail || "",
   });
   const [toastMessage, setToastMessage] = useState("");
 
@@ -1092,7 +1097,7 @@ export function ChatDashboard() {
   const [facilitiesFetchedOnce, setFacilitiesFetchedOnce] = useState(false);
   const [facilitySearchQuery, setFacilitySearchQuery] = useState("");
 
-  const isDark = appSettings.darkMode;
+  const isDark = appSettings?.darkMode ?? true;
 
   const isRegionActive = (address) => {
     if (!address) return false;
@@ -1260,7 +1265,7 @@ export function ChatDashboard() {
             });
           }
 
-          if (appSettings.emailNotif && token) {
+          if (appSettings?.emailNotif && token) {
             try {
               await axios.post(
                 API.CHAT_EMAIL_REMINDER,
@@ -1276,7 +1281,7 @@ export function ChatDashboard() {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [reminders, appSettings.emailNotif, token]);
+  }, [reminders, appSettings?.emailNotif, token]);
 
   const formatTimeAMPM = (timeStr) => {
     if (!timeStr) return "";
@@ -1359,7 +1364,7 @@ export function ChatDashboard() {
       .join(" ");
   };
 
-  const rawFullName = user.name || "User";
+  const rawFullName = user?.name || "User";
   const rawFirstName = rawFullName.trim().split(" ")[0];
   const firstName = formatName(rawFirstName);
 
@@ -1372,7 +1377,7 @@ export function ChatDashboard() {
   }, []);
 
   useEffect(() => {
-    if (appSettings.saveHistory && messages.length > 1) {
+    if (appSettings?.saveHistory && messages.length > 1) {
       const title =
         messages.find((m) => m.sender === "user")?.text?.substring(0, 30) +
           "..." || "Health Consultation";
@@ -1397,14 +1402,14 @@ export function ChatDashboard() {
         return newHistory;
       });
     }
-  }, [messages, activeSessionId, appSettings.saveHistory]);
+  }, [messages, activeSessionId, appSettings?.saveHistory]);
 
-  // Load the most recent chat history automatically when app opens
+  // Auto-load latest session
   useEffect(() => {
     if (chatHistoryList.length > 0 && messages.length === 0) {
       const latestSession = chatHistoryList[0];
       setActiveSessionId(latestSession.id);
-      setMessages(latestSession.messages);
+      setMessages(latestSession.messages || []);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1877,7 +1882,7 @@ export function ChatDashboard() {
 
   const loadChatSession = (session) => {
     setActiveSessionId(session.id);
-    setMessages(session.messages);
+    setMessages(session.messages || []);
     handleNavClick("chat");
   };
 
@@ -1983,7 +1988,7 @@ export function ChatDashboard() {
         {
           symptoms: msg.detectedSymptoms.map((s) => s.id),
           originalText: msg.originalText,
-          saveHistory: appSettings.saveHistory,
+          saveHistory: appSettings?.saveHistory,
           round,
         },
         { headers: { Authorization: `Bearer ${token}` } },
@@ -2159,7 +2164,7 @@ export function ChatDashboard() {
         {
           text: textToSend,
           image: currentImg,
-          saveHistory: appSettings.saveHistory,
+          saveHistory: appSettings?.saveHistory,
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -2372,7 +2377,7 @@ export function ChatDashboard() {
               </a>
               <button
                 onClick={() => {
-                  const location = user.address
+                  const location = user?.address
                     ? `near ${user.address}`
                     : "near me";
                   window.open(
@@ -2650,7 +2655,6 @@ export function ChatDashboard() {
                   >
                     HealthBot
                   </h3>
-                  {/* --- NEW: Regional AI Badge --- */}
                   {isRegionActive(user?.address) && (
                     <span
                       className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-bold uppercase tracking-widest mt-0.5 transition-colors ${isDark ? "bg-teal-500/10 border-teal-500/20 text-teal-400" : "bg-teal-50 border-teal-200 text-teal-600"}`}
@@ -2673,7 +2677,7 @@ export function ChatDashboard() {
               <span
                 className={`text-sm font-bold transition-colors ${isDark ? "text-slate-400" : "text-slate-600"}`}
               >
-                {user.name || "User"}
+                {user?.name || "User"}
               </span>
               <span className="text-[8px] text-slate-500 font-bold uppercase opacity-60">
                 Verified User
@@ -2956,18 +2960,18 @@ export function ChatDashboard() {
                           onClick={() => {
                             setIsEditingProfile(false);
                             setProfileForm({
-                              name: user.name || "",
-                              age: user.age || "",
-                              gender: user.gender || "",
-                              bloodGroup: user.bloodGroup || "",
-                              address: user.address || "",
-                              phoneNumber: user.phoneNumber || "",
+                              name: user?.name || "",
+                              age: user?.age || "",
+                              gender: user?.gender || "",
+                              bloodGroup: user?.bloodGroup || "",
+                              address: user?.address || "",
+                              phoneNumber: user?.phoneNumber || "",
                               emergencyContactName:
-                                user.emergencyContactName || "",
+                                user?.emergencyContactName || "",
                               emergencyContactPhone:
-                                user.emergencyContactPhone || "",
+                                user?.emergencyContactPhone || "",
                               emergencyContactEmail:
-                                user.emergencyContactEmail || "",
+                                user?.emergencyContactEmail || "",
                             });
                             setToastMessage("");
                           }}
@@ -3636,7 +3640,7 @@ export function ChatDashboard() {
                     No listed facilities found nearby in OpenStreetMap's data.
                     Try Use My Location, or search directly on{" "}
                     <a
-                      href={`https://www.google.com/maps/search/${encodeURIComponent("hospitals near " + (user.address || ""))}`}
+                      href={`https://www.google.com/maps/search/${encodeURIComponent("hospitals near " + (user?.address || ""))}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-teal-500 underline"
@@ -3706,7 +3710,7 @@ export function ChatDashboard() {
                 <SettingToggle
                   label="Dark Mode"
                   desc="Enable sleek dark theme across the app."
-                  checked={appSettings.darkMode}
+                  checked={appSettings?.darkMode ?? true}
                   isDark={isDark}
                   onChange={() => handleSettingChange("darkMode")}
                 />
@@ -3716,7 +3720,7 @@ export function ChatDashboard() {
                 <SettingToggle
                   label="Email Notifications"
                   desc="Receive reminder alerts via email."
-                  checked={appSettings.emailNotif}
+                  checked={appSettings?.emailNotif ?? true}
                   isDark={isDark}
                   onChange={() => handleSettingChange("emailNotif")}
                 />
@@ -3745,7 +3749,7 @@ export function ChatDashboard() {
                 <SettingToggle
                   label="Save Chat History"
                   desc="Securely save conversations to your device."
-                  checked={appSettings.saveHistory}
+                  checked={appSettings?.saveHistory ?? true}
                   isDark={isDark}
                   onChange={() => handleSettingChange("saveHistory")}
                 />
@@ -4296,9 +4300,13 @@ const PasswordField = ({ label, value, show, onToggle, onChange, isDark }) => (
 );
 
 export default function App() {
-  return (
-    <MemoryRouter>
-      <ChatDashboard />
-    </MemoryRouter>
-  );
+  const isPreviewWindow = window.location.hostname.includes("usercontent.goog");
+  if (isPreviewWindow) {
+    return (
+      <MemoryRouter>
+        <ChatDashboard />
+      </MemoryRouter>
+    );
+  }
+  return <ChatDashboard />;
 }
