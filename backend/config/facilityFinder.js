@@ -7,7 +7,7 @@ const axios = require("axios");
 
 const USER_AGENT =
   "HealthBot-MCA-Project/1.0 (contact: murtazabadam@gmail.com)";
-const SEARCH_RADIUS_METERS = 15000; // 15km dynamic search radius
+const SEARCH_RADIUS_METERS = 30000; // 30km dynamic search radius
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -42,13 +42,18 @@ async function geocodeAddress(address) {
 }
 
 async function findNearbyFacilities(latitude, longitude) {
-  // Highly optimized query using regex matching to prevent server timeouts
-  const query = `[out:json][timeout:15];
+  // 100% safe, explicit match query. Mirror servers block regex (~), so we explicitly define everything.
+  const query = `[out:json][timeout:20];
 (
-  node["amenity"~"hospital|clinic|doctors|pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  way["amenity"~"hospital|clinic|doctors|pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  node["healthcare"~"hospital|clinic|doctor|pharmacy|centre"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  way["healthcare"~"hospital|clinic|doctor|pharmacy|centre"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="hospital"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="clinic"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="doctors"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="hospital"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="clinic"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="centre"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="doctor"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
 );
 out center tags;`;
 
@@ -92,9 +97,7 @@ out center tags;`;
 
   // If ALL servers failed, throw a clean error to the frontend
   if (!data || !data.elements) {
-    console.error(
-      "All OpenStreetMap servers timed out or blocked the request.",
-    );
+    console.error("All OpenStreetMap servers timed out or rejected the query.");
     throw new Error(
       "Map servers are currently busy. Please try again in a moment.",
     );
@@ -115,16 +118,11 @@ out center tags;`;
     const am = (tags.amenity || "").toLowerCase();
     const hc = (tags.healthcare || "").toLowerCase();
 
-    if (am.includes("hospital") || hc.includes("hospital")) type = "Hospital";
-    else if (
-      am.includes("clinic") ||
-      hc.includes("clinic") ||
-      hc.includes("centre")
-    )
+    if (am === "hospital" || hc === "hospital") type = "Hospital";
+    else if (am === "clinic" || hc === "clinic" || hc === "centre")
       type = "Clinic";
-    else if (am.includes("doctor") || hc.includes("doctor")) type = "Doctor";
-    else if (am.includes("pharmacy") || hc.includes("pharmacy"))
-      type = "Pharmacy";
+    else if (am === "doctors" || hc === "doctor") type = "Doctor";
+    else if (am === "pharmacy" || hc === "pharmacy") type = "Pharmacy";
 
     if (!name || name.trim() === "") {
       name = `${type} (Unnamed Map Entry)`;
