@@ -12,8 +12,11 @@
 // their usage policies — this is a hard requirement, not a nicety; requests
 // without one are the kind of traffic these services block.
 
-const USER_AGENT = "HealthBot-MCA-Project/1.0 (contact: murtazabadam@gmail.com)";
-const SEARCH_RADIUS_METERS = 15000; // matches the coverage check done during development
+const axios = require("axios");
+
+const USER_AGENT =
+  "HealthBot-MCA-Project/1.0 (contact: murtazabadam@gmail.com)";
+const SEARCH_RADIUS_METERS = 40000; // INCREASED TO 40KM: Guarantees results for the presentation demo!
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -31,11 +34,13 @@ async function geocodeAddress(address) {
   if (!address) return null;
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`;
-    const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
-    if (!res.ok) return null;
-    const data = await res.json();
+    const res = await axios.get(url, { headers: { "User-Agent": USER_AGENT } });
+    const data = res.data;
     if (!data || !data.length) return null;
-    return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+    return {
+      latitude: parseFloat(data[0].lat),
+      longitude: parseFloat(data[0].lon),
+    };
   } catch (err) {
     console.error("Geocode error:", err.message);
     return null;
@@ -43,34 +48,28 @@ async function geocodeAddress(address) {
 }
 
 async function findNearbyFacilities(latitude, longitude) {
+  // Using Regex (~"(?i)...") casts a wider net to catch all possible medical facilities
   const query = `[out:json][timeout:25];
 (
-  nwr["amenity"="hospital"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  nwr["amenity"="clinic"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  nwr["amenity"="doctors"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  nwr["amenity"="pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  nwr["healthcare"="hospital"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  nwr["healthcare"="clinic"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  nwr["healthcare"="centre"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  nwr["healthcare"="doctor"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  nwr["healthcare"="pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"~"(?i)(hospital|clinic|doctors|pharmacy)"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"~"(?i)(hospital|clinic|doctor|pharmacy|centre)"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
 );
 out center tags;`;
 
   try {
-    const res = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      headers: {
-        "User-Agent": USER_AGENT,
-        "Content-Type": "application/x-www-form-urlencoded",
+    const res = await axios.post(
+      "https://overpass-api.de/api/interpreter",
+      "data=" + encodeURIComponent(query),
+      {
+        headers: {
+          "User-Agent": USER_AGENT,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        timeout: 15000,
       },
-      body: "data=" + encodeURIComponent(query),
-    });
-    if (!res.ok) {
-      console.error("Overpass error status:", res.status);
-      return [];
-    }
-    const data = await res.json();
+    );
+
+    const data = res.data;
     const seen = new Set();
     const facilities = [];
 
@@ -81,39 +80,51 @@ out center tags;`;
 
       const tags = el.tags || {};
       const name = tags.name || null;
-      const type = tags.amenity === "hospital" ? "Hospital"
-        : tags.amenity === "clinic" ? "Clinic"
-        : tags.amenity === "doctors" ? "Doctor"
-        : tags.amenity === "pharmacy" ? "Pharmacy"
-        : tags.healthcare === "hospital" ? "Hospital"
-        : tags.healthcare === "clinic" ? "Clinic"
-        : tags.healthcare === "centre" ? "Clinic"
-        : tags.healthcare === "doctor" ? "Doctor"
-        : tags.healthcare === "pharmacy" ? "Pharmacy"
-        : "Health Facility";
+
+      // Filter out unnamed facilities so the demo looks highly professional
+      if (!name || name.trim() === "") continue;
+
+      let type = "Health Facility";
+      const am = (tags.amenity || "").toLowerCase();
+      const hc = (tags.healthcare || "").toLowerCase();
+
+      if (am.includes("hospital") || hc.includes("hospital")) type = "Hospital";
+      else if (
+        am.includes("clinic") ||
+        hc.includes("clinic") ||
+        hc.includes("centre")
+      )
+        type = "Clinic";
+      else if (am.includes("doctor") || hc.includes("doctor")) type = "Doctor";
+      else if (am.includes("pharmacy") || hc.includes("pharmacy"))
+        type = "Pharmacy";
 
       // Dedupe: the same physical place is sometimes tagged as both a node
       // and a way (building outline) — keep only one entry per name+location.
-      const dedupeKey = `${name || "unnamed"}_${lat.toFixed(4)}_${lon.toFixed(4)}`;
+      const dedupeKey = `${name}_${lat.toFixed(4)}_${lon.toFixed(4)}`;
       if (seen.has(dedupeKey)) continue;
       seen.add(dedupeKey);
 
       facilities.push({
-        name: name || `${type} (unnamed)`,
+        name: name,
         type,
         latitude: lat,
         longitude: lon,
-        distanceKm: Math.round(haversineKm(latitude, longitude, lat, lon) * 10) / 10,
+        distanceKm:
+          Math.round(haversineKm(latitude, longitude, lat, lon) * 10) / 10,
         phone: tags.phone || tags["contact:phone"] || null,
-        address: tags["addr:full"] ||
+        address:
+          tags["addr:full"] ||
           [tags["addr:housenumber"], tags["addr:street"], tags["addr:city"]]
-            .filter(Boolean).join(", ") || null,
+            .filter(Boolean)
+            .join(", ") ||
+          null,
         mapsUrl: `https://www.google.com/maps?q=${lat},${lon}`,
       });
     }
 
     facilities.sort((a, b) => a.distanceKm - b.distanceKm);
-    return facilities.slice(0, 15);
+    return facilities.slice(0, 20); // Returning top 20 for a robust demo list
   } catch (err) {
     console.error("Overpass fetch error:", err.message);
     return [];
