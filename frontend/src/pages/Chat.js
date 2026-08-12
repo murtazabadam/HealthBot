@@ -1594,120 +1594,23 @@ export function ChatDashboard() {
     setFacilitiesLoading(true);
     setFacilitiesError("");
     try {
-      let lat, lon;
-      let source = "gps";
-
-      if (coords) {
-        lat = coords.latitude;
-        lon = coords.longitude;
-      } else if (user?.address) {
-        source = "address";
-        const geoRes = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(user.address)}`,
-        );
-        const geoData = await geoRes.json();
-        if (geoData && geoData.length > 0) {
-          lat = parseFloat(geoData[0].lat);
-          lon = parseFloat(geoData[0].lon);
-        } else {
-          throw new Error(
-            "Could not find map coordinates for your saved address.",
-          );
-        }
-      } else {
-        throw new Error(
-          "No location provided. Please click 'Use My Location'.",
-        );
-      }
-
-      const overpassQuery = `
-        [out:json][timeout:25];
-        (
-          nwr["amenity"~"(?i)(hospital|clinic|doctors|pharmacy)"](around:15000,${lat},${lon});
-          nwr["healthcare"~"(?i)(hospital|clinic|doctor|pharmacy|centre)"](around:15000,${lat},${lon});
-        );
-        out center;
-      `;
-
-      const overpassRes = await fetch(
-        "https://overpass-api.de/api/interpreter",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: `data=${encodeURIComponent(overpassQuery)}`,
-        },
-      );
-
-      if (!overpassRes.ok) {
-        throw new Error("Map server is busy or unavailable. Please try again.");
-      }
-
-      const overpassData = await overpassRes.json();
-
-      let facilities = [];
-      if (overpassData && overpassData.elements) {
-        facilities = overpassData.elements.map((el) => {
-          const centerLat = el.lat || el.center?.lat;
-          const centerLon = el.lon || el.center?.lon;
-          const tags = el.tags || {};
-
-          let type = "Hospital";
-          const am = (tags.amenity || "").toLowerCase();
-          const hc = (tags.healthcare || "").toLowerCase();
-
-          if (
-            am.includes("clinic") ||
-            hc.includes("clinic") ||
-            hc.includes("centre")
-          )
-            type = "Clinic";
-          else if (am.includes("doctor") || hc.includes("doctor"))
-            type = "Doctor";
-          else if (am.includes("pharmacy") || hc.includes("pharmacy"))
-            type = "Pharmacy";
-          else type = "Hospital";
-
-          const R = 6371;
-          const dLat = ((centerLat - lat) * Math.PI) / 180;
-          const dLon = ((centerLon - lon) * Math.PI) / 180;
-          const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos((lat * Math.PI) / 180) *
-              Math.cos((centerLat * Math.PI) / 180) *
-              Math.sin(dLon / 2) *
-              Math.sin(dLon / 2);
-          const distanceKm = (
-            R *
-            2 *
-            Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-          ).toFixed(1);
-
-          return {
-            name: tags.name || `Unnamed ${type}`,
-            type: type,
-            distanceKm,
-            address: tags["addr:street"]
-              ? `${tags["addr:street"]} ${tags["addr:city"] || ""}`.trim()
-              : null,
-            phone: tags.phone || tags["contact:phone"] || null,
-            mapsUrl: `https://www.google.com/maps/search/?api=1&query=${centerLat},${centerLon}`,
-          };
-        });
-
-        facilities = facilities
-          .filter((f) => !f.name.startsWith("Unnamed"))
-          .sort((a, b) => parseFloat(a.distanceKm) - parseFloat(b.distanceKm));
-      }
-
-      setFacilitiesData(facilities);
-      setFacilitiesLocationSource(source);
+      const token = localStorage.getItem("token");
+      const params = coords
+        ? { lat: coords.latitude, lon: coords.longitude }
+        : {};
+      const res = await axios.get(API.FIND_DOCTORS, {
+        headers: { Authorization: `Bearer ${token}` },
+        params,
+      });
+      setFacilitiesData(res.data.facilities || []);
+      setFacilitiesLocationSource(res.data.locationSource || null);
       setFacilitiesFetchedOnce(true);
     } catch (err) {
-      setFacilitiesError(
-        err.message || "Failed to load facilities. The server might be busy.",
-      );
+      const msg =
+        err.response?.data?.message ||
+        "Could not load nearby facilities. The server might be busy.";
+      const hint = err.response?.data?.hint;
+      setFacilitiesError(hint ? `${msg} ${hint}` : msg);
       setFacilitiesData([]);
     } finally {
       setFacilitiesLoading(false);
