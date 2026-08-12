@@ -1,13 +1,21 @@
 // ── Doctor / Facility Finder (OpenStreetMap) ────────────────────────────────
-// Dynamically fetches real nearby hospitals and clinics based on GPS coordinates.
-// Implements Multi-Server Routing: If the primary OSM server rate-limits the
-// Render backend, it automatically retries on global mirror servers to ensure data loads.
+// Uses two free, card-free OSM services:
+//   - Nominatim: turns a saved text address into coordinates when the
+//     frontend doesn't have a live GPS fix.
+//   - Overpass: the actual nearby-facility query, using both the older
+//     amenity=hospital/clinic/doctors tagging AND the newer healthcare=*
+//     scheme — testing during development found several real private
+//     clinics and individual doctors were tagged with healthcare=* only,
+//     and would have been silently missing with amenity alone.
+//
+// Both services require a descriptive User-Agent identifying the app per
+// their usage policies — this is a hard requirement, not a nicety; requests
+// without one are the kind of traffic these services block.
 
-const axios = require("axios");
+const axios = require('axios');
 
-const USER_AGENT =
-  "HealthBot-MCA-Project/1.0 (contact: murtazabadam@gmail.com)";
-const SEARCH_RADIUS_METERS = 15000; // 15km dynamic search radius
+const USER_AGENT = "HealthBot-MCA-Project/1.0 (contact: murtazabadam@gmail.com)";
+const SEARCH_RADIUS_METERS = 15000; // matches the coverage check done during development
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -25,16 +33,10 @@ async function geocodeAddress(address) {
   if (!address) return null;
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`;
-    const res = await axios.get(url, {
-      headers: { "User-Agent": USER_AGENT },
-      timeout: 10000,
-    });
+    const res = await axios.get(url, { headers: { "User-Agent": USER_AGENT } });
     const data = res.data;
     if (!data || !data.length) return null;
-    return {
-      latitude: parseFloat(data[0].lat),
-      longitude: parseFloat(data[0].lon),
-    };
+    return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
   } catch (err) {
     console.error("Geocode error:", err.message);
     return null;
@@ -42,118 +44,81 @@ async function geocodeAddress(address) {
 }
 
 async function findNearbyFacilities(latitude, longitude) {
-  // Highly optimized query using regex matching to prevent server timeouts
-  const query = `[out:json][timeout:15];
+  const query = `[out:json][timeout:25];
 (
-  node["amenity"~"hospital|clinic|doctors|pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  way["amenity"~"hospital|clinic|doctors|pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  node["healthcare"~"hospital|clinic|doctor|pharmacy|centre"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
-  way["healthcare"~"hospital|clinic|doctor|pharmacy|centre"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="hospital"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="clinic"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="doctors"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["amenity"="pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="hospital"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="clinic"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="centre"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="doctor"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
+  nwr["healthcare"="pharmacy"](around:${SEARCH_RADIUS_METERS},${latitude},${longitude});
 );
 out center tags;`;
 
-  // List of global OSM Overpass mirror servers
-  const endpoints = [
-    "https://overpass-api.de/api/interpreter", // Primary (Germany)
-    "https://lz4.overpass-api.de/api/interpreter", // Mirror 1
-    "https://z.overpass-api.de/api/interpreter", // Mirror 2
-    "https://overpass.kumi.systems/api/interpreter", // Mirror 3 (France - highly reliable)
-  ];
-
-  let data = null;
-
-  // Try each server one by one until one succeeds
-  for (const endpoint of endpoints) {
-    try {
-      console.log(`Trying OSM server: ${endpoint}...`);
-      const res = await axios.post(
-        endpoint,
-        "data=" + encodeURIComponent(query),
-        {
-          headers: {
-            "User-Agent": USER_AGENT,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          timeout: 15000,
+  try {
+    const res = await axios.post(
+      "https://overpass-api.de/api/interpreter",
+      "data=" + encodeURIComponent(query),
+      {
+        headers: {
+          "User-Agent": USER_AGENT,
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-      );
-
-      if (res.data && res.data.elements) {
-        data = res.data;
-        console.log(`✅ Success fetching live data from ${endpoint}`);
-        break; // Stop trying other servers once we have the data!
+        timeout: 25000
       }
-    } catch (err) {
-      console.log(
-        `❌ Failed on ${endpoint}: ${err.message}. Trying next server...`,
-      );
-    }
-  }
-
-  // If ALL servers failed, throw a clean error to the frontend
-  if (!data || !data.elements) {
-    console.error(
-      "All OpenStreetMap servers timed out or blocked the request.",
     );
-    throw new Error(
-      "Map servers are currently busy. Please try again in a moment.",
-    );
-  }
+    
+    const data = res.data;
+    const seen = new Set();
+    const facilities = [];
 
-  const seen = new Set();
-  const facilities = [];
+    for (const el of data.elements || []) {
+      const lat = el.lat ?? el.center?.lat;
+      const lon = el.lon ?? el.center?.lon;
+      if (lat == null || lon == null) continue;
 
-  for (const el of data.elements) {
-    const lat = el.lat ?? el.center?.lat;
-    const lon = el.lon ?? el.center?.lon;
-    if (lat == null || lon == null) continue;
+      const tags = el.tags || {};
+      const name = tags.name || null;
+      const type = tags.amenity === "hospital" ? "Hospital"
+        : tags.amenity === "clinic" ? "Clinic"
+        : tags.amenity === "doctors" ? "Doctor"
+        : tags.amenity === "pharmacy" ? "Pharmacy"
+        : tags.healthcare === "hospital" ? "Hospital"
+        : tags.healthcare === "clinic" ? "Clinic"
+        : tags.healthcare === "centre" ? "Clinic"
+        : tags.healthcare === "doctor" ? "Doctor"
+        : tags.healthcare === "pharmacy" ? "Pharmacy"
+        : "Health Facility";
 
-    const tags = el.tags || {};
-    let name = tags.name || tags["name:en"] || null;
+      // Dedupe: the same physical place is sometimes tagged as both a node
+      // and a way (building outline) — keep only one entry per name+location.
+      const dedupeKey = `${name || "unnamed"}_${lat.toFixed(4)}_${lon.toFixed(4)}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
 
-    let type = "Health Facility";
-    const am = (tags.amenity || "").toLowerCase();
-    const hc = (tags.healthcare || "").toLowerCase();
-
-    if (am.includes("hospital") || hc.includes("hospital")) type = "Hospital";
-    else if (
-      am.includes("clinic") ||
-      hc.includes("clinic") ||
-      hc.includes("centre")
-    )
-      type = "Clinic";
-    else if (am.includes("doctor") || hc.includes("doctor")) type = "Doctor";
-    else if (am.includes("pharmacy") || hc.includes("pharmacy"))
-      type = "Pharmacy";
-
-    if (!name || name.trim() === "") {
-      name = `${type} (Unnamed Map Entry)`;
+      facilities.push({
+        name: name || `${type} (unnamed)`,
+        type,
+        latitude: lat,
+        longitude: lon,
+        distanceKm: Math.round(haversineKm(latitude, longitude, lat, lon) * 10) / 10,
+        phone: tags.phone || tags["contact:phone"] || null,
+        address: tags["addr:full"] ||
+          [tags["addr:housenumber"], tags["addr:street"], tags["addr:city"]]
+            .filter(Boolean).join(", ") || null,
+        mapsUrl: `https://www.google.com/maps?q=${lat},${lon}`,
+      });
     }
 
-    const dedupeKey = `${name}_${lat.toFixed(4)}_${lon.toFixed(4)}`;
-    if (seen.has(dedupeKey)) continue;
-    seen.add(dedupeKey);
-
-    facilities.push({
-      name: name,
-      type,
-      latitude: lat,
-      longitude: lon,
-      distanceKm:
-        Math.round(haversineKm(latitude, longitude, lat, lon) * 10) / 10,
-      phone: tags.phone || tags["contact:phone"] || null,
-      address:
-        tags["addr:full"] ||
-        [tags["addr:housenumber"], tags["addr:street"], tags["addr:city"]]
-          .filter(Boolean)
-          .join(", ") ||
-        null,
-      mapsUrl: `https://www.google.com/maps?q=${lat},${lon}`,
-    });
+    facilities.sort((a, b) => a.distanceKm - b.distanceKm);
+    return facilities.slice(0, 15);
+  } catch (err) {
+    console.error("Overpass fetch error:", err.message);
+    return [];
   }
-
-  facilities.sort((a, b) => a.distanceKm - b.distanceKm);
-  return facilities.slice(0, 15);
 }
 
 module.exports = { geocodeAddress, findNearbyFacilities };

@@ -1335,40 +1335,25 @@ export function ChatDashboard() {
     );
   };
 
-  // ── 🚨 THE FINAL FIX FOR CARE LOCATOR 🚨 ──
   const fetchFacilities = async (coords = null) => {
     setFacilitiesLoading(true);
     setFacilitiesError("");
     try {
-      let lat, lon;
-      let source = "gps";
+      let params = {};
+      let source = "address";
 
       if (coords) {
-        lat = coords.latitude;
-        lon = coords.longitude;
-      } else if (user?.address) {
-        source = "address";
-        
-        // 1. Geocode locally on the frontend first to ensure we get exactly matched coordinates, bypassing backend text-search bugs
-        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(user.address)}`);
-        const geoData = await geoRes.json();
-        
-        if (geoData && geoData.length > 0) {
-          lat = parseFloat(geoData[0].lat);
-          lon = parseFloat(geoData[0].lon);
-        } else {
-          throw new Error(`Could not find precise map coordinates for "${user.address}". Try clicking 'Use My Location' instead.`);
-        }
-      } else {
-        throw new Error("No location provided. Please click 'Use My Location'.");
+        params.lat = coords.latitude;
+        params.lon = coords.longitude;
+        source = "gps";
+      } else if (!user?.address) {
+        throw new Error("No location provided. Please click 'Use My Location' or update your profile address.");
       }
 
-      // 2. Now call the backend endpoint exactly as defined in your config.js
-      // Passing exact lat/lon completely skips the backend's internal geocoding that causes the 400 error.
       const token = localStorage.getItem("token");
       const res = await axios.get(API.FIND_DOCTORS, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { lat, lon }
+        params: params
       });
 
       setFacilitiesData(res.data.facilities || []);
