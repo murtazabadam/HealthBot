@@ -51,17 +51,18 @@ import {
   Search,
 } from "lucide-react";
 
-// Inline API config to prevent missing module errors
-const API_BASE_URL = "http://localhost:5000/api";
+// Inline API configuration to resolve import errors in the build environment
+const API_BASE_URL = "https://healthbot-backend-ezxv.onrender.com";
 const API = {
-  PROFILE: `${API_BASE_URL}/auth/profile`,
-  CHANGE_PASSWORD: `${API_BASE_URL}/auth/change-password`,
-  DELETE_ACCOUNT: `${API_BASE_URL}/auth/delete-account`,
-  CHAT_MESSAGE: `${API_BASE_URL}/chat/message`,
-  CHAT_CONFIRM_SYMPTOMS: `${API_BASE_URL}/chat/confirm-symptoms`,
-  CHAT_SYMPTOM_OPTIONS: `${API_BASE_URL}/chat/symptom-options`,
-  CHAT_EMAIL_REMINDER: `${API_BASE_URL}/chat/email-reminder`,
-  NOTIFY_EMERGENCY: `${API_BASE_URL}/chat/notify-emergency`,
+  PROFILE: `${API_BASE_URL}/api/auth/profile`,
+  CHANGE_PASSWORD: `${API_BASE_URL}/api/auth/change-password`,
+  DELETE_ACCOUNT: `${API_BASE_URL}/api/auth/delete-account`,
+  CHAT_MESSAGE: `${API_BASE_URL}/api/chat/message`,
+  CHAT_CONFIRM_SYMPTOMS: `${API_BASE_URL}/api/chat/confirm-symptoms`,
+  CHAT_SYMPTOM_OPTIONS: `${API_BASE_URL}/api/chat/symptom-options`,
+  CHAT_EMAIL_REMINDER: `${API_BASE_URL}/api/chat/email-reminder`,
+  NOTIFY_EMERGENCY: `${API_BASE_URL}/api/chat/notify-emergency`,
+  FACILITIES: `${API_BASE_URL}/api/chat/facilities`,
 };
 
 function SymptomConfirmationCard({
@@ -935,7 +936,6 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
-          {/* Ambulance Card */}
           <div
             className={`p-4 sm:p-5 rounded-2xl border ${isDark ? "bg-red-500/5 border-red-500/20" : "bg-red-50 border-red-200"} flex flex-col sm:flex-row sm:items-center justify-between gap-4`}
           >
@@ -962,7 +962,6 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
             </a>
           </div>
 
-          {/* Personal Contact Details */}
           <div
             className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
@@ -997,7 +996,6 @@ const EmergencyContactsView = ({ isDark, onBack, user }) => {
             </div>
           </div>
 
-          {/* Registered Location */}
           <div
             className={`p-5 rounded-2xl border ${isDark ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}
           >
@@ -1085,7 +1083,6 @@ export function ChatDashboard() {
 
   const [emergencyAlert, setEmergencyAlert] = useState(false);
 
-  // ── Find a Doctor / Facilities ─────────────────────────────────────────
   const [facilitiesData, setFacilitiesData] = useState([]);
   const [facilitiesLoading, setFacilitiesLoading] = useState(false);
   const [facilitiesError, setFacilitiesError] = useState("");
@@ -1402,149 +1399,21 @@ export function ChatDashboard() {
     }
   }, [messages, activeSessionId, appSettings.saveHistory]);
 
+  // Load the most recent chat history automatically when app opens
+  useEffect(() => {
+    if (chatHistoryList.length > 0 && messages.length === 0) {
+      const latestSession = chatHistoryList[0];
+      setActiveSessionId(latestSession.id);
+      setMessages(latestSession.messages);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (page === "chat") {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, loading, page]);
-
-  const fetchFacilities = async (coords = null) => {
-    setFacilitiesLoading(true);
-    setFacilitiesError("");
-    try {
-      let lat, lon;
-      let source = "gps";
-
-      // 1. Get coordinates
-      if (coords) {
-        lat = coords.latitude;
-        lon = coords.longitude;
-      } else if (user?.address) {
-        source = "address";
-        // Call Nominatim without custom headers to avoid CORS
-        const geoRes = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(user.address)}`,
-        );
-
-        if (!geoRes.ok)
-          throw new Error("Could not connect to location services.");
-
-        const geoData = await geoRes.json();
-        if (geoData && geoData.length > 0) {
-          lat = parseFloat(geoData[0].lat);
-          lon = parseFloat(geoData[0].lon);
-        } else {
-          throw new Error(
-            `Could not find map coordinates for "${user.address}". Try updating your profile address or click Use My Location.`,
-          );
-        }
-      } else {
-        throw new Error(
-          "No location provided. Please click 'Use My Location' or update your profile address.",
-        );
-      }
-
-      // 2. Query Overpass API for Hospitals, Clinics, Pharmacies within 10km
-      const radius = 10000;
-      const overpassQuery = `
-        [out:json][timeout:25];
-        (
-          node["amenity"~"(?i)(hospital|clinic|doctors|pharmacy)"](around:${radius},${lat},${lon});
-          way["amenity"~"(?i)(hospital|clinic|doctors|pharmacy)"](around:${radius},${lat},${lon});
-          node["healthcare"~"(?i)(hospital|clinic|doctor|pharmacy|centre)"](around:${radius},${lat},${lon});
-          way["healthcare"~"(?i)(hospital|clinic|doctor|pharmacy|centre)"](around:${radius},${lat},${lon});
-        );
-        out center;
-      `;
-
-      // Call Overpass strictly with native fetch and standard headers
-      const overpassRes = await fetch(
-        "https://overpass-api.de/api/interpreter",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `data=${encodeURIComponent(overpassQuery)}`,
-        },
-      );
-
-      if (!overpassRes.ok) {
-        throw new Error(
-          "Map server is currently busy. Please try again in a few moments.",
-        );
-      }
-
-      const overpassData = await overpassRes.json();
-
-      let facilities = [];
-      if (overpassData && overpassData.elements) {
-        facilities = overpassData.elements.map((el) => {
-          const centerLat = el.lat || el.center?.lat;
-          const centerLon = el.lon || el.center?.lon;
-          const tags = el.tags || {};
-
-          let type = "Hospital";
-          const am = (tags.amenity || "").toLowerCase();
-          const hc = (tags.healthcare || "").toLowerCase();
-
-          if (
-            am.includes("clinic") ||
-            hc.includes("clinic") ||
-            hc.includes("centre")
-          )
-            type = "Clinic";
-          else if (am.includes("doctor") || hc.includes("doctor"))
-            type = "Doctor";
-          else if (am.includes("pharmacy") || hc.includes("pharmacy"))
-            type = "Pharmacy";
-
-          // Haversine Distance Calculation (Frontend Native)
-          const R = 6371;
-          const dLat = ((centerLat - lat) * Math.PI) / 180;
-          const dLon = ((centerLon - lon) * Math.PI) / 180;
-          const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos((lat * Math.PI) / 180) *
-              Math.cos((centerLat * Math.PI) / 180) *
-              Math.sin(dLon / 2) *
-              Math.sin(dLon / 2);
-          const distanceKm = (
-            R *
-            2 *
-            Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-          ).toFixed(1);
-
-          return {
-            name: tags.name || `Unnamed ${type}`,
-            type: type,
-            distanceKm,
-            address: tags["addr:street"]
-              ? `${tags["addr:street"]} ${tags["addr:city"] || ""}`.trim()
-              : null,
-            phone: tags.phone || tags["contact:phone"] || null,
-            mapsUrl: `https://www.google.com/maps/search/?api=1&query=${centerLat},${centerLon}`,
-          };
-        });
-
-        // Filter out completely unnamed entries and sort by closest
-        facilities = facilities
-          .filter((f) => !f.name.startsWith("Unnamed"))
-          .sort((a, b) => parseFloat(a.distanceKm) - parseFloat(b.distanceKm))
-          .slice(0, 30);
-      }
-
-      setFacilitiesData(facilities);
-      setFacilitiesLocationSource(source);
-      setFacilitiesFetchedOnce(true);
-    } catch (err) {
-      setFacilitiesError(
-        err.message ||
-          "Failed to load facilities. Check your internet connection.",
-      );
-      setFacilitiesData([]);
-    } finally {
-      setFacilitiesLoading(false);
-    }
-  };
 
   useEffect(() => {
     if (page === "facilities" && !facilitiesFetchedOnce && !facilitiesLoading) {
@@ -1714,6 +1583,130 @@ export function ChatDashboard() {
         showToast("Location access denied. Please allow permissions.");
       },
     );
+  };
+
+  const fetchFacilities = async (coords = null) => {
+    setFacilitiesLoading(true);
+    setFacilitiesError("");
+    try {
+      let lat, lon;
+      let source = "gps";
+
+      if (coords) {
+        lat = coords.latitude;
+        lon = coords.longitude;
+      } else if (user?.address) {
+        source = "address";
+        const geoRes = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(user.address)}`,
+        );
+        const geoData = await geoRes.json();
+        if (geoData && geoData.length > 0) {
+          lat = parseFloat(geoData[0].lat);
+          lon = parseFloat(geoData[0].lon);
+        } else {
+          throw new Error(
+            "Could not find map coordinates for your saved address.",
+          );
+        }
+      } else {
+        throw new Error(
+          "No location provided. Please click 'Use My Location'.",
+        );
+      }
+
+      const overpassQuery = `
+        [out:json][timeout:25];
+        (
+          nwr["amenity"~"(?i)(hospital|clinic|doctors|pharmacy)"](around:15000,${lat},${lon});
+          nwr["healthcare"~"(?i)(hospital|clinic|doctor|pharmacy|centre)"](around:15000,${lat},${lon});
+        );
+        out center;
+      `;
+
+      const overpassRes = await fetch(
+        "https://overpass-api.de/api/interpreter",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: `data=${encodeURIComponent(overpassQuery)}`,
+        },
+      );
+
+      if (!overpassRes.ok) {
+        throw new Error("Map server is busy or unavailable. Please try again.");
+      }
+
+      const overpassData = await overpassRes.json();
+
+      let facilities = [];
+      if (overpassData && overpassData.elements) {
+        facilities = overpassData.elements.map((el) => {
+          const centerLat = el.lat || el.center?.lat;
+          const centerLon = el.lon || el.center?.lon;
+          const tags = el.tags || {};
+
+          let type = "Hospital";
+          const am = (tags.amenity || "").toLowerCase();
+          const hc = (tags.healthcare || "").toLowerCase();
+
+          if (
+            am.includes("clinic") ||
+            hc.includes("clinic") ||
+            hc.includes("centre")
+          )
+            type = "Clinic";
+          else if (am.includes("doctor") || hc.includes("doctor"))
+            type = "Doctor";
+          else if (am.includes("pharmacy") || hc.includes("pharmacy"))
+            type = "Pharmacy";
+          else type = "Hospital";
+
+          const R = 6371;
+          const dLat = ((centerLat - lat) * Math.PI) / 180;
+          const dLon = ((centerLon - lon) * Math.PI) / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos((lat * Math.PI) / 180) *
+              Math.cos((centerLat * Math.PI) / 180) *
+              Math.sin(dLon / 2) *
+              Math.sin(dLon / 2);
+          const distanceKm = (
+            R *
+            2 *
+            Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+          ).toFixed(1);
+
+          return {
+            name: tags.name || `Unnamed ${type}`,
+            type: type,
+            distanceKm,
+            address: tags["addr:street"]
+              ? `${tags["addr:street"]} ${tags["addr:city"] || ""}`.trim()
+              : null,
+            phone: tags.phone || tags["contact:phone"] || null,
+            mapsUrl: `https://www.google.com/maps/search/?api=1&query=${centerLat},${centerLon}`,
+          };
+        });
+
+        facilities = facilities
+          .filter((f) => !f.name.startsWith("Unnamed"))
+          .sort((a, b) => parseFloat(a.distanceKm) - parseFloat(b.distanceKm));
+      }
+
+      setFacilitiesData(facilities);
+      setFacilitiesLocationSource(source);
+      setFacilitiesFetchedOnce(true);
+    } catch (err) {
+      setFacilitiesError(
+        err.message || "Failed to load facilities. The server might be busy.",
+      );
+      setFacilitiesData([]);
+    } finally {
+      setFacilitiesLoading(false);
+    }
   };
 
   const handleUseMyLocationForFacilities = () => {
@@ -4303,12 +4296,9 @@ const PasswordField = ({ label, value, show, onToggle, onChange, isDark }) => (
 );
 
 export default function App() {
-  const isPreviewWindow = window.location.hostname.includes("usercontent.goog");
-  if (isPreviewWindow)
-    return (
-      <MemoryRouter>
-        <ChatDashboard />
-      </MemoryRouter>
-    );
-  return <ChatDashboard />;
+  return (
+    <MemoryRouter>
+      <ChatDashboard />
+    </MemoryRouter>
+  );
 }
