@@ -6,3 +6,5 @@ numpy
 gunicorn
 xgboost
 joblib
+pytesseract
+Pillow

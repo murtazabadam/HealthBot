@@ -33,6 +33,12 @@ export const API = {
   CHAT_EMAIL_REMINDER: `${API_BASE_URL}/api/chat/email-reminder`,
   NOTIFY_EMERGENCY: `${API_BASE_URL}/api/chat/notify-emergency`,
   FIND_DOCTORS: `${API_BASE_URL}/api/chat/find-doctors`,
+
+  // Prescriptions & Reminders
+  CHAT_PRESCRIPTION: `${API_BASE_URL}/api/chat/prescription`,
+  PRESCRIPTIONS: `${API_BASE_URL}/api/chat/prescriptions`,
+  REMINDERS: `${API_BASE_URL}/api/chat/reminders`,
+  REMINDER_BY_ID: (id) => `${API_BASE_URL}/api/chat/reminders/${id}`,
 };
 
 export default API_BASE_URL;

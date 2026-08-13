@@ -7,6 +7,7 @@ const https      = require('https');
 const { Server } = require('socket.io');
 const session    = require('express-session');
 const passport   = require('./config/passport');
+const { startReminderScheduler } = require('./config/reminderScheduler');
 
 dotenv.config();
 
@@ -36,7 +37,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cors({ origin: '*' }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));
@@ -49,7 +50,10 @@ app.get('/', (req, res) => {
 
 // ── MongoDB ────────────────────────────────────────────────────────────────────
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
+  .then(() => {
+    console.log('MongoDB connected');
+    startReminderScheduler();
+  })
   .catch(err => console.log('DB Error:', err));
 
 // ── Socket.IO ──────────────────────────────────────────────────────────────────
