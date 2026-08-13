@@ -1,0 +1,10 @@
+# Root-level ignore — each subproject (frontend/, backend/, ml-engine/) also
+# has its own .gitignore for stack-specific files (build/, __pycache__, etc).
+# This one exists to stop the mistakes already cleaned up once: a stray
+# root node_modules/package-lock.json, and macOS .DS_Store files.
+
+node_modules/
+.DS_Store
+*.DS_Store
+.env
+.env.local
