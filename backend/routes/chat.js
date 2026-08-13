@@ -6,6 +6,8 @@ const User = require("../models/User");
 const { getGroqResponse, isOffTopic } = require("../config/groq");
 const nodemailer = require("nodemailer");
 const { geocodeAddress, findNearbyFacilities, FacilityLookupError } = require("../config/facilityFinder");
+const { sendEmergencyAlertEmail } = require("../config/emailService");
+const { sendSMS } = require("../config/smsService");
 const axios = require("axios"); // Using axios for safe Node.js compatibility
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
@@ -618,6 +620,70 @@ router.get("/find-doctors", auth, async (req, res) => {
   }
 });
 
+// ── POST /api/chat/notify-emergency ─────────────────────────────────────────
+// Called by the frontend whenever an emergency is detected (either the ML/
+// keyword emergency check on a chat message, or the user's explicit
+// "Trigger Emergency Alert" action). Notifies the user's saved emergency
+// contact by email and/or SMS — whichever channels are on file — and
+// includes a Google Maps link when GPS coordinates were provided.
+//
+// This intentionally never fails loudly: a missing/misconfigured contact,
+// or an email/SMS provider hiccup, still returns 200 with emailSent/smsSent
+// flags so the frontend (which only logs a console error on failure) can't
+// accidentally block the chat UI during an actual emergency. The real
+// signal for "did it work" is emailSent/smsSent in the response, which
+// callers can check if they want to surface it.
+router.post("/notify-emergency", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const { latitude, longitude } = req.body || {};
+    const hasCoords =
+      typeof latitude === "number" && typeof longitude === "number" &&
+      !Number.isNaN(latitude) && !Number.isNaN(longitude);
+    const mapsUrl = hasCoords
+      ? `https://www.google.com/maps?q=${latitude},${longitude}`
+      : null;
+
+    const contactEmail = user.emergencyContactEmail;
+    const contactPhone = user.emergencyContactPhone;
+    const contactName = user.emergencyContactName;
+
+    if (!contactEmail && !contactPhone) {
+      return res.status(200).json({
+        message: "No emergency contact on file — nothing was sent.",
+        hint: "Add an emergency contact email or phone number in Profile settings.",
+        emailSent: false,
+        smsSent: false,
+        hasCoords,
+      });
+    }
+
+    const smsMessage =
+      `HealthBot Emergency Alert: ${user.name} may need immediate help.` +
+      (mapsUrl ? ` Location: ${mapsUrl}` : "") +
+      ` Please try to reach them now.`;
+
+    const [emailSent, smsSent] = await Promise.all([
+      contactEmail
+        ? sendEmergencyAlertEmail(contactEmail, contactName, user.name, mapsUrl)
+        : Promise.resolve(false),
+      contactPhone ? sendSMS(contactPhone, smsMessage) : Promise.resolve(false),
+    ]);
+
+    res.json({
+      message: "Emergency alert processed.",
+      emailSent,
+      smsSent,
+      hasCoords,
+    });
+  } catch (err) {
+    console.error("Notify-emergency error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 // ── Message Route ──────────────────────────────────────────────────────────────
 router.post("/message", auth, async (req, res) => {
   try {
@@ -949,121 +1015,10 @@ router.post("/email-reminder", auth, async (req, res) => {
   }
 });
 
-// Helper function to calculate distance between two coordinates in km
-function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radius of the earth in km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// ── Find Nearby Facilities Route ──────────────────────────────────────────────
-router.get("/facilities", auth, async (req, res) => {
-  try {
-    let { lat, lon } = req.query;
-    let locationSource = "gps";
-
-    // If no exact coordinates provided, fallback to user's saved profile address
-    if (!lat || !lon) {
-      const user = await User.findById(req.user.id);
-      if (!user || !user.address) {
-        return res.status(400).json({
-          message: "No location provided.",
-          hint: "Please enable GPS or add an address in your Profile.",
-        });
-      }
-
-      // Replaced native fetch with axios
-      const geoRes = await axios.get(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(user.address)}`,
-        {
-          headers: { "User-Agent": "HealthBot/1.0" },
-        },
-      );
-      const geoData = geoRes.data;
-
-      if (!geoData || geoData.length === 0) {
-        return res.status(400).json({
-          message: "Could not locate your saved address.",
-          hint: "Please click 'Use My Location' or update your address in your Profile.",
-        });
-      }
-      lat = geoData[0].lat;
-      lon = geoData[0].lon;
-      locationSource = "address";
-    }
-
-    // Query Overpass API for nearby medical facilities (5km radius)
-    const radius = 5000;
-    const overpassQuery = `
-      [out:json];
-      (
-        node["amenity"~"hospital|clinic|doctors|pharmacy"](around:${radius},${lat},${lon});
-        way["amenity"~"hospital|clinic|doctors|pharmacy"](around:${radius},${lat},${lon});
-      );
-      out center;
-    `;
-
-    // Replaced native fetch with axios and implemented safe native timeout
-    const overpassRes = await axios.post(
-      "https://overpass-api.de/api/interpreter",
-      overpassQuery,
-      {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        timeout: 15000, // 15 seconds timeout
-      },
-    );
-
-    const overpassData = overpassRes.data;
-    const elements = overpassData.elements || [];
-
-    // Map and format the results for the frontend
-    const facilities = elements
-      .map((el) => {
-        const tags = el.tags || {};
-        const elLat = el.lat || el.center?.lat;
-        const elLon = el.lon || el.center?.lon;
-
-        let type = "Clinic";
-        if (tags.amenity === "hospital") type = "Hospital";
-        else if (tags.amenity === "pharmacy") type = "Pharmacy";
-        else if (tags.amenity === "doctors") type = "Doctor";
-
-        const name = tags.name || `${type} (Unnamed)`;
-        const distanceKm = getDistanceFromLatLonInKm(
-          lat,
-          lon,
-          elLat,
-          elLon,
-        ).toFixed(1);
-        const address =
-          [tags["addr:street"], tags["addr:city"]].filter(Boolean).join(", ") ||
-          null;
-
-        return {
-          name,
-          type,
-          distanceKm,
-          address,
-          phone: tags.phone || tags["contact:phone"] || null,
-          mapsUrl: `https://www.google.com/maps/search/?api=1&query=${elLat},${elLon}`,
-        };
-      })
-      .sort((a, b) => parseFloat(a.distanceKm) - parseFloat(b.distanceKm))
-      .slice(0, 20); // Return top 20 closest
-
-    res.json({ facilities, locationSource });
-  } catch (err) {
-    console.error("Facilities route error:", err.message);
-    res.status(500).json({ message: "Failed to fetch nearby facilities." });
-  }
-});
+// NOTE: an older, duplicate "/facilities" route used to live here (a second,
+// less robust Overpass implementation with no mirror fallback). It was never
+// called by the frontend (which only uses GET /find-doctors, see
+// frontend/src/config.js) and has been removed so there's a single source of
+// truth for facility lookups: config/facilityFinder.js.
 
 module.exports = router;
