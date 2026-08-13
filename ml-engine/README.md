@@ -13,8 +13,12 @@ Medical symptom analysis API for HealthBot chatbot.
 
 ## Models
 - Random Forest
-- Gradient Boosting  
-- SVM (RBF kernel)
+- Gradient Boosting
+- Naive Bayes
+
+(Trained fresh from `data/merged_dataset.csv` on every startup — see
+`app.py` — there's no persisted model file, so `saved_models/` is
+currently unused.)
 
 ## Endpoints
 - GET / — Engine status and accuracy
