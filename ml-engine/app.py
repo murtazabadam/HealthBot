@@ -7,7 +7,9 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import LabelEncoder
-import os, re, warnings
+import os, re, warnings, base64, io
+import pytesseract
+from PIL import Image
 warnings.filterwarnings('ignore')
 
 app = Flask(__name__)
@@ -365,6 +367,33 @@ def model_stats():
         "total_symptoms":   len(ALL_SYMPTOMS),
         "training_samples": len(X_train)
     })
+
+@app.route('/ocr', methods=['POST'])
+def ocr():
+    """
+    Reads a prescription photo. Expects JSON: { "image": "data:image/...;base64,..." }
+    (or a bare base64 string with no data-URL prefix). Returns { "text": "..." }.
+    """
+    data = request.get_json(silent=True) or {}
+    image_field = data.get('image', '')
+    if not image_field:
+        return jsonify({"error": "no_image", "message": "No image provided."}), 400
+
+    # Strip a "data:image/png;base64," style prefix if present.
+    b64_data = image_field.split(',', 1)[1] if ',' in image_field else image_field
+
+    try:
+        image_bytes = base64.b64decode(b64_data)
+        img = Image.open(io.BytesIO(image_bytes))
+        text = pytesseract.image_to_string(img)
+        return jsonify({"text": text.strip()})
+    except Exception as e:
+        return jsonify({
+            "error":   "ocr_failed",
+            "message": "Could not read text from that image.",
+            "detail":  str(e)
+        }), 422
+
 
 @app.route('/predict', methods=['POST'])
 def predict():

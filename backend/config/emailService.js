@@ -87,4 +87,44 @@ async function sendEmergencyAlertEmail(toEmail, contactName, userName, mapsUrl) 
   }
 }
 
-module.exports = { sendOTPEmail, sendEmergencyAlertEmail };
+module.exports = { sendOTPEmail, sendEmergencyAlertEmail, sendReminderEmail };
+
+// ── Medicine reminder email ──────────────────────────────────────────────────
+async function sendReminderEmail(toEmail, toName, medicineName, instructions) {
+  const subject = `⏰ HealthBot Reminder: ${medicineName}`;
+  const body = `Hello ${toName},\n\nTime to take: ${medicineName}${instructions ? `\nInstructions: ${instructions}` : ''}\n\nStay healthy!\n— The HealthBot Team`;
+
+  try {
+    await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender:      { name: 'HealthBot', email: process.env.EMAIL_FROM || 'noreply@healthbot.com' },
+        to:          [{ email: toEmail, name: toName }],
+        subject,
+        textContent: body,
+        htmlContent: `
+          <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px;">
+            <h2 style="color:#0d9488;">⏰ HealthBot Reminder</h2>
+            <p>Hello <strong>${toName}</strong>,</p>
+            <div style="background:#f0fdfa;border:2px solid #0d9488;border-radius:8px;padding:20px;margin:20px 0;">
+              <p style="margin:0;font-size:18px;font-weight:bold;">${medicineName}</p>
+              ${instructions ? `<p style="margin:8px 0 0 0;color:#555;">${instructions}</p>` : ''}
+            </div>
+            <p>— HealthBot Team</p>
+          </div>
+        `
+      },
+      {
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log(`Reminder email sent to ${toEmail}`);
+    return true;
+  } catch (err) {
+    console.error('Reminder email error:', err.response?.data || err.message);
+    return false;
+  }
+}

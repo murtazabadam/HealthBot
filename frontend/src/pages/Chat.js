@@ -1210,22 +1210,11 @@ export function ChatDashboard() {
   const [isRecording, setIsRecording] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
 
-  const [reminders, setReminders] = useState([
-    {
-      id: 1,
-      name: "Drink Water",
-      date: "2026-06-01",
-      time: "08:00",
-      active: true,
-    },
-    {
-      id: 2,
-      name: "Vitamin C Supplement",
-      date: "2026-06-02",
-      time: "09:00",
-      active: true,
-    },
-  ]);
+  // Reminders now live in the backend (Reminder model) so they fire via the
+  // server-side cron scheduler even when no tab is open. This starts empty
+  // and is populated by loadReminders() below.
+  const [reminders, setReminders] = useState([]);
+  const [remindersLoading, setRemindersLoading] = useState(false);
 
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [editingReminderId, setEditingReminderId] = useState(null);
@@ -1235,11 +1224,35 @@ export function ChatDashboard() {
     time: "",
   });
 
+  const loadReminders = async () => {
+    if (!token) return;
+    setRemindersLoading(true);
+    try {
+      const res = await axios.get(API.REMINDERS, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setReminders(res.data || []);
+    } catch (err) {
+      console.error("Failed to load reminders", err);
+    } finally {
+      setRemindersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadReminders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   useEffect(() => {
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
     }
 
+    // The backend's cron scheduler is the source of truth for actually
+    // sending email/SMS reminders (it works even with no tab open). This
+    // interval only adds a same-tab desktop Notification as a nice-to-have
+    // — it must NOT also call the email API, or a reminder would fire twice.
     const interval = setInterval(() => {
       const now = new Date();
       const currentTime = now.toLocaleTimeString([], {
@@ -1249,39 +1262,36 @@ export function ChatDashboard() {
       });
       const today = now.toISOString().split("T")[0];
 
-      reminders.forEach(async (reminder) => {
-        if (
-          reminder.date === today &&
-          reminder.time === currentTime &&
-          reminder.active
-        ) {
-          if (
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            new Notification("HealthBot Reminder", {
-              body: `It's time for: ${reminder.name}`,
-              icon: "/favicon.ico",
-            });
-          }
+      reminders.forEach((reminder) => {
+        const start = reminder.startDate
+          ? new Date(reminder.startDate).toISOString().split("T")[0]
+          : null;
+        const end = reminder.endDate
+          ? new Date(reminder.endDate).toISOString().split("T")[0]
+          : null;
+        const inRange =
+          reminder.active &&
+          start &&
+          start <= today &&
+          (!end || end >= today);
+        const timeMatches = (reminder.times || []).includes(currentTime);
 
-          if (appSettings?.emailNotif && token) {
-            try {
-              await axios.post(
-                API.CHAT_EMAIL_REMINDER,
-                { reminderName: reminder.name, time: reminder.time },
-                { headers: { Authorization: `Bearer ${token}` } },
-              );
-            } catch (err) {
-              console.error("Failed to send automatic reminder email", err);
-            }
-          }
+        if (
+          inRange &&
+          timeMatches &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          new Notification("HealthBot Reminder", {
+            body: `It's time for: ${reminder.name}`,
+            icon: "/favicon.ico",
+          });
         }
       });
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [reminders, appSettings?.emailNotif, token]);
+  }, [reminders]);
 
   const formatTimeAMPM = (timeStr) => {
     if (!timeStr) return "";
@@ -1299,15 +1309,21 @@ export function ChatDashboard() {
   };
 
   const openEditReminderModal = (id) => {
-    const r = reminders.find((rem) => rem.id === id);
+    const r = reminders.find((rem) => rem._id === id);
     if (r) {
       setEditingReminderId(id);
-      setReminderForm({ name: r.name, date: r.date, time: r.time });
+      setReminderForm({
+        name: r.name,
+        date: r.startDate
+          ? new Date(r.startDate).toISOString().split("T")[0]
+          : "",
+        time: (r.times && r.times[0]) || "",
+      });
       setIsReminderModalOpen(true);
     }
   };
 
-  const saveReminder = (e) => {
+  const saveReminder = async (e) => {
     e.preventDefault();
     if (
       !reminderForm.name.trim() ||
@@ -1317,39 +1333,54 @@ export function ChatDashboard() {
       showToast("Name, Date, and Time are required!");
       return;
     }
+    if (!token) return;
 
-    if (editingReminderId) {
-      setReminders(
-        reminders.map((r) =>
-          r.id === editingReminderId
-            ? {
-                ...r,
-                name: reminderForm.name,
-                date: reminderForm.date,
-                time: reminderForm.time,
-              }
-            : r,
-        ),
-      );
-      showToast("Reminder updated!");
-    } else {
-      setReminders([
-        ...reminders,
-        {
-          id: Date.now(),
-          name: reminderForm.name,
-          date: reminderForm.date,
-          time: reminderForm.time,
-          active: true,
-        },
-      ]);
-      showToast("Reminder added!");
+    // A manually-added reminder is a single date + time, mapped onto the
+    // backend's date-range + multi-time schema as a one-day, one-time window.
+    const payload = {
+      name: reminderForm.name,
+      instructions: "",
+      times: [reminderForm.time],
+      startDate: reminderForm.date,
+      endDate: reminderForm.date,
+    };
+
+    try {
+      if (editingReminderId) {
+        const res = await axios.put(
+          API.REMINDER_BY_ID(editingReminderId),
+          payload,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        setReminders(
+          reminders.map((r) => (r._id === editingReminderId ? res.data : r)),
+        );
+        showToast("Reminder updated!");
+      } else {
+        const res = await axios.post(API.REMINDERS, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setReminders([res.data, ...reminders]);
+        showToast("Reminder added!");
+      }
+      setIsReminderModalOpen(false);
+    } catch (err) {
+      console.error("Failed to save reminder", err);
+      showToast("Couldn't save that reminder. Please try again.");
     }
-    setIsReminderModalOpen(false);
   };
 
-  const handleDeleteReminder = (id) => {
-    setReminders(reminders.filter((r) => r.id !== id));
+  const handleDeleteReminder = async (id) => {
+    if (!token) return;
+    try {
+      await axios.delete(API.REMINDER_BY_ID(id), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setReminders(reminders.filter((r) => r._id !== id));
+    } catch (err) {
+      console.error("Failed to delete reminder", err);
+      showToast("Couldn't delete that reminder. Please try again.");
+    }
   };
 
   const bottomRef = useRef(null);
@@ -2006,6 +2037,13 @@ export function ChatDashboard() {
     const textToSend = textOverride || inputText;
     if ((!textToSend.trim() && !uploadedImage) || loading) return;
 
+    // An attached image is treated as a prescription photo, not a symptom
+    // message — route it through OCR + structuring instead of the general
+    // emergency-keyword/symptom pipeline below.
+    if (uploadedImage) {
+      return sendPrescriptionImage(textToSend);
+    }
+
     const emergencyKeywords = [
       "heart attack",
       "stroke",
@@ -2144,6 +2182,97 @@ export function ChatDashboard() {
           id: Date.now() + 2,
           sender: "bot",
           text: "⚠️ Connection error. Please try again later.",
+          time: now,
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendPrescriptionImage = async (textToSend) => {
+    const now = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const currentImg = uploadedImage;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        sender: "user",
+        text: textToSend || "📄 Prescription photo",
+        image: currentImg,
+        time: now,
+      },
+    ]);
+
+    setInputText("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+    setUploadedImage(null);
+    setLoading(true);
+
+    try {
+      const res = await axios.post(
+        API.CHAT_PRESCRIPTION,
+        { image: currentImg },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+
+      const { prescription, reminders: createdReminders, message } = res.data;
+      const meds = prescription?.medicines || [];
+
+      let summary;
+      if (meds.length) {
+        const medLines = meds
+          .map((m) => {
+            const parts = [m.name];
+            if (m.dosage) parts.push(`(${m.dosage})`);
+            const details = [m.frequency, m.durationDays ? `${m.durationDays} days` : null, m.instructions]
+              .filter(Boolean)
+              .join(" · ");
+            return `• ${parts.join(" ")}${details ? ` — ${details}` : ""}`;
+          })
+          .join("\n");
+        summary = `I read your prescription${prescription.doctorName ? ` from ${prescription.doctorName}` : ""}:\n\n${medLines}\n\n${message}`;
+      } else {
+        summary = message || "I read the image but couldn't confidently identify any medicines. Try a clearer photo, or add reminders manually.";
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: "bot",
+          text: summary,
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      ]);
+
+      if (createdReminders && createdReminders.length) {
+        setReminders((prev) => [...createdReminders, ...prev]);
+        showToast(`${createdReminders.length} reminder(s) added`);
+      }
+    } catch (err) {
+      if (err.response && err.response.status === 401) {
+        localStorage.clear();
+        window.location.href = "/login";
+        return;
+      }
+      const errMsg =
+        err.response?.data?.message ||
+        "⚠️ Couldn't process that prescription image. Please try again.";
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 2,
+          sender: "bot",
+          text: errMsg,
           time: now,
         },
       ]);
@@ -3391,9 +3520,18 @@ export function ChatDashboard() {
                 </button>
               </div>
               <div className="grid gap-4">
+                {remindersLoading && reminders.length === 0 && (
+                  <p className="text-slate-400 text-sm">Loading reminders…</p>
+                )}
+                {!remindersLoading && reminders.length === 0 && (
+                  <p className="text-slate-400 text-sm">
+                    No reminders yet. Add one, or upload a prescription photo
+                    and I'll set them up automatically.
+                  </p>
+                )}
                 {reminders.map((r) => (
                   <div
-                    key={r.id}
+                    key={r._id}
                     className={`border p-4 sm:p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 backdrop-blur-md transition-all ${isDark ? "bg-[#111827]/80 border-slate-700/50 hover:border-teal-500/30" : "bg-slate-50 border-slate-200 hover:border-teal-500/50 shadow-sm"}`}
                   >
                     <div className="flex items-center gap-4">
@@ -3402,30 +3540,54 @@ export function ChatDashboard() {
                       </div>
                       <div>
                         <h4
-                          className={`font-bold text-lg ${isDark ? "text-white" : "text-slate-900"}`}
+                          className={`font-bold text-lg flex items-center gap-2 ${isDark ? "text-white" : "text-slate-900"}`}
                         >
                           {r.name}
+                          {r.source === "prescription" && (
+                            <span className="text-[10px] font-bold uppercase tracking-wide bg-teal-500/10 text-teal-500 px-2 py-0.5 rounded-full">
+                              From Prescription
+                            </span>
+                          )}
                         </h4>
-                        <div className="flex gap-3 text-slate-500 text-sm mt-0.5">
+                        <div className="flex gap-3 text-slate-500 text-sm mt-0.5 flex-wrap">
                           <span className="flex items-center gap-1">
-                            <CalendarDays size={14} /> {r.date}
+                            <CalendarDays size={14} />{" "}
+                            {r.startDate
+                              ? new Date(r.startDate).toLocaleDateString()
+                              : ""}
+                            {r.endDate
+                              ? ` – ${new Date(r.endDate).toLocaleDateString()}`
+                              : ""}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Clock size={14} /> {formatTimeAMPM(r.time)}
+                            <Clock size={14} />{" "}
+                            {(r.times || []).map(formatTimeAMPM).join(", ")}
                           </span>
                         </div>
+                        {r.instructions && (
+                          <p className="text-xs text-slate-400 mt-1">
+                            {r.instructions}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-1 sm:gap-2 self-end sm:self-auto">
+                      {r.source !== "prescription" && (
+                        <button
+                          onClick={() => openEditReminderModal(r._id)}
+                          className="p-2 text-slate-400 hover:bg-teal-500/10 hover:text-teal-500 rounded-lg transition-colors"
+                        >
+                          <Edit3 size={18} />
+                        </button>
+                      )}
                       <button
-                        onClick={() => openEditReminderModal(r.id)}
-                        className="p-2 text-slate-400 hover:bg-teal-500/10 hover:text-teal-500 rounded-lg transition-colors"
-                      >
-                        <Edit3 size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteReminder(r.id)}
+                        onClick={() => handleDeleteReminder(r._id)}
                         className="p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-colors"
+                        title={
+                          r.source === "prescription"
+                            ? "Remove this reminder"
+                            : "Delete reminder"
+                        }
                       >
                         <Trash2 size={18} />
                       </button>
@@ -3708,7 +3870,8 @@ export function ChatDashboard() {
                     className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
                   />
                   <span className="text-xs text-slate-400 flex-1 truncate font-medium">
-                    Image attached
+                    Prescription photo attached — I'll read it and set up
+                    reminders when you hit send
                   </span>
                   <button
                     onClick={() => setUploadedImage(null)}

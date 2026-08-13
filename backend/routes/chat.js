@@ -3,11 +3,14 @@ const router = express.Router();
 const auth = require("../middleware/auth");
 const Conversation = require("../models/Conversation");
 const User = require("../models/User");
-const { getGroqResponse, isOffTopic } = require("../config/groq");
+const Prescription = require("../models/Prescription");
+const Reminder = require("../models/Reminder");
+const { getGroqResponse, isOffTopic, structurePrescription } = require("../config/groq");
 const nodemailer = require("nodemailer");
 const { geocodeAddress, findNearbyFacilities, FacilityLookupError } = require("../config/facilityFinder");
 const { sendEmergencyAlertEmail } = require("../config/emailService");
 const { sendSMS } = require("../config/smsService");
+const { extractTextFromImage } = require("../config/ocr");
 const axios = require("axios"); // Using axios for safe Node.js compatibility
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
@@ -680,6 +683,159 @@ router.post("/notify-emergency", auth, async (req, res) => {
     });
   } catch (err) {
     console.error("Notify-emergency error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── Prescription Read Route ────────────────────────────────────────────────
+// Accepts a base64 image (data URL) of a prescription photo, OCRs it,
+// asks the AI to structure the result into a medicine list, saves it, and
+// auto-creates Reminder documents so the scheduler starts pinging the user
+// at the right times for each medicine it could confidently parse.
+function buildTimesForFrequency(timesPerDay) {
+  const n = Number(timesPerDay);
+  if (!Number.isFinite(n) || n <= 0) return [];
+  const presets = {
+    1: ["09:00"],
+    2: ["09:00", "21:00"],
+    3: ["08:00", "14:00", "20:00"],
+    4: ["08:00", "12:00", "16:00", "20:00"],
+  };
+  return presets[Math.min(Math.round(n), 4)] || presets[4];
+}
+
+router.post("/prescription", auth, async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image || typeof image !== "string") {
+      return res.status(400).json({ message: "A prescription image is required" });
+    }
+
+    const rawText = await extractTextFromImage(image);
+    if (!rawText) {
+      return res.status(422).json({
+        message: "Couldn't read any text from that image. Try a clearer, well-lit photo.",
+      });
+    }
+
+    let structured = process.env.GROQ_API_KEY ? await structurePrescription(rawText) : null;
+    if (!structured) structured = { doctorName: "", medicines: [], notes: "" };
+
+    const prescription = new Prescription({
+      userId: req.user.id,
+      rawText,
+      medicines: structured.medicines,
+      doctorName: structured.doctorName,
+      notes: structured.notes,
+    });
+    await prescription.save();
+
+    // Auto-create reminders for every medicine with a usable dosing frequency.
+    const createdReminders = [];
+    const now = new Date();
+    for (const med of structured.medicines) {
+      const times = buildTimesForFrequency(med.timesPerDay);
+      if (!times.length || !med.name) continue;
+
+      const durationDays =
+        Number.isFinite(med.durationDays) && med.durationDays > 0 ? med.durationDays : 5; // sane default if AI couldn't extract one
+
+      const endDate = new Date(now);
+      endDate.setDate(endDate.getDate() + durationDays);
+
+      const reminder = new Reminder({
+        userId: req.user.id,
+        name: med.dosage ? `${med.name} (${med.dosage})` : med.name,
+        instructions: med.instructions || "",
+        times,
+        startDate: now,
+        endDate,
+        source: "prescription",
+        prescriptionId: prescription._id,
+      });
+      await reminder.save();
+      createdReminders.push(reminder);
+    }
+
+    res.status(201).json({
+      message: createdReminders.length
+        ? `Prescription read. Set up ${createdReminders.length} medicine reminder(s) automatically.`
+        : "Prescription read, but no medicines with a clear dosing schedule were found — you can add reminders manually.",
+      prescription,
+      reminders: createdReminders,
+    });
+  } catch (err) {
+    console.error("Prescription route error:", err.message);
+    res.status(500).json({ message: "Failed to process prescription image" });
+  }
+});
+
+// ── Prescriptions List ────────────────────────────────────────────────────────
+router.get("/prescriptions", auth, async (req, res) => {
+  try {
+    const items = await Prescription.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ── Reminders CRUD ─────────────────────────────────────────────────────────────
+router.get("/reminders", auth, async (req, res) => {
+  try {
+    const items = await Reminder.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.post("/reminders", auth, async (req, res) => {
+  try {
+    const { name, instructions = "", times, startDate, endDate } = req.body;
+    if (!name || !Array.isArray(times) || times.length === 0 || !startDate) {
+      return res.status(400).json({ message: "name, times[], and startDate are required" });
+    }
+    const reminder = new Reminder({
+      userId: req.user.id,
+      name,
+      instructions,
+      times,
+      startDate: new Date(startDate),
+      endDate: endDate ? new Date(endDate) : null,
+      source: "manual",
+    });
+    await reminder.save();
+    res.status(201).json(reminder);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.put("/reminders/:id", auth, async (req, res) => {
+  try {
+    const reminder = await Reminder.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!reminder) return res.status(404).json({ message: "Reminder not found" });
+
+    const { name, instructions, times, startDate, endDate, active } = req.body;
+    if (name !== undefined) reminder.name = name;
+    if (instructions !== undefined) reminder.instructions = instructions;
+    if (Array.isArray(times) && times.length) reminder.times = times;
+    if (startDate !== undefined) reminder.startDate = new Date(startDate);
+    if (endDate !== undefined) reminder.endDate = endDate ? new Date(endDate) : null;
+    if (active !== undefined) reminder.active = active;
+    await reminder.save();
+    res.json(reminder);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.delete("/reminders/:id", auth, async (req, res) => {
+  try {
+    await Reminder.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    res.json({ message: "Reminder deleted" });
+  } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });

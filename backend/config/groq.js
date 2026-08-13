@@ -144,4 +144,63 @@ ${recentContext || '(no prior messages)'}`;
   }
 }
 
-module.exports = { getGroqResponse, isOffTopic };
+module.exports = { getGroqResponse, isOffTopic, structurePrescription };
+
+// ── Prescription structuring ─────────────────────────────────────────────
+// Turns raw, error-prone OCR text from a prescription photo into a strict
+// JSON medicine list. Kept as its own narrow call (low temperature, no
+// chat history, JSON-only) rather than reusing getGroqResponse, because a
+// parsing failure here should never leak conversational text into a
+// medicine name/dosage field.
+async function structurePrescription(rawText) {
+  if (!groq) return null;
+
+  const prompt = `You are a medical prescription parser. Below is raw OCR text extracted from a photo of a doctor's prescription. It will contain OCR noise: garbled characters, misread words, stray symbols, and irrelevant boilerplate (clinic letterhead, signatures, etc).
+
+Extract ONLY medicines you can identify with reasonable confidence. Return STRICT JSON and nothing else — no markdown, no commentary — in exactly this shape:
+{
+  "doctorName": "string, or empty string if not found",
+  "medicines": [
+    {
+      "name": "medicine name",
+      "dosage": "e.g. 500mg",
+      "frequency": "human-readable, e.g. twice daily",
+      "timesPerDay": 2,
+      "durationDays": 5,
+      "instructions": "e.g. after food, or empty string"
+    }
+  ],
+  "notes": "any other relevant free-text detail, or empty string"
+}
+
+Rules:
+- If a field is not present in the text, use an empty string ("") for text fields, or null for timesPerDay/durationDays.
+- Never invent a medicine name that isn't reasonably supported by the OCR text.
+- If you cannot confidently identify any medicines at all, return {"doctorName":"","medicines":[],"notes":"Could not confidently read any medicines from this image."}
+
+OCR TEXT:
+"""
+${rawText.slice(0, 4000)}
+"""`;
+
+  try {
+    const completion = await groq.chat.completions.create({
+      model:       'llama-3.1-8b-instant',
+      messages:    [{ role: 'system', content: prompt }],
+      max_tokens:  700,
+      temperature: 0,
+    });
+
+    const raw = completion.choices[0]?.message?.content?.trim() || '';
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    if (!Array.isArray(parsed.medicines)) parsed.medicines = [];
+    parsed.doctorName = parsed.doctorName || '';
+    parsed.notes       = parsed.notes || '';
+    return parsed;
+  } catch (err) {
+    console.error('Prescription structuring failed:', err.message);
+    return null;
+  }
+}
