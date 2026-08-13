@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Activity, Mail, Lock, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { API } from '../config';
 export default function Login() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -116,14 +117,25 @@ export default function Login() {
 
           <form className="flex flex-col gap-5" onSubmit={handleLogin}>
             {showVerificationBanner && (
-              <div className="bg-amber-500/10 border border-amber-500/50 text-amber-400 text-sm p-4 rounded-xl flex flex-col gap-1 items-center text-center animate-in fade-in">
+              <div className="bg-amber-500/10 border border-amber-500/50 text-amber-400 text-sm p-4 rounded-xl flex flex-col gap-2 items-center text-center animate-in fade-in">
                 <AlertTriangle size={24} className="text-amber-500 mb-1" />
                 <p className="font-bold text-base">Please verify your email!</p>
                 <p className="text-xs opacity-90">
-                  We sent a link to{" "}
-                  <span className="font-bold">{unverifiedEmail}</span>. Check
-                  your inbox or spam folder.
+                  <span className="font-bold">{unverifiedEmail}</span> hasn't
+                  been verified yet — you'll need a quick code to finish
+                  setting up your account.
                 </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate("/verify-email", {
+                      state: { email: unverifiedEmail, password },
+                    })
+                  }
+                  className="mt-1 text-xs font-bold text-amber-300 hover:text-amber-200 underline"
+                >
+                  Verify Email
+                </button>
               </div>
             )}
 
