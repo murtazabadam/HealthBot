@@ -10,6 +10,7 @@ from sklearn.preprocessing import LabelEncoder
 import os, re, warnings, base64, io
 import pytesseract
 from PIL import Image
+import fitz  # PyMuPDF — pure-Python PDF handling, no poppler/system binary needed
 warnings.filterwarnings('ignore')
 
 app = Flask(__name__)
@@ -371,28 +372,82 @@ def model_stats():
 @app.route('/ocr', methods=['POST'])
 def ocr():
     """
-    Reads a prescription photo. Expects JSON: { "image": "data:image/...;base64,..." }
-    (or a bare base64 string with no data-URL prefix). Returns { "text": "..." }.
+    Reads a prescription upload — a photo OR a PDF. Expects JSON:
+    { "image": "data:<mime>;base64,..." } (or a bare base64 string with no
+    data-URL prefix, in which case it's assumed to be an image). Returns
+    { "text": "..." }.
+
+    PDF handling: prescriptions arrive either as a real, text-based PDF
+    (e.g. exported from a clinic's system) or as a scan/photo saved as a
+    PDF. We try the cheap, accurate path first — pulling embedded text
+    directly via PyMuPDF — and only fall back to rendering each page to an
+    image and running Tesseract on it if that yields next to nothing
+    (the signature of a scanned/image-only PDF).
     """
     data = request.get_json(silent=True) or {}
-    image_field = data.get('image', '')
-    if not image_field:
-        return jsonify({"error": "no_image", "message": "No image provided."}), 400
+    file_field = data.get('image', '')
+    if not file_field:
+        return jsonify({"error": "no_image", "message": "No file provided."}), 400
 
-    # Strip a "data:image/png;base64," style prefix if present.
-    b64_data = image_field.split(',', 1)[1] if ',' in image_field else image_field
+    # Detect a PDF from its data-URL mime prefix. A bare base64 string with
+    # no prefix is assumed to be an image, matching the previous behaviour.
+    is_pdf = file_field.startswith('data:application/pdf')
+
+    # Strip a "data:<mime>;base64," style prefix if present.
+    b64_data = file_field.split(',', 1)[1] if ',' in file_field else file_field
 
     try:
-        image_bytes = base64.b64decode(b64_data)
-        img = Image.open(io.BytesIO(image_bytes))
-        text = pytesseract.image_to_string(img)
+        file_bytes = base64.b64decode(b64_data)
+
+        if is_pdf:
+            text = _extract_pdf_text(file_bytes)
+        else:
+            img = Image.open(io.BytesIO(file_bytes))
+            text = pytesseract.image_to_string(img)
+
         return jsonify({"text": text.strip()})
     except Exception as e:
         return jsonify({
             "error":   "ocr_failed",
-            "message": "Could not read text from that image.",
+            "message": "Could not read text from that file.",
             "detail":  str(e)
         }), 422
+
+
+def _extract_pdf_text(file_bytes, min_chars_per_page=20, max_pages=10):
+    """
+    Text-first, OCR-fallback PDF reading.
+
+    - Opens the PDF with PyMuPDF and tries direct text extraction per page
+      (fast, exact — works for any PDF that has a real text layer).
+    - Any page whose direct-extracted text is suspiciously short (under
+      min_chars_per_page) is treated as image-only and re-read by
+      rendering that page to a bitmap and running Tesseract on it.
+    - Capped at max_pages: prescriptions are almost always 1-2 pages, and
+      capping bounds both response time and memory use against someone
+      accidentally uploading an unrelated, much longer PDF.
+    """
+    doc = fitz.open(stream=file_bytes, filetype="pdf")
+    pages_text = []
+
+    for page_index in range(min(len(doc), max_pages)):
+        page = doc[page_index]
+        direct_text = page.get_text().strip()
+
+        if len(direct_text) >= min_chars_per_page:
+            pages_text.append(direct_text)
+            continue
+
+        # Fall back to OCR for this page: render at 2x zoom for a sharper
+        # image than the PDF's default page resolution, which noticeably
+        # helps Tesseract's accuracy on scanned documents.
+        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+        img = Image.open(io.BytesIO(pix.tobytes("png")))
+        ocr_text = pytesseract.image_to_string(img).strip()
+        pages_text.append(ocr_text)
+
+    doc.close()
+    return "\n\n".join(p for p in pages_text if p)
 
 
 @app.route('/predict', methods=['POST'])
