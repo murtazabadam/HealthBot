@@ -32,15 +32,20 @@ async function getMLPrediction(text, symptoms) {
 
 // ── NL Map ────────────────────────────────────────────────────────────────────
 function readableSymptom(id) {
+  if (id === "unspecified_fever") return "Fever";
   return id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 const NL_MAP = {
   "high fever": "high_fever",
   "mild fever": "mild_fever",
-  fever: "high_fever",
-  feverish: "high_fever",
-  "feel hot": "high_fever",
+  // Bare "fever" doesn't say how severe it is — map it to a placeholder
+  // that ISN'T a real ML symptom column, so it can never be silently
+  // treated as high_fever. It only becomes high_fever/mild_fever once the
+  // user actually states the severity (the clarification flow below asks).
+  fever: "unspecified_fever",
+  feverish: "unspecified_fever",
+  "feel hot": "unspecified_fever",
   "high temperature": "high_fever",
   cough: "cough",
   coughing: "cough",
@@ -204,9 +209,12 @@ function _escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function extractSymptoms(text) {
+// Runs the phrase match once and separates what was affirmed from what was
+// explicitly negated ("fever but not headache" -> positive: fever, negated: headache).
+function extractSymptomsWithNegation(text) {
   let lower = text.toLowerCase();
-  const found = new Set();
+  const positive = new Set();
+  const negated = new Set();
 
   for (const phrase of _SORTED) {
     const regex = new RegExp(`\\b${_escapeRegex(phrase)}\\b`, "g");
@@ -224,29 +232,59 @@ function extractSymptoms(text) {
           contextBefore,
         );
 
-      if (!isNegated) {
-        found.add(NL_MAP[phrase]);
-
-        newLower =
-          newLower.substring(0, match.index) +
-          " ".repeat(phrase.length) +
-          newLower.substring(match.index + phrase.length);
+      if (isNegated) {
+        negated.add(NL_MAP[phrase]);
+      } else {
+        positive.add(NL_MAP[phrase]);
       }
+
+      newLower =
+        newLower.substring(0, match.index) +
+        " ".repeat(phrase.length) +
+        newLower.substring(match.index + phrase.length);
     }
     lower = newLower;
   }
 
-  let finalSymptoms = [...found];
+  return { positive, negated };
+}
 
-  // --- CONFLICT RESOLUTION (De-duplication) ---
-  if (finalSymptoms.includes("mild_fever")) {
-    finalSymptoms = finalSymptoms.filter((s) => s !== "high_fever");
+// De-dupes/reconciles related symptom ids once a final set has been built —
+// shared by both the single-message and turn-aware extractors below.
+function resolveSymptomConflicts(symptomsArray) {
+  let final = symptomsArray;
+  if (final.includes("mild_fever")) {
+    final = final.filter((s) => s !== "high_fever" && s !== "unspecified_fever");
   }
-  if (finalSymptoms.includes("severe_headache")) {
-    finalSymptoms = finalSymptoms.filter((s) => s !== "headache");
+  if (final.includes("high_fever")) {
+    final = final.filter((s) => s !== "unspecified_fever");
   }
+  if (final.includes("severe_headache")) {
+    final = final.filter((s) => s !== "headache");
+  }
+  return final;
+}
 
-  return finalSymptoms;
+function extractSymptoms(text) {
+  const { positive, negated } = extractSymptomsWithNegation(text);
+  const finalSymptoms = [...positive].filter((s) => !negated.has(s));
+  return resolveSymptomConflicts(finalSymptoms);
+}
+
+// Applies symptoms turn-by-turn across a conversation so a negation in a
+// LATER message correctly cancels a symptom that was affirmed in an EARLIER
+// one. A naive extractSymptoms(historyText + " " + text) call can't do this:
+// once "headache" is found anywhere in the combined blob it stays forever,
+// even if the user later says "not headache" — this fixes that.
+function extractSymptomsFromTurns(historyTexts, currentText) {
+  const active = new Set();
+  for (const t of [...(historyTexts || []), currentText]) {
+    if (!t) continue;
+    const { positive, negated } = extractSymptomsWithNegation(t);
+    for (const s of positive) active.add(s);
+    for (const s of negated) active.delete(s);
+  }
+  return resolveSymptomConflicts([...active]);
 }
 
 // ── Intent Detection ───────────────────────────────────────────────────────────
@@ -356,6 +394,39 @@ function hasNonPersonSubject(text) {
   return determinerPattern.test(lower) || bareSubjectPattern.test(lower);
 }
 
+// A bare "yes"/"no"/"a little"/etc. carries almost no signal on its own —
+// asking the off-topic LLM classifier to judge it reliably, every time, is
+// asking too much of a small fast model at near-zero context. Rather than
+// try to make that probabilistic call more reliable, short-circuit it
+// entirely: a short reply arriving while a conversation is already under
+// way is treated as a continuation, deterministically, with no model call.
+// This is also what the classifier's own prompt already says it SHOULD do
+// ("short conversational reply continuing a prior health discussion") —
+// this just makes that guarantee, instead of hoping the model gets there.
+const SHORT_CONTINUATION_WORDS = [
+  "yes", "yeah", "yep", "yup", "no", "nope", "nah",
+  "ok", "okay", "sure", "maybe", "none", "nothing",
+  "worse", "better", "same", "still", "not yet", "a little",
+  "not really", "not much", "somewhat", "kind of", "sort of",
+];
+const SHORT_CONTINUATION_WORD_LIMIT = 4;
+
+function isShortConversationalReply(text, hasConversation) {
+  if (!hasConversation) return false;
+  const trimmed = text.trim().toLowerCase();
+  if (!trimmed) return false;
+  if (trimmed.split(/\s+/).length <= SHORT_CONTINUATION_WORD_LIMIT) {
+    if (SHORT_CONTINUATION_WORDS.some((w) => trimmed === w || trimmed.startsWith(w + " "))) {
+      return true;
+    }
+    // Even without matching the exact word list, a very short (1-2 word)
+    // reply mid-conversation is far more likely to be answering the bot's
+    // last question than starting a new, unrelated topic.
+    if (trimmed.split(/\s+/).length <= 2) return true;
+  }
+  return false;
+}
+
 function detectIntent(text) {
   const lower = text.toLowerCase().trim();
   const greetings = [
@@ -427,10 +498,21 @@ function checkEmergency(symptoms) {
     ["chest_pain", "sweating"],
     ["chest_pain", "palpitations"],
     ["severe_headache", "vomiting"],
-    ["high_fever", "altered_sensorium"],
-    ["stiff_neck", "high_fever"],
   ];
-  return combos.some((combo) => combo.every((s) => symptoms.includes(s)));
+  if (combos.some((combo) => combo.every((s) => symptoms.includes(s)))) {
+    return true;
+  }
+  // Fever + confusion/stiff neck is a red-flag combo regardless of whether
+  // severity has been clarified yet — don't wait on "mild vs high" to flag it.
+  const hasFever =
+    symptoms.includes("high_fever") || symptoms.includes("unspecified_fever");
+  if (
+    hasFever &&
+    (symptoms.includes("altered_sensorium") || symptoms.includes("stiff_neck"))
+  ) {
+    return true;
+  }
+  return false;
 }
 
 // ── Fallback ──────────────────────────────────────────────────────────────────
@@ -903,7 +985,10 @@ router.post("/message", auth, async (req, res) => {
         .filter((m) => m.sender === "user")
         .map((m) => m.text)
         .join(" ");
-      const combinedSymptoms = extractSymptoms(historyText + " " + text);
+      const historyTexts = recentHistory
+        .filter((m) => m.sender === "user")
+        .map((m) => m.text);
+      const combinedSymptoms = extractSymptomsFromTurns(historyTexts, text);
 
       emergency = checkEmergency(combinedSymptoms);
 
@@ -1002,9 +1087,11 @@ router.post("/message", auth, async (req, res) => {
         }
       }
     } else {
-      const offTopic = process.env.GROQ_API_KEY
-        ? await isOffTopic(text, recentHistory)
-        : false;
+      const offTopic =
+        !isShortConversationalReply(text, hasConversation) &&
+        process.env.GROQ_API_KEY
+          ? await isOffTopic(text, recentHistory)
+          : false;
 
       if (offTopic) {
         botReply = `That's outside what I can help with, ${userName.split(" ")[0]} — I'm a medical symptom assistant, so I can only help with health, symptoms, and wellness questions. Is there anything going on with your health I can help you with?`;
@@ -1016,7 +1103,10 @@ router.post("/message", auth, async (req, res) => {
             .filter((m) => m.sender === "user")
             .map((m) => m.text)
             .join(" ");
-          const historicalSymptoms = extractSymptoms(historyText);
+          const historyTexts = recentHistory
+            .filter((m) => m.sender === "user")
+            .map((m) => m.text);
+          const historicalSymptoms = extractSymptomsFromTurns(historyTexts, "");
 
           if (historicalSymptoms.length > 0) {
             mlResult = await getMLPrediction(historyText, historicalSymptoms);
@@ -1114,8 +1204,13 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
       .filter((m) => m.sender === "user")
       .map((m) => m.text)
       .join(" ");
-    const historicalSymptoms = extractSymptoms(historyText + " " + text);
-    const combinedSymptoms = [...new Set([...symptoms, ...historicalSymptoms])];
+    // combinedSymptoms trusts the user's confirmed checkbox selection as
+    // authoritative. We deliberately do NOT re-merge a fresh raw-text
+    // extraction on top of it here — that used to silently re-add a
+    // symptom the user had just explicitly unchecked (e.g. deselecting
+    // "headache" during confirmation, only for it to reappear because the
+    // word still existed somewhere in the raw conversation text).
+    const combinedSymptoms = [...new Set(symptoms)];
 
     const mlResult = await getMLPrediction(
       historyText + " " + text,
@@ -1171,9 +1266,18 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
   }
 });
 
+// IDs that exist purely as internal placeholders for the natural-language
+// clarification flow (e.g. bare "fever" before severity is known). They're
+// deliberately not real ML columns, so offering them in the manual picker
+// would let a symptom silently vanish from prediction with no chance to
+// ask "how severe?" — exclude them; "High Fever"/"Mild Fever" cover it.
+const NON_PICKABLE_SYMPTOM_IDS = new Set(["unspecified_fever"]);
+
 // ── Symptom Options Route ────────────────────────────────────────────────────
 router.get("/symptom-options", auth, (req, res) => {
-  const ids = [...new Set(Object.values(NL_MAP))].sort();
+  const ids = [...new Set(Object.values(NL_MAP))]
+    .filter((id) => !NON_PICKABLE_SYMPTOM_IDS.has(id))
+    .sort();
   res.json(ids.map((id) => ({ id, label: readableSymptom(id) })));
 });
 
