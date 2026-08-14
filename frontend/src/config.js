@@ -37,6 +37,7 @@ export const API = {
   // Prescriptions & Reminders
   CHAT_PRESCRIPTION: `${API_BASE_URL}/api/chat/prescription`,
   PRESCRIPTIONS: `${API_BASE_URL}/api/chat/prescriptions`,
+  PRESCRIPTION_BY_ID: (id) => `${API_BASE_URL}/api/chat/prescriptions/${id}`,
   REMINDERS: `${API_BASE_URL}/api/chat/reminders`,
   REMINDER_BY_ID: (id) => `${API_BASE_URL}/api/chat/reminders/${id}`,
 };

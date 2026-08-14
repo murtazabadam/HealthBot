@@ -52,6 +52,7 @@ import {
   Search,
   Pill,
   ChevronDown,
+  FileText,
 } from "lucide-react";
 
 function SymptomConfirmationCard({
@@ -1222,8 +1223,10 @@ export function ChatDashboard() {
   const [editingReminderId, setEditingReminderId] = useState(null);
   const [reminderForm, setReminderForm] = useState({
     name: "",
-    date: "",
-    time: "",
+    instructions: "",
+    times: [""],
+    startDate: "",
+    endDate: "",
   });
 
   const loadReminders = async () => {
@@ -1314,6 +1317,30 @@ export function ChatDashboard() {
     e.target.value = ""; // allow re-selecting the same file again later
   };
 
+  const [viewingPrescription, setViewingPrescription] = useState(null);
+
+  const deletePrescription = (id) => {
+    setConfirmDialog({
+      message:
+        "Delete this prescription? Any reminders it created will be removed too.",
+      onConfirm: async () => {
+        try {
+          await axios.delete(API.PRESCRIPTION_BY_ID(id), {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setPrescriptions((prev) => prev.filter((p) => p._id !== id));
+          setReminders((prev) => prev.filter((r) => r.prescriptionId !== id));
+          showToast("Prescription deleted.");
+        } catch (err) {
+          console.error("Failed to delete prescription", err);
+          showToast("Couldn't delete that prescription. Please try again.");
+        } finally {
+          setConfirmDialog(null);
+        }
+      },
+    });
+  };
+
   useEffect(() => {
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
@@ -1372,9 +1399,17 @@ export function ChatDashboard() {
     return `${hour}:${m} ${ampm}`;
   };
 
+  const todayISO = () => new Date().toISOString().split("T")[0];
+
   const openAddReminderModal = () => {
     setEditingReminderId(null);
-    setReminderForm({ name: "", date: "", time: "" });
+    setReminderForm({
+      name: "",
+      instructions: "",
+      times: [""],
+      startDate: todayISO(),
+      endDate: "",
+    });
     setIsReminderModalOpen(true);
   };
 
@@ -1384,35 +1419,53 @@ export function ChatDashboard() {
       setEditingReminderId(id);
       setReminderForm({
         name: r.name,
-        date: r.startDate
+        instructions: r.instructions || "",
+        times: r.times && r.times.length ? [...r.times] : [""],
+        startDate: r.startDate
           ? new Date(r.startDate).toISOString().split("T")[0]
+          : todayISO(),
+        endDate: r.endDate
+          ? new Date(r.endDate).toISOString().split("T")[0]
           : "",
-        time: (r.times && r.times[0]) || "",
       });
       setIsReminderModalOpen(true);
     }
   };
 
+  const addTimeField = () => {
+    setReminderForm((prev) => ({ ...prev, times: [...prev.times, ""] }));
+  };
+
+  const removeTimeField = (index) => {
+    setReminderForm((prev) => ({
+      ...prev,
+      times: prev.times.length > 1 ? prev.times.filter((_, i) => i !== index) : prev.times,
+    }));
+  };
+
+  const updateTimeField = (index, value) => {
+    setReminderForm((prev) => ({
+      ...prev,
+      times: prev.times.map((t, i) => (i === index ? value : t)),
+    }));
+  };
+
   const saveReminder = async (e) => {
     e.preventDefault();
-    if (
-      !reminderForm.name.trim() ||
-      !reminderForm.date.trim() ||
-      !reminderForm.time.trim()
-    ) {
-      showToast("Name, Date, and Time are required!");
+    const cleanTimes = reminderForm.times.map((t) => t.trim()).filter(Boolean);
+
+    if (!reminderForm.name.trim() || !reminderForm.startDate || cleanTimes.length === 0) {
+      showToast("Name, start date, and at least one time are required!");
       return;
     }
     if (!token) return;
 
-    // A manually-added reminder is a single date + time, mapped onto the
-    // backend's date-range + multi-time schema as a one-day, one-time window.
     const payload = {
       name: reminderForm.name,
-      instructions: "",
-      times: [reminderForm.time],
-      startDate: reminderForm.date,
-      endDate: reminderForm.date,
+      instructions: reminderForm.instructions,
+      times: cleanTimes,
+      startDate: reminderForm.startDate,
+      endDate: reminderForm.endDate || null, // blank = repeats indefinitely
     };
 
     try {
@@ -2600,36 +2653,96 @@ export function ChatDashboard() {
                 />
               </div>
 
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Instructions (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. after food"
+                  value={reminderForm.instructions}
+                  onChange={(e) =>
+                    setReminderForm({
+                      ...reminderForm,
+                      instructions: e.target.value,
+                    })
+                  }
+                  className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Times
+                </label>
+                {reminderForm.times.map((t, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="time"
+                      required
+                      value={t}
+                      onChange={(e) => updateTimeField(i, e.target.value)}
+                      className={`flex-1 border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
+                    />
+                    {reminderForm.times.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeTimeField(i)}
+                        className="p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-colors shrink-0"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addTimeField}
+                  className="self-start flex items-center gap-1 text-xs font-bold text-teal-500 hover:text-teal-400 transition-colors mt-1"
+                >
+                  <Plus size={14} /> Add another time
+                </button>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Date
+                    Start Date
                   </label>
                   <input
                     type="date"
                     required
-                    value={reminderForm.date}
+                    value={reminderForm.startDate}
                     onChange={(e) =>
-                      setReminderForm({ ...reminderForm, date: e.target.value })
+                      setReminderForm({
+                        ...reminderForm,
+                        startDate: e.target.value,
+                      })
                     }
                     className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
                   />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Time
+                    End Date
                   </label>
                   <input
-                    type="time"
-                    required
-                    value={reminderForm.time}
+                    type="date"
+                    placeholder="Leave blank to repeat"
+                    value={reminderForm.endDate}
                     onChange={(e) =>
-                      setReminderForm({ ...reminderForm, time: e.target.value })
+                      setReminderForm({
+                        ...reminderForm,
+                        endDate: e.target.value,
+                      })
                     }
                     className={`border rounded-xl py-3 px-4 text-sm focus:border-teal-400 outline-none transition-all ${isDark ? "bg-[#0B1120] border-slate-700 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
                   />
                 </div>
               </div>
+              <p className="text-[11px] text-slate-500 -mt-2">
+                Leave End Date blank for a reminder that repeats every day.
+              </p>
 
               <button
                 type="submit"
@@ -2740,6 +2853,49 @@ export function ChatDashboard() {
                 {accountAction.loading ? "Verifying..." : "Confirm Deletion"}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {viewingPrescription && (
+        <div
+          className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setViewingPrescription(null)}
+        >
+          <div
+            className={`w-full max-w-2xl max-h-[85vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col ${isDark ? "bg-[#111827] border border-slate-700/50" : "bg-white border border-slate-200"}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className={`flex justify-between items-center p-4 border-b ${isDark ? "border-slate-700/50" : "border-slate-200"}`}
+            >
+              <h3
+                className={`font-bold text-sm ${isDark ? "text-white" : "text-slate-900"}`}
+              >
+                {viewingPrescription.doctorName || "Prescription"}
+              </h3>
+              <button
+                onClick={() => setViewingPrescription(null)}
+                className="p-1 text-slate-400 hover:text-rose-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto bg-black/20 flex items-center justify-center">
+              {viewingPrescription.fileType === "pdf" ? (
+                <iframe
+                  src={viewingPrescription.image}
+                  title="Prescription PDF"
+                  className="w-full h-[75vh]"
+                />
+              ) : (
+                <img
+                  src={viewingPrescription.image}
+                  alt="Prescription"
+                  className="max-w-full max-h-[75vh] object-contain mx-auto"
+                />
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -2932,11 +3088,20 @@ export function ChatDashboard() {
                             className={`p-4 rounded-2xl text-xs lg:text-sm leading-relaxed shadow-lg ${msg.sender === "user" ? "bg-teal-600 text-white rounded-tr-none" : isDark ? "bg-slate-800/90 border border-slate-700/50 text-slate-200 rounded-tl-none backdrop-blur-md" : "bg-slate-50 border border-slate-200 text-slate-800 rounded-tl-none"}`}
                           >
                             {msg.image && (
-                              <img
-                                src={msg.image}
-                                alt="Upload"
-                                className="max-w-full rounded-lg mb-3 border border-white/10 shadow-lg"
-                              />
+                              msg.image.startsWith("data:application/pdf") ? (
+                                <div className="flex items-center gap-2 mb-3 p-2.5 rounded-lg bg-black/10 border border-white/10">
+                                  <FileText size={20} className="shrink-0" />
+                                  <span className="text-xs font-medium truncate">
+                                    Prescription PDF attached
+                                  </span>
+                                </div>
+                              ) : (
+                                <img
+                                  src={msg.image}
+                                  alt="Upload"
+                                  className="max-w-full rounded-lg mb-3 border border-white/10 shadow-lg"
+                                />
+                              )
                             )}
                             {msg.text && (
                               <div className="whitespace-pre-wrap">
@@ -3653,22 +3818,15 @@ export function ChatDashboard() {
                       </div>
                     </div>
                     <div className="flex gap-1 sm:gap-2 self-end sm:self-auto">
-                      {r.source !== "prescription" && (
-                        <button
-                          onClick={() => openEditReminderModal(r._id)}
-                          className="p-2 text-slate-400 hover:bg-teal-500/10 hover:text-teal-500 rounded-lg transition-colors"
-                        >
-                          <Edit3 size={18} />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => openEditReminderModal(r._id)}
+                        className="p-2 text-slate-400 hover:bg-teal-500/10 hover:text-teal-500 rounded-lg transition-colors"
+                      >
+                        <Edit3 size={18} />
+                      </button>
                       <button
                         onClick={() => handleDeleteReminder(r._id)}
                         className="p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-colors"
-                        title={
-                          r.source === "prescription"
-                            ? "Remove this reminder"
-                            : "Delete reminder"
-                        }
                       >
                         <Trash2 size={18} />
                       </button>
@@ -3686,7 +3844,7 @@ export function ChatDashboard() {
                 ref={prescriptionFileInputRef}
                 onChange={handlePrescriptionFileSelect}
                 className="hidden"
-                accept="image/*"
+                accept="image/*,application/pdf"
               />
               <div className="flex justify-between items-center mb-8 flex-wrap gap-3">
                 <h2
@@ -3738,9 +3896,36 @@ export function ChatDashboard() {
                   >
                     <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
                       <div className="flex items-center gap-3">
-                        <div className="p-3 bg-teal-500/10 rounded-xl">
-                          <Pill className="h-6 w-6 text-teal-500" />
-                        </div>
+                        {p.image ? (
+                          <button
+                            type="button"
+                            onClick={() => setViewingPrescription(p)}
+                            className="w-14 h-14 shrink-0 rounded-xl overflow-hidden border border-teal-500/20 hover:border-teal-500/50 transition-colors relative group"
+                            title="View original file"
+                          >
+                            {p.fileType === "pdf" ? (
+                              <div className="w-full h-full flex items-center justify-center bg-teal-500/10 text-teal-500">
+                                <FileText size={22} />
+                              </div>
+                            ) : (
+                              <img
+                                src={p.image}
+                                alt="Prescription"
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                              <Search
+                                size={16}
+                                className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                              />
+                            </div>
+                          </button>
+                        ) : (
+                          <div className="p-3 bg-teal-500/10 rounded-xl">
+                            <Pill className="h-6 w-6 text-teal-500" />
+                          </div>
+                        )}
                         <div>
                           <h4
                             className={`font-bold text-lg ${isDark ? "text-white" : "text-slate-900"}`}
@@ -3755,6 +3940,13 @@ export function ChatDashboard() {
                           </span>
                         </div>
                       </div>
+                      <button
+                        onClick={() => deletePrescription(p._id)}
+                        className="p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 rounded-lg transition-colors shrink-0"
+                        title="Delete prescription"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     </div>
 
                     {p.medicines && p.medicines.length > 0 ? (
@@ -4092,13 +4284,21 @@ export function ChatDashboard() {
                 <div
                   className={`mb-3 flex items-center gap-3 p-2 rounded-xl border animate-in slide-in-from-bottom-2 ${isDark ? "bg-slate-800 border-slate-700" : "bg-slate-50 border-slate-200"}`}
                 >
-                  <img
-                    src={uploadedImage}
-                    alt="Preview"
-                    className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
-                  />
+                  {uploadedImage.startsWith("data:application/pdf") ? (
+                    <div
+                      className={`h-10 w-10 sm:h-12 sm:w-12 rounded-lg flex items-center justify-center shrink-0 ${isDark ? "bg-slate-900 text-teal-400" : "bg-white text-teal-500"}`}
+                    >
+                      <FileText size={20} />
+                    </div>
+                  ) : (
+                    <img
+                      src={uploadedImage}
+                      alt="Preview"
+                      className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
+                    />
+                  )}
                   <span className="text-xs text-slate-400 flex-1 truncate font-medium">
-                    Prescription photo attached — I'll read it and set up
+                    Prescription {uploadedImage.startsWith("data:application/pdf") ? "PDF" : "photo"} attached — I'll read it and set up
                     reminders when you hit send
                   </span>
                   <button
@@ -4118,7 +4318,7 @@ export function ChatDashboard() {
                   ref={fileInputRef}
                   onChange={handleImageUpload}
                   className="hidden"
-                  accept="image/*"
+                  accept="image/*,application/pdf"
                 />
                 <button
                   type="button"
