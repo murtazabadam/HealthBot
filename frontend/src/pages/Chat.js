@@ -1947,6 +1947,16 @@ export function ChatDashboard() {
     setActiveSessionId(Date.now());
     setMessages([]);
     handleNavClick("chat");
+    // Clears the backend's actual conversation record — not just the
+    // local view. Without this, "New Chat" only reset what was shown on
+    // screen; the AI still received the last 12 messages from whatever
+    // was discussed before, sometimes causing it to reference symptoms
+    // from an entirely different, already-closed conversation.
+    if (token) {
+      axios
+        .delete(API.CHAT_HISTORY, { headers: { Authorization: `Bearer ${token}` } })
+        .catch((err) => console.error("Failed to reset chat context", err));
+    }
   };
 
   const loadChatSession = (session) => {

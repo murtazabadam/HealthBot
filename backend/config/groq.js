@@ -43,7 +43,8 @@ STRICT RULES:
 - If patient answers your question (e.g. "from last 2 days", "yes", "no"), acknowledge their answer and continue naturally
 - If patient asks for self-care tips: exception to the 1-2 sentence rule — give up to 3 tips as a short bullet list, nothing else added
 - If patient asks about medicine, say briefly you cannot prescribe and suggest a pharmacist or doctor — keep it to one sentence
-- If ML prediction is provided, mention the top disease naturally
+- If ML prediction is provided below, mention the top disease naturally
+- CRITICAL: if NO ML prediction is provided below, you have NOT run any diagnosis or prediction. NEVER name a disease, NEVER say "based on your symptoms" or "the ML prediction suggests" or anything implying you've assessed or diagnosed them — if asked directly what the prediction/diagnosis is and none is provided, say plainly that you don't have one yet and more symptom detail is needed first
 - Ask at most one relevant follow-up question, and only as part of your 1-2 sentences, never in addition to them
 - NEVER make definitive diagnoses
 - If symptoms sound serious, urge seeing a doctor immediately
@@ -52,7 +53,7 @@ Patient name: ${userName}
 ${mlPrediction
     ? `ML Model says: ${mlPrediction}`
     : isFollowUp
-      ? 'Patient is continuing the conversation — use chat history for full context'
+      ? 'Patient is continuing the conversation — use chat history for full context. No ML prediction has been run yet.'
       : 'No ML prediction yet — ask patient to describe symptoms'}`;
 
   // Build history — keep last 8 messages for context
@@ -93,14 +94,13 @@ ${mlPrediction
 }
 
 // ── Off-topic gate ───────────────────────────────────────────────────────
-// A dedicated, narrow classification call, kept completely separate from
-// getGroqResponse above. The point of splitting this out: when the answer
-// is "off-topic", the caller in routes/chat.js never uses any model-
-// generated text at all — it substitutes a hardcoded string it controls
-// itself. That's a stronger guarantee than the prompt rule inside
-// getGroqResponse's systemPrompt (which still relies on the model choosing
-// to comply while generating free-form content) — here, the model's only
-// job is a one-word yes/no, and the actual reply text is never its output.
+// Kept as a narrow fallback ONLY for when analyzeSymptomTurn isn't in play
+// (e.g. GROQ_API_KEY unset, or an analyzeSymptomTurn call itself failed and
+// routes/chat.js fell back to the deterministic keyword pipeline for that
+// turn). When the AI path is healthy, analyzeSymptomTurn's is_health_related
+// field replaces this — folded into the same call instead of a second
+// round-trip, and with awareness of the running symptom state so short
+// replies ("yes"/"no") aren't judged in isolation.
 async function isOffTopic(userMessage, chatHistory = []) {
   if (!groq) return false; // fail open — never block the user if AI is unavailable
 
@@ -144,7 +144,117 @@ ${recentContext || '(no prior messages)'}`;
   }
 }
 
-module.exports = { getGroqResponse, isOffTopic, structurePrescription };
+// ── Unified symptom-conversation turn analysis ──────────────────────────
+// This is the core of the AI-driven intake flow. One call per health
+// message does everything the old pipeline needed several disconnected,
+// regex-based mechanisms for:
+//   - understands free-form phrasing ("I feel dull", "I stay at home a
+//     lot") instead of only exact keyword matches
+//   - properly handles negation/retraction ACROSS turns, because it's
+//     given the current running symptom list and asked to update it, not
+//     re-deriving from scratch by pattern-matching raw text every time
+//   - decides what to ask next from genuine understanding of what's
+//     already been established, instead of a "does this literal phrase
+//     appear anywhere in the text" regex that can't tell "not headache"
+//     from "headache"
+//   - decides when enough has been gathered to move to confirmation
+//
+// knownSymptoms: [{id, label}] — the fixed vocabulary the ML model
+// understands (see routes/chat.js's /symptom-options). The model is
+// instructed to only place IDs from this list into matched_symptom_ids /
+// negated_symptom_ids; anything it can't map goes into unmatched_notes
+// instead of being invented as a new, ML-meaningless ID.
+//
+// Returns null on any failure — callers MUST handle that by falling back
+// to the deterministic keyword pipeline for that turn; never assume a
+// response.
+async function analyzeSymptomTurn({
+  userMessage,
+  userName,
+  activeSymptoms = [],
+  notes = '',
+  chatHistory = [],
+  knownSymptoms = [],
+}) {
+  if (!groq) return null;
+
+  const vocabList = knownSymptoms.map(s => `${s.id} (${s.label})`).join(', ');
+  const activeList = activeSymptoms.length
+    ? activeSymptoms.join(', ')
+    : '(none yet)';
+
+  const systemPrompt = `You are a careful, compassionate AI intake nurse for a symptom-checking chatbot. You are having a natural, flowing conversation with a patient to build up a picture of their symptoms before an ML model predicts a likely condition.
+
+KNOWN SYMPTOM VOCABULARY (the ML model ONLY understands these exact ids — never invent new ones):
+${vocabList}
+
+CURRENTLY TRACKED SYMPTOMS FOR THIS PATIENT (from earlier in this conversation): ${activeList}
+ADDITIONAL NOTES ALREADY CAPTURED: ${notes || '(none)'}
+
+Read the patient's LATEST message (given as the user turn below, with recent chat history for context) and respond with STRICT JSON ONLY, no markdown, no commentary, in exactly this shape:
+{
+  "is_health_related": boolean,
+  "is_emergency": boolean,
+  "matched_symptom_ids": ["id_from_vocabulary", ...],
+  "negated_symptom_ids": ["id_from_vocabulary", ...],
+  "unmatched_notes": "string or empty string",
+  "ready_for_confirmation": boolean,
+  "reply": "string"
+}
+
+RULES:
+- is_health_related: false ONLY if the message has genuinely nothing to do with health, feelings, symptoms, or continuing this conversation (general trivia, unrelated requests, etc). A short reply like "yes"/"no"/"ok" while a symptom conversation is under way is ALWAYS health-related — never mark it false just because it's short.
+- is_emergency: true if the patient describes or the tracked symptoms together suggest something urgent (e.g. chest pain with breathlessness or sweating, severe headache with vomiting, high fever with confusion or a stiff neck, severe bleeding, difficulty breathing, suicidal ideation, or anything else clearly dangerous) — even if severity hasn't been fully clarified yet. Err toward true if genuinely unsure on something dangerous-sounding.
+- matched_symptom_ids: ONLY ids from the vocabulary list above, that the patient is NEWLY affirming in this message (map casual language onto the closest matching vocabulary id — e.g. "I feel dull/wiped out/no energy" -> fatigue). Do not repeat ids that are already in the currently-tracked list unless the patient is re-affirming something after it was previously negated.
+- negated_symptom_ids: vocabulary ids the patient is explicitly denying or retracting in this message, whether or not they're currently tracked (e.g. "no headache", "not anymore", "actually I don't have that").
+- unmatched_notes: any clinically relevant free-text detail that does NOT map onto a vocabulary id (e.g. "stays home a lot", "stressful week at work", sleep/appetite details) — short phrase, or empty string if nothing new. Do not put vocabulary-mappable symptoms here.
+- ready_for_confirmation: true once you have a reasonably complete picture — generally 2 or more tracked symptoms with any obviously-needed clarification (like fever severity, symptom duration) already given, OR the patient indicates they're done ("that's everything", "nothing else", "no other symptoms"). Do not wait indefinitely for a perfect picture — a compassionate intake nurse knows when to move forward.
+- reply: your natural, warm, BRIEF (1-2 sentences) response to the patient — either a relevant follow-up question if not ready_for_confirmation yet, or a brief acknowledgment if you are ready (the app will show a separate confirmation UI, so don't list out their symptoms yourself here). NEVER state or imply a diagnosis or ML prediction here — none has run yet. If is_health_related is false, still write a brief, kind redirect back to health topics as the reply.
+- Never fabricate symptoms the patient didn't describe or clearly imply.
+
+Patient name: ${userName}`;
+
+  const history = chatHistory.slice(-10).map(msg => ({
+    role:    msg.sender === 'user' ? 'user' : 'assistant',
+    content: msg.text.substring(0, 500)
+  }));
+
+  try {
+    const completion = await groq.chat.completions.create({
+      model:       'llama-3.1-8b-instant',
+      messages:    [
+        { role: 'system', content: systemPrompt },
+        ...history,
+        { role: 'user', content: userMessage }
+      ],
+      max_tokens:  350,
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+    });
+
+    const raw = completion.choices[0]?.message?.content?.trim() || '';
+    const parsed = JSON.parse(raw);
+
+    const knownIds = new Set(knownSymptoms.map(s => s.id));
+    const cleanIds = (arr) =>
+      Array.isArray(arr) ? arr.filter(id => knownIds.has(id)) : [];
+
+    return {
+      is_health_related: parsed.is_health_related !== false,
+      is_emergency: !!parsed.is_emergency,
+      matched_symptom_ids: cleanIds(parsed.matched_symptom_ids),
+      negated_symptom_ids: cleanIds(parsed.negated_symptom_ids),
+      unmatched_notes: typeof parsed.unmatched_notes === 'string' ? parsed.unmatched_notes.trim() : '',
+      ready_for_confirmation: !!parsed.ready_for_confirmation,
+      reply: typeof parsed.reply === 'string' && parsed.reply.trim() ? parsed.reply.trim() : null,
+    };
+  } catch (err) {
+    console.error('analyzeSymptomTurn failed:', err.message);
+    return null;
+  }
+}
+
+module.exports = { getGroqResponse, isOffTopic, structurePrescription, analyzeSymptomTurn };
 
 // ── Prescription structuring ─────────────────────────────────────────────
 // Turns raw, error-prone OCR text from a prescription photo into a strict
