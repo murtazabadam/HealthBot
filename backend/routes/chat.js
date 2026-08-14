@@ -427,6 +427,25 @@ function isShortConversationalReply(text, hasConversation) {
   return false;
 }
 
+// Answers to "how long have you had this?" — "from yesterday's morning",
+// "since 2 days", "for about a week" — are obviously continuations of the
+// clinical intake, but they're often 3-6 words and don't match any entry
+// in SHORT_CONTINUATION_WORDS, so isShortConversationalReply above misses
+// them and they used to fall through to the off-topic LLM classifier,
+// which can and did misfire on them. Recognize the shape of a duration
+// answer directly instead of relying on an exact word-list match.
+const DURATION_ANSWER_WORD_LIMIT = 8;
+const DURATION_ANSWER_PATTERN =
+  /\b(yesterday'?s?|today|tonight|this\s+(morning|afternoon|evening|week)|last\s+(night|week|month)|since|ago|\d*\s*(days?|weeks?|months?|hours?|mins?|minutes?))\b/;
+
+function isDurationAnswer(text, hasConversation) {
+  if (!hasConversation) return false;
+  const trimmed = text.trim().toLowerCase();
+  if (!trimmed) return false;
+  if (trimmed.split(/\s+/).length > DURATION_ANSWER_WORD_LIMIT) return false;
+  return DURATION_ANSWER_PATTERN.test(trimmed);
+}
+
 function detectIntent(text) {
   const lower = text.toLowerCase().trim();
   const greetings = [
@@ -534,8 +553,31 @@ function getFallbackReply(intent, userName) {
   );
 }
 
+// Location-specific pain/ache symptom ids — if any of these are present,
+// the patient HAS already specified where it hurts, even though the
+// generic "pain"/"hurts"/"ache" words also appear in the raw text.
+const LOCATED_PAIN_SYMPTOMS = new Set([
+  "chest_pain", "stomach_pain", "abdominal_pain", "joint_pain",
+  "muscle_pain", "back_pain", "neck_pain", "knee_pain", "hip_joint_pain",
+  "pain_in_eyes", "pain_behind_the_eyes", "throat_irritation",
+]);
+
+// How many consecutive bot turns are allowed to stay in "clinical intake"
+// mode (asking clarifying questions, box hidden) before we force a reveal
+// regardless of the usual thresholds. This is a hard backstop: whatever
+// specific clarification logic exists above it, no patient should ever be
+// able to get stuck answering the same handful of questions forever.
+const MAX_CLARIFICATION_TURNS = 4;
+
 // ── Build ML Section & Clinical Intake Logic ────────────────────────────────────
-function buildMLSection(mlResult, symptoms, rawText) {
+// `symptoms` here is always the already negation-resolved id set (from
+// extractSymptoms/extractSymptomsFromTurns + resolveSymptomConflicts) —
+// NOT raw text. That matters: it's what lets the checks below tell "user
+// said mild_fever" apart from "user said fever", and "headache was
+// negated so it's simply absent" apart from "headache was never
+// mentioned". Checking raw text instead (the old approach) can't make
+// either distinction, which is what caused the infinite follow-up loop.
+function buildMLSection(mlResult, symptoms, rawText, recentHistory = []) {
   if (
     !mlResult ||
     mlResult.error ||
@@ -558,6 +600,11 @@ function buildMLSection(mlResult, symptoms, rawText) {
     ) || /\d+/.test(lowerText);
 
   // 2. CLARIFICATION ENGINE
+  // Fever/headache severity are read off the RESOLVED symptom set, not
+  // raw text — this is negation-safe ("fever but not headache" never
+  // leaves "headache" in `symptoms`) and answer-safe (once the user says
+  // "mild", NL_MAP already turns that into mild_fever, which clears
+  // unspecified_fever — no need to see the literal phrase "mild fever").
   let mustHideBox = false;
   let doctorInstructions = "";
 
@@ -567,22 +614,26 @@ function buildMLSection(mlResult, symptoms, rawText) {
       " The patient hasn't mentioned a timeline. Ask them exactly how long they have been experiencing these symptoms.";
   }
 
-  if (
-    /\bfever(ish)?\b/.test(lowerText) &&
-    !/high fever|mild fever|moderate/.test(lowerText)
-  ) {
+  if (symptoms.includes("unspecified_fever")) {
     mustHideBox = true;
     doctorInstructions +=
-      " They mentioned a fever. Ask: 'Is your fever mild, moderate, or high?'";
+      " They mentioned a fever but haven't said how severe. Ask: 'Is your fever mild, moderate, or high?'";
   }
-  if (/\bheadache\b/.test(lowerText) && !/severe headache/.test(lowerText)) {
+  if (symptoms.includes("headache")) {
     mustHideBox = true;
     doctorInstructions +=
       " They mentioned a headache. Ask: 'Is your headache a normal headache, or is it severe?'";
   }
+  // Cough has no dedicated "unspecified" placeholder id (dry/mucus/blood
+  // all still just resolve to "cough" or a companion id), so this one
+  // still has to look at raw text — but only the TAIL of it (recent
+  // turns), not the ever-growing full history, so an old, already-
+  // answered mention can't keep re-triggering it turn after turn.
+  const recentTailText = lowerText.slice(-150);
   if (
+    symptoms.includes("cough") &&
     /\bcough(ing)?\b/.test(lowerText) &&
-    !/mucus|phlegm|dry|blood/.test(lowerText)
+    !/mucus|phlegm|dry|blood/.test(recentTailText)
   ) {
     mustHideBox = true;
     doctorInstructions +=
@@ -590,7 +641,10 @@ function buildMLSection(mlResult, symptoms, rawText) {
   }
   if (
     /\b(swell|swelling|swollen)\b/.test(lowerText) &&
-    !/joint|gland|lymph/.test(lowerText)
+    !symptoms.some((s) =>
+      ["swelling_joints", "swelled_lymph_nodes"].includes(s),
+    ) &&
+    !/joint|gland|lymph/.test(recentTailText)
   ) {
     mustHideBox = true;
     doctorInstructions +=
@@ -598,8 +652,9 @@ function buildMLSection(mlResult, symptoms, rawText) {
   }
   if (
     /\bpain\b|\bhurts\b|\bache\b/.test(lowerText) &&
+    !symptoms.some((s) => LOCATED_PAIN_SYMPTOMS.has(s)) &&
     !/chest|stomach|joint|muscle|back|neck|knee|hip|eye|throat|head|body|ear|tooth/.test(
-      lowerText,
+      recentTailText,
     )
   ) {
     mustHideBox = true;
@@ -607,8 +662,22 @@ function buildMLSection(mlResult, symptoms, rawText) {
       " They mentioned pain but didn't specify where. Ask: 'Which specific part of your body hurts?'";
   }
 
+  // 2b. LOOP BACKSTOP — count how many bot replies in a row have already
+  // been intake-only (no ML box shown). If we're at/past the cap, stop
+  // asking and reveal whatever we've got instead of asking again — a
+  // guaranteed exit, independent of which clarification rule is stuck.
+  let consecutiveIntakeTurns = 0;
+  for (let i = recentHistory.length - 1; i >= 0; i--) {
+    const m = recentHistory[i];
+    if (m.sender !== "bot") continue;
+    if (m.text && m.text.includes("📊 ML Analysis")) break;
+    consecutiveIntakeTurns++;
+  }
+  const forceReveal = consecutiveIntakeTurns >= MAX_CLARIFICATION_TURNS;
+  if (forceReveal) mustHideBox = false;
+
   // 3. THE 3-PILLAR SECURITY LOCK
-  if (symptoms.length < 3 || top.confidence < 60 || mustHideBox) {
+  if (!forceReveal && (symptoms.length < 3 || top.confidence < 60 || mustHideBox)) {
     const suggested =
       mlResult.followup_question || "fatigue, dizziness, or nausea";
 
@@ -636,9 +705,10 @@ function buildMLSection(mlResult, symptoms, rawText) {
         .map((p) => `• ${p}`)
         .join("\n")}`
     : "";
-  const tip = mlResult.low_confidence
-    ? `\n\n⚡ Tip: Describe more symptoms for better accuracy.`
-    : "";
+  const tip =
+    mlResult.low_confidence || (forceReveal && (symptoms.length < 3 || top.confidence < 60))
+      ? `\n\n⚡ Tip: Describe more symptoms for better accuracy.`
+      : "";
   const followup = mlResult.followup_question
     ? `\n\n❓ ${mlResult.followup_question}`
     : "";
@@ -1020,6 +1090,7 @@ router.post("/message", auth, async (req, res) => {
         mlResult,
         combinedSymptoms,
         historyText + " " + text,
+        recentHistory,
       );
 
       if (process.env.GROQ_API_KEY && ml && ml.summary) {
@@ -1089,6 +1160,7 @@ router.post("/message", auth, async (req, res) => {
     } else {
       const offTopic =
         !isShortConversationalReply(text, hasConversation) &&
+        !isDurationAnswer(text, hasConversation) &&
         process.env.GROQ_API_KEY
           ? await isOffTopic(text, recentHistory)
           : false;
@@ -1114,6 +1186,7 @@ router.post("/message", auth, async (req, res) => {
               mlResult,
               historicalSymptoms,
               historyText + " " + text,
+              recentHistory,
             );
             const aiText = await getGroqResponse(
               text,
@@ -1220,6 +1293,7 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
       mlResult,
       combinedSymptoms,
       historyText + " " + text,
+      recentHistory,
     );
 
     let botReply;
