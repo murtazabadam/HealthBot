@@ -10,7 +10,7 @@ const nodemailer = require("nodemailer");
 const { geocodeAddress, findNearbyFacilities, FacilityLookupError } = require("../config/facilityFinder");
 const { sendEmergencyAlertEmail } = require("../config/emailService");
 const { sendSMS } = require("../config/smsService");
-const { extractTextFromImage } = require("../config/ocr");
+const { extractTextFromFile } = require("../config/ocr");
 const axios = require("axios"); // Using axios for safe Node.js compatibility
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
@@ -708,13 +708,20 @@ router.post("/prescription", auth, async (req, res) => {
   try {
     const { image } = req.body;
     if (!image || typeof image !== "string") {
-      return res.status(400).json({ message: "A prescription image is required" });
+      return res.status(400).json({ message: "A prescription image or PDF is required" });
     }
 
-    const rawText = await extractTextFromImage(image);
+    // Accept photos and PDFs — both arrive as data URLs from the frontend's
+    // FileReader, distinguished by mime prefix.
+    const isPdf = image.startsWith("data:application/pdf");
+    const fileType = isPdf ? "pdf" : "image";
+
+    const rawText = await extractTextFromFile(image);
     if (!rawText) {
       return res.status(422).json({
-        message: "Couldn't read any text from that image. Try a clearer, well-lit photo.",
+        message: isPdf
+          ? "Couldn't read any text from that PDF. Make sure it's not empty or corrupted."
+          : "Couldn't read any text from that image. Try a clearer, well-lit photo.",
       });
     }
 
@@ -727,6 +734,8 @@ router.post("/prescription", auth, async (req, res) => {
       medicines: structured.medicines,
       doctorName: structured.doctorName,
       notes: structured.notes,
+      image,
+      fileType,
     });
     await prescription.save();
 
@@ -775,6 +784,32 @@ router.get("/prescriptions", auth, async (req, res) => {
   try {
     const items = await Prescription.find({ userId: req.user.id }).sort({ createdAt: -1 });
     res.json(items);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Deleting a prescription also removes any reminders it auto-created —
+// otherwise they'd be orphaned (still firing, but pointing at a
+// prescriptionId that no longer resolves to anything in the Prescriptions
+// tab), which would be confusing to leave behind.
+router.delete("/prescriptions/:id", auth, async (req, res) => {
+  try {
+    const prescription = await Prescription.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+    if (!prescription) {
+      return res.status(404).json({ message: "Prescription not found" });
+    }
+    const deletedReminders = await Reminder.deleteMany({
+      prescriptionId: prescription._id,
+      userId: req.user.id,
+    });
+    res.json({
+      message: "Prescription deleted",
+      remindersRemoved: deletedReminders.deletedCount || 0,
+    });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
