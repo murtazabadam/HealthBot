@@ -5,7 +5,7 @@ const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const Prescription = require("../models/Prescription");
 const Reminder = require("../models/Reminder");
-const { getGroqResponse, isOffTopic, structurePrescription } = require("../config/groq");
+const { getGroqResponse, isOffTopic, structurePrescription, analyzeSymptomTurn } = require("../config/groq");
 const nodemailer = require("nodemailer");
 const { geocodeAddress, findNearbyFacilities, FacilityLookupError } = require("../config/facilityFinder");
 const { sendEmergencyAlertEmail } = require("../config/emailService");
@@ -204,6 +204,24 @@ const NL_MAP = {
 };
 
 const _SORTED = Object.keys(NL_MAP).sort((a, b) => b.length - a.length);
+
+// IDs that exist purely as internal placeholders for the natural-language
+// clarification flow (e.g. bare "fever" before severity is known). They're
+// deliberately not real ML columns, so offering them anywhere a real
+// symptom id is expected — the manual picker, or the AI's known-vocabulary
+// list — would let a symptom silently vanish from prediction with no
+// chance to ask "how severe?"
+const NON_PICKABLE_SYMPTOM_IDS = new Set(["unspecified_fever"]);
+
+// The fixed vocabulary the ML model actually understands, as {id, label}
+// pairs. Single source of truth for both the /symptom-options endpoint
+// (manual picker in the confirmation UI) and analyzeSymptomTurn's AI call
+// (which maps free-form phrasing onto this same list).
+const KNOWN_SYMPTOM_OPTIONS = [...new Set(Object.values(NL_MAP))]
+  .filter((id) => !NON_PICKABLE_SYMPTOM_IDS.has(id))
+  .sort()
+  .map((id) => ({ id, label: readableSymptom(id) }));
+
 
 function _escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -649,6 +667,54 @@ function buildMLSection(mlResult, symptoms, rawText) {
   };
 }
 
+// Formats the ML result box with NO conversational-clarification gating —
+// used by the AI-driven flow below, where "have we gathered enough yet" is
+// already decided upstream by analyzeSymptomTurn's ready_for_confirmation
+// (or, for an emergency, we deliberately want the box immediately
+// regardless of how complete the picture is). This is buildMLSection's own
+// formatting logic, without the regex mustHideBox checks — those checks
+// are what caused the negation-blind, phrase-rigid "trapped in follow-ups"
+// bug (e.g. re-asking about a symptom the patient had already denied).
+// buildMLSection above is kept as-is, unchanged, for the no-API-key
+// deterministic fallback path only.
+function formatMLBlock(mlResult, symptoms) {
+  if (
+    !mlResult ||
+    mlResult.error ||
+    !mlResult.predictions ||
+    mlResult.predictions.length === 0
+  )
+    return null;
+
+  const top = mlResult.predictions[0];
+  const matched = (mlResult.matched_symptoms || symptoms).map((s) =>
+    s.replace(/_/g, " "),
+  );
+  const others = mlResult.predictions
+    .slice(1)
+    .filter((p) => p.confidence > 3)
+    .map((p) => `${p.disease} (${p.confidence}%)`)
+    .join(", ");
+  const description = top.description ? `\n📖 ${top.description}` : "";
+  const precautions = top.precautions?.length
+    ? `\n\n💡 Precautions:\n${top.precautions
+        .slice(0, 3)
+        .map((p) => `• ${p}`)
+        .join("\n")}`
+    : "";
+  const tip = mlResult.low_confidence
+    ? `\n\n⚡ Tip: Describe more symptoms for better accuracy.`
+    : "";
+  const followup = mlResult.followup_question
+    ? `\n\n❓ ${mlResult.followup_question}`
+    : "";
+
+  return {
+    summary: `Top prediction: ${top.disease} (${top.confidence}% confidence). Severity: ${mlResult.severity}. Based on this, give compassionate, brief advice.`,
+    block: `📊 ML Analysis (${matched.join(", ")}):\n📋 Most likely: ${top.disease} (${top.confidence}%)\n${others ? `📌 Also possible: ${others}\n` : ""}⚠️ Severity: ${mlResult.severity}\n${description}\n💊 ${mlResult.recommendation}${precautions}${tip}${followup}\n\n⚕️ Not a substitute for professional medical advice.`,
+  };
+}
+
 // ── GET /api/chat/find-doctors ────────────────────────────────────────────────
 router.get("/find-doctors", auth, async (req, res) => {
   try {
@@ -968,7 +1034,15 @@ router.post("/message", auth, async (req, res) => {
     let recentHistory = [];
     if (saveHistory) {
       conv = await Conversation.findOne({ userId: req.user.id });
-      recentHistory = conv ? conv.messages.slice(-12) : [];
+      if (!conv) {
+        conv = new Conversation({
+          userId: req.user.id,
+          messages: [],
+          activeSymptomIds: [],
+          symptomNotes: "",
+        });
+      }
+      recentHistory = conv.messages.slice(-12);
     }
     const hasConversation = recentHistory.length > 0;
 
@@ -978,85 +1052,13 @@ router.post("/message", auth, async (req, res) => {
     let emergency = false;
     let facilities = null;
 
-    if (intent === "symptoms") {
-      const newSymptoms = extractSymptoms(text);
-
-      const historyText = recentHistory
-        .filter((m) => m.sender === "user")
-        .map((m) => m.text)
-        .join(" ");
-      const historyTexts = recentHistory
-        .filter((m) => m.sender === "user")
-        .map((m) => m.text);
-      const combinedSymptoms = extractSymptomsFromTurns(historyTexts, text);
-
-      emergency = checkEmergency(combinedSymptoms);
-
-      if (!emergency) {
-        if (saveHistory) {
-          if (!conv)
-            conv = new Conversation({ userId: req.user.id, messages: [] });
-          conv.messages.push({ sender: "user", text });
-          await conv.save();
-        }
-
-        return res.json({
-          needsConfirmation: true,
-          originalText: text,
-          detectedSymptoms: newSymptoms.map((id) => ({
-            id,
-            label: readableSymptom(id),
-          })),
-          intent,
-          emergency: false,
-        });
-      }
-
-      mlResult = await getMLPrediction(
-        historyText + " " + text,
-        combinedSymptoms,
-      );
-      const ml = buildMLSection(
-        mlResult,
-        combinedSymptoms,
-        historyText + " " + text,
-      );
-
-      if (process.env.GROQ_API_KEY && ml && ml.summary) {
-        try {
-          console.log("Calling Groq AI...");
-          const aiText = await getGroqResponse(
-            text,
-            ml.summary,
-            userName,
-            recentHistory,
-          );
-
-          if (ml.block) {
-            botReply = aiText ? `${aiText}\n\n${ml.block}` : ml.block;
-          } else {
-            botReply =
-              aiText ||
-              `Could you please provide more details about your symptoms, ${userName.split(" ")[0]}?`;
-          }
-        } catch (err) {
-          console.error("Groq failed:", err.message);
-          botReply =
-            ml.block ||
-            "I am having trouble connecting to my brain. Please provide more symptoms.";
-        }
-      } else {
-        botReply =
-          ml && ml.block
-            ? ml.block
-            : `I need more symptom details, ${userName.split(" ")[0]}. Please describe what you are feeling and how long you've felt this way.`;
-      }
-    } else if (
+    if (
       ["greeting", "how_are_you", "thanks", "farewell", "help"].includes(
         intent,
       ) &&
       !hasConversation
     ) {
+      // Fast, deterministic paths — no AI call needed for these.
       botReply = getFallbackReply(intent, userName);
     } else if (intent === "find_doctor") {
       if (!user || !user.address) {
@@ -1086,59 +1088,162 @@ router.post("/message", auth, async (req, res) => {
           }
         }
       }
-    } else {
-      const offTopic =
-        !isShortConversationalReply(text, hasConversation) &&
-        process.env.GROQ_API_KEY
-          ? await isOffTopic(text, recentHistory)
-          : false;
+    } else if (process.env.GROQ_API_KEY) {
+      // ── Unified AI-driven symptom conversation ───────────────────────────
+      // Handles both "describing symptoms" and "just chatting" in one call:
+      // the model understands free-form phrasing (not just exact keyword
+      // matches), tracks negation across the whole conversation correctly
+      // (not just within one message), and decides naturally when it has
+      // enough of a picture to move to confirmation — replacing several
+      // disconnected, regex-based mechanisms that had drifted out of sync
+      // with each other (see formatMLBlock's comment for background).
+      const historyTexts = recentHistory
+        .filter((m) => m.sender === "user")
+        .map((m) => m.text);
 
-      if (offTopic) {
-        botReply = `That's outside what I can help with, ${userName.split(" ")[0]} — I'm a medical symptom assistant, so I can only help with health, symptoms, and wellness questions. Is there anything going on with your health I can help you with?`;
-      } else if (process.env.GROQ_API_KEY) {
-        try {
-          console.log("Calling Groq AI for conversation...");
+      const activeSymptoms = conv?.activeSymptomIds || [];
+      const notes = conv?.symptomNotes || "";
 
-          const historyText = recentHistory
-            .filter((m) => m.sender === "user")
-            .map((m) => m.text)
-            .join(" ");
-          const historyTexts = recentHistory
-            .filter((m) => m.sender === "user")
-            .map((m) => m.text);
-          const historicalSymptoms = extractSymptomsFromTurns(historyTexts, "");
+      const analysis = await analyzeSymptomTurn({
+        userMessage: text,
+        userName,
+        activeSymptoms,
+        notes,
+        chatHistory: recentHistory,
+        knownSymptoms: KNOWN_SYMPTOM_OPTIONS,
+      });
 
-          if (historicalSymptoms.length > 0) {
-            mlResult = await getMLPrediction(historyText, historicalSymptoms);
-            const ml = buildMLSection(
-              mlResult,
-              historicalSymptoms,
-              historyText + " " + text,
-            );
-            const aiText = await getGroqResponse(
-              text,
-              ml?.summary || null,
-              userName,
-              recentHistory,
-            );
+      if (!analysis) {
+        // The AI call itself failed (network/API error, bad JSON, etc) —
+        // degrade to the deterministic keyword pipeline for just this
+        // turn rather than leave the user with no answer at all.
+        const combinedSymptoms = extractSymptomsFromTurns(historyTexts, text);
+        emergency = checkEmergency(combinedSymptoms);
 
-            if (ml && ml.block) {
-              botReply = aiText ? `${aiText}\n\n${ml.block}` : ml.block;
-            } else {
-              botReply = aiText || getFallbackReply(intent, userName);
-            }
-          } else {
-            const aiText = await getGroqResponse(
-              text,
-              null,
-              userName,
-              recentHistory,
-            );
-            botReply = aiText || getFallbackReply(intent, userName);
+        if (emergency) {
+          mlResult = await getMLPrediction(text, combinedSymptoms);
+          const ml = formatMLBlock(mlResult, combinedSymptoms);
+          botReply =
+            `🚨 This sounds like it could be serious, ${userName.split(" ")[0]}. Please seek medical attention immediately.` +
+            (ml?.block ? `\n\n${ml.block}` : "");
+          if (saveHistory) {
+            conv.activeSymptomIds = [];
+            conv.symptomNotes = "";
           }
-        } catch (err) {
-          console.error("Groq conversation failed:", err.message);
-          botReply = getFallbackReply(intent, userName);
+        } else if (combinedSymptoms.length > 0) {
+          if (saveHistory) {
+            conv.activeSymptomIds = combinedSymptoms;
+            conv.messages.push({ sender: "user", text });
+            await conv.save();
+          }
+          return res.json({
+            needsConfirmation: true,
+            originalText: text,
+            detectedSymptoms: combinedSymptoms.map((id) => ({
+              id,
+              label: readableSymptom(id),
+            })),
+            intent: "symptoms",
+            emergency: false,
+          });
+        } else {
+          botReply = `I'm having a little trouble processing that, ${userName.split(" ")[0]} — could you tell me a bit more about how you're feeling?`;
+        }
+      } else if (!analysis.is_health_related) {
+        botReply = `That's outside what I can help with, ${userName.split(" ")[0]} — I'm a medical symptom assistant, so I can only help with health, symptoms, and wellness questions. Is there anything going on with your health I can help you with?`;
+      } else {
+        let updatedActive = new Set(activeSymptoms);
+        analysis.matched_symptom_ids.forEach((id) => updatedActive.add(id));
+        analysis.negated_symptom_ids.forEach((id) => updatedActive.delete(id));
+        updatedActive = resolveSymptomConflicts([...updatedActive]);
+
+        const combinedNotes = analysis.unmatched_notes
+          ? (notes ? notes + "; " : "") + analysis.unmatched_notes
+          : notes;
+
+        // Belt-and-suspenders: trust either the deterministic keyword-combo
+        // check OR the AI's own judgment call — missing a real emergency
+        // is far worse than a false positive here.
+        emergency = checkEmergency(updatedActive) || analysis.is_emergency;
+
+        if (emergency) {
+          mlResult = await getMLPrediction(text, updatedActive);
+          const ml = formatMLBlock(mlResult, updatedActive);
+          botReply =
+            `🚨 This sounds like it could be serious, ${userName.split(" ")[0]}. Please seek medical attention immediately.` +
+            (ml?.block ? `\n\n${ml.block}` : "");
+          if (saveHistory) {
+            conv.activeSymptomIds = [];
+            conv.symptomNotes = "";
+          }
+        } else if (analysis.ready_for_confirmation && updatedActive.length > 0) {
+          if (saveHistory) {
+            conv.activeSymptomIds = updatedActive;
+            conv.symptomNotes = combinedNotes;
+            conv.messages.push({ sender: "user", text });
+            await conv.save();
+          }
+          return res.json({
+            needsConfirmation: true,
+            originalText: text,
+            detectedSymptoms: updatedActive.map((id) => ({
+              id,
+              label: readableSymptom(id),
+            })),
+            intent: "symptoms",
+            emergency: false,
+          });
+        } else {
+          botReply =
+            analysis.reply ||
+            `Could you tell me a bit more about how you're feeling, ${userName.split(" ")[0]}?`;
+          if (saveHistory) {
+            conv.activeSymptomIds = updatedActive;
+            conv.symptomNotes = combinedNotes;
+          }
+        }
+      }
+    } else {
+      // No GROQ_API_KEY configured at all — original deterministic
+      // pipeline (keyword matching only, no AI understanding or gap-fill).
+      if (intent === "symptoms") {
+        const historyText = recentHistory
+          .filter((m) => m.sender === "user")
+          .map((m) => m.text)
+          .join(" ");
+        const historyTexts = recentHistory
+          .filter((m) => m.sender === "user")
+          .map((m) => m.text);
+        const combinedSymptoms = extractSymptomsFromTurns(historyTexts, text);
+        emergency = checkEmergency(combinedSymptoms);
+
+        if (!emergency) {
+          if (saveHistory) {
+            conv.activeSymptomIds = combinedSymptoms;
+            conv.messages.push({ sender: "user", text });
+            await conv.save();
+          }
+          return res.json({
+            needsConfirmation: true,
+            originalText: text,
+            detectedSymptoms: combinedSymptoms.map((id) => ({
+              id,
+              label: readableSymptom(id),
+            })),
+            intent,
+            emergency: false,
+          });
+        }
+
+        mlResult = await getMLPrediction(historyText + " " + text, combinedSymptoms);
+        const ml = buildMLSection(mlResult, combinedSymptoms, historyText + " " + text);
+        botReply =
+          ml && ml.block
+            ? ml.block
+            : `I need more symptom details, ${userName.split(" ")[0]}. Please describe what you are feeling and how long you've felt this way.`;
+        if (saveHistory) {
+          conv.activeSymptomIds = [];
+          conv.symptomNotes = "";
         }
       } else {
         botReply = getFallbackReply(intent, userName);
@@ -1212,15 +1317,20 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
     // word still existed somewhere in the raw conversation text).
     const combinedSymptoms = [...new Set(symptoms)];
 
-    const mlResult = await getMLPrediction(
-      historyText + " " + text,
-      combinedSymptoms,
-    );
-    const ml = buildMLSection(
-      mlResult,
-      combinedSymptoms,
-      historyText + " " + text,
-    );
+    // Any free-text detail the AI-driven flow captured along the way
+    // (things that didn't map onto a known symptom id) — folded in here so
+    // the ML call and the final reply both still have that context, even
+    // though it was never a substitute for a real symptom id.
+    const notes = conv?.symptomNotes || "";
+    const fullContextText = [historyText, text, notes].filter(Boolean).join(" ");
+
+    const mlResult = await getMLPrediction(fullContextText, combinedSymptoms);
+    // Explicitly confirmed by the user via the confirmation card — always
+    // reveal the result. formatMLBlock has no clarification/hide-the-box
+    // gating (unlike buildMLSection, which is only used by the no-API-key
+    // fallback path) since that decision has already been made by this
+    // point; there's nothing left to ask.
+    const ml = formatMLBlock(mlResult, combinedSymptoms);
 
     let botReply;
     if (process.env.GROQ_API_KEY && ml && ml.summary) {
@@ -1250,6 +1360,11 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
 
     if (saveHistory) {
       if (!conv) conv = new Conversation({ userId: req.user.id, messages: [] });
+      // This topic is resolved — clear the running gather state so the
+      // next message (a new topic, or just chatting) starts fresh instead
+      // of continuing to build on symptoms that were just analyzed.
+      conv.activeSymptomIds = [];
+      conv.symptomNotes = "";
       conv.messages.push({ sender: "bot", text: botReply });
       await conv.save();
     }
@@ -1266,19 +1381,9 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
   }
 });
 
-// IDs that exist purely as internal placeholders for the natural-language
-// clarification flow (e.g. bare "fever" before severity is known). They're
-// deliberately not real ML columns, so offering them in the manual picker
-// would let a symptom silently vanish from prediction with no chance to
-// ask "how severe?" — exclude them; "High Fever"/"Mild Fever" cover it.
-const NON_PICKABLE_SYMPTOM_IDS = new Set(["unspecified_fever"]);
-
 // ── Symptom Options Route ────────────────────────────────────────────────────
 router.get("/symptom-options", auth, (req, res) => {
-  const ids = [...new Set(Object.values(NL_MAP))]
-    .filter((id) => !NON_PICKABLE_SYMPTOM_IDS.has(id))
-    .sort();
-  res.json(ids.map((id) => ({ id, label: readableSymptom(id) })));
+  res.json(KNOWN_SYMPTOM_OPTIONS);
 });
 
 // ── Email Reminder Route ──────────────────────────────────────────────────────
