@@ -203,14 +203,14 @@ Read the patient's LATEST message (given as the user turn below, with recent cha
 }
 
 RULES:
+- The patient is the ONLY person whose health this conversation is about. If a message describes something/someone else — an object, a pet, another person, a joke, a hypothetical — do NOT extract any symptom from it, even if the wording resembles a symptom description. Set matched_symptom_ids to an empty list for that part, and gently clarify in your reply that you're asking about their own health.
 - is_health_related: false ONLY if the message has genuinely nothing to do with health, feelings, symptoms, or continuing this conversation (general trivia, unrelated requests, etc). A short reply like "yes"/"no"/"ok" while a symptom conversation is under way is ALWAYS health-related — never mark it false just because it's short.
 - is_emergency: true if the patient describes or the tracked symptoms together suggest something urgent (e.g. chest pain with breathlessness or sweating, severe headache with vomiting, high fever with confusion or a stiff neck, severe bleeding, difficulty breathing, suicidal ideation, or anything else clearly dangerous) — even if severity hasn't been fully clarified yet. Err toward true if genuinely unsure on something dangerous-sounding.
-- matched_symptom_ids: ONLY ids from the vocabulary list above, that the patient is NEWLY affirming in this message (map casual language onto the closest matching vocabulary id — e.g. "I feel dull/wiped out/no energy" -> fatigue). Do not repeat ids that are already in the currently-tracked list unless the patient is re-affirming something after it was previously negated.
-- negated_symptom_ids: vocabulary ids the patient is explicitly denying or retracting in this message, whether or not they're currently tracked (e.g. "no headache", "not anymore", "actually I don't have that").
-- unmatched_notes: any clinically relevant free-text detail that does NOT map onto a vocabulary id (e.g. "stays home a lot", "stressful week at work", sleep/appetite details) — short phrase, or empty string if nothing new. Do not put vocabulary-mappable symptoms here.
-- ready_for_confirmation: true once you have a reasonably complete picture — generally 2 or more tracked symptoms with any obviously-needed clarification (like fever severity, symptom duration) already given, OR the patient indicates they're done ("that's everything", "nothing else", "no other symptoms"). Do not wait indefinitely for a perfect picture — a compassionate intake nurse knows when to move forward.
-- reply: your natural, warm, BRIEF (1-2 sentences) response to the patient — either a relevant follow-up question if not ready_for_confirmation yet, or a brief acknowledgment if you are ready (the app will show a separate confirmation UI, so don't list out their symptoms yourself here). NEVER state or imply a diagnosis or ML prediction here — none has run yet. If is_health_related is false, still write a brief, kind redirect back to health topics as the reply.
-- Never fabricate symptoms the patient didn't describe or clearly imply.
+- matched_symptom_ids: ONLY ids from the vocabulary list above, and ONLY ones the PATIENT is CLEARLY, EXPLICITLY affirming about THEMSELVES in their current message. Map casual language onto the closest matching vocabulary id (e.g. "I feel dull/wiped out/no energy" -> fatigue) — but this is a mapping step, not a license to guess. If you are not confident the patient stated it, leave it out. NEVER include a symptom just because you (the assistant) asked about it in a previous turn and the patient's reply was unclear, off-topic, or about something else — an id only belongs here if the patient's own words support it. When genuinely unsure, do not include it — a missed symptom can be added next turn; a fabricated one cannot be un-shown once the patient sees it in the confirmation list.
+- negated_symptom_ids: vocabulary ids the patient is explicitly denying or retracting in this message, whether or not they're currently tracked (e.g. "no headache", "not anymore", "actually I don't have that", "I never said I had fever").
+- unmatched_notes: any clinically relevant free-text detail, ABOUT THE PATIENT, that does NOT map onto a vocabulary id (e.g. "stays home a lot", "stressful week at work", sleep/appetite details) — short phrase, or empty string if nothing new. Do not put vocabulary-mappable symptoms here.
+- ready_for_confirmation: true once you have a reasonably complete picture — generally 2 or more tracked symptoms with any obviously-needed clarification (like fever severity, symptom duration) already given, OR the patient indicates they're done ("that's everything", "nothing else", "no other symptoms"). Do not wait indefinitely for a perfect picture — a compassionate intake nurse knows when to move forward. Never set this true if there are zero tracked symptoms.
+- reply: your natural, warm, BRIEF (1-2 sentences) response to the patient — either a relevant follow-up question if not ready_for_confirmation yet, or a brief acknowledgment if you are ready (the app will show a separate confirmation UI, so don't list out their symptoms yourself here). NEVER state or imply a diagnosis or ML prediction here — none has run yet. If is_health_related is false, still write a brief, kind redirect back to health topics as the reply. If the message was about something other than the patient's own health (an object, a joke, a third party), gently clarify you can only assess their own symptoms.
 
 Patient name: ${userName}`;
 
@@ -228,7 +228,12 @@ Patient name: ${userName}`;
         { role: 'user', content: userMessage }
       ],
       max_tokens:  350,
-      temperature: 0.2,
+      // Lowered from a "creative" range to as close to deterministic as
+      // this endpoint offers — this call extracts structured facts from
+      // what the patient said, it isn't creative writing, and a stray bit
+      // of sampling randomness is exactly what let it hallucinate a
+      // symptom ("high_fever") that was never mentioned in one real test.
+      temperature: 0,
       response_format: { type: 'json_object' },
     });
 
