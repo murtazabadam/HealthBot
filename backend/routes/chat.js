@@ -10,7 +10,7 @@ const nodemailer = require("nodemailer");
 const { geocodeAddress, findNearbyFacilities, FacilityLookupError } = require("../config/facilityFinder");
 const { sendEmergencyAlertEmail } = require("../config/emailService");
 const { sendSMS } = require("../config/smsService");
-const { extractTextFromFile, OcrServiceError } = require("../config/ocr");
+const { extractTextFromFile } = require("../config/ocr");
 const axios = require("axios"); // Using axios for safe Node.js compatibility
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
@@ -864,18 +864,7 @@ router.post("/prescription", auth, async (req, res) => {
     const isPdf = image.startsWith("data:application/pdf");
     const fileType = isPdf ? "pdf" : "image";
 
-    let rawText;
-    try {
-      rawText = await extractTextFromFile(image);
-    } catch (err) {
-      if (err instanceof OcrServiceError) {
-        console.error("Prescription OCR service unavailable:", err.message);
-        return res.status(503).json({
-          message: "The prescription-reading service is temporarily unavailable — please try again in a minute.",
-        });
-      }
-      throw err;
-    }
+    const rawText = await extractTextFromFile(image);
     if (!rawText) {
       return res.status(422).json({
         message: isPdf
@@ -1137,9 +1126,12 @@ router.post("/message", auth, async (req, res) => {
           botReply =
             `🚨 This sounds like it could be serious, ${userName.split(" ")[0]}. Please seek medical attention immediately.` +
             (ml?.block ? `\n\n${ml.block}` : "");
+          // Persisted, not cleared — see the comment on the main emergency
+          // branch below for why: a pushback or added detail should build
+          // on this, not force the patient to repeat themselves.
           if (saveHistory) {
-            conv.activeSymptomIds = [];
-            conv.symptomNotes = "";
+            conv.activeSymptomIds = combinedSymptoms;
+            conv.symptomNotes = notes;
           }
         } else if (combinedSymptoms.length > 0) {
           if (saveHistory) {
@@ -1181,20 +1173,44 @@ router.post("/message", auth, async (req, res) => {
           ? (notes ? notes + "; " : "") + analysis.unmatched_notes
           : notes;
 
-        // Belt-and-suspenders: trust either the deterministic keyword-combo
-        // check OR the AI's own judgment call — missing a real emergency
-        // is far worse than a false positive here.
-        emergency = checkEmergency(updatedActive) || analysis.is_emergency;
+        // Two separate signals feed into this, and they're not treated the
+        // same way. The deterministic keyword-combo check (checkEmergency)
+        // and the AI's own is_emergency judgment are belt-and-suspenders —
+        // trust either. But whether that combination should trigger the
+        // FULL alarm treatment (frontend's red full-screen modal, and
+        // auto-notifying the user's emergency contact by SMS/email) is a
+        // separate, higher bar: reserved for a matched red-flag combo, or
+        // the ML model's own severity assessment independently agreeing
+        // this is as severe as it gets. The AI flagging something as
+        // "concerning enough to mention" on its own gets a real, visible
+        // nudge to see a doctor soon instead — not the full alarm, which
+        // would otherwise fire on common symptom combinations (a fever
+        // with chills and fatigue, dizziness with vomiting) often enough
+        // to make people stop trusting it for when it's actually needed.
+        const deterministicEmergency = checkEmergency(updatedActive);
+        const aiFlaggedConcern = analysis.is_emergency;
 
-        if (emergency) {
+        if (deterministicEmergency || aiFlaggedConcern) {
           mlResult = await getMLPrediction(text, updatedActive);
           const ml = formatMLBlock(mlResult, updatedActive);
-          botReply =
-            `🚨 This sounds like it could be serious, ${userName.split(" ")[0]}. Please seek medical attention immediately.` +
-            (ml?.block ? `\n\n${ml.block}` : "");
+          const severityLevel = mlResult?.severity_level;
+          const isCritical = deterministicEmergency || severityLevel >= 4;
+
+          emergency = isCritical;
+          const namePrefix = userName.split(" ")[0];
+          const banner = isCritical
+            ? `🚨 This sounds like it could be serious, ${namePrefix}. Please seek medical attention immediately.`
+            : `⚠️ These symptoms are worth taking seriously, ${namePrefix} — please see a doctor soon rather than waiting it out.`;
+          botReply = banner + (ml?.block ? `\n\n${ml.block}` : "");
+
+          // Deliberately NOT cleared here (unlike earlier versions of this
+          // route) — if the patient pushes back ("it's not that serious")
+          // or adds more detail, the conversation should keep building on
+          // what's already established instead of forgetting it and
+          // forcing them to repeat everything from scratch.
           if (saveHistory) {
-            conv.activeSymptomIds = [];
-            conv.symptomNotes = "";
+            conv.activeSymptomIds = updatedActive;
+            conv.symptomNotes = combinedNotes;
           }
         } else if (analysis.ready_for_confirmation && updatedActive.length > 0) {
           if (saveHistory) {
@@ -1262,8 +1278,7 @@ router.post("/message", auth, async (req, res) => {
             ? ml.block
             : `I need more symptom details, ${userName.split(" ")[0]}. Please describe what you are feeling and how long you've felt this way.`;
         if (saveHistory) {
-          conv.activeSymptomIds = [];
-          conv.symptomNotes = "";
+          conv.activeSymptomIds = combinedSymptoms;
         }
       } else {
         botReply = getFallbackReply(intent, userName);
