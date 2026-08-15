@@ -1147,7 +1147,16 @@ router.post("/message", auth, async (req, res) => {
             emergency: false,
           });
         } else {
-          botReply = `I'm having a little trouble processing that, ${userName.split(" ")[0]} — could you tell me a bit more about how you're feeling?`;
+          // Nothing matched deterministically either — as a last check
+          // before giving up, ask the (separate, simpler) off-topic
+          // classifier whether this was ever health-related at all, so a
+          // genuinely off-topic message still gets the right response
+          // even in this double-fallback case (analyzeSymptomTurn failed
+          // AND no keyword symptoms were found).
+          const offTopic = await isOffTopic(text, recentHistory);
+          botReply = offTopic
+            ? `That's outside what I can help with, ${userName.split(" ")[0]} — I'm a medical symptom assistant, so I can only help with health, symptoms, and wellness questions. Is there anything going on with your health I can help you with?`
+            : `I'm having a little trouble processing that, ${userName.split(" ")[0]} — could you tell me a bit more about how you're feeling?`;
         }
       } else if (!analysis.is_health_related) {
         botReply = `That's outside what I can help with, ${userName.split(" ")[0]} — I'm a medical symptom assistant, so I can only help with health, symptoms, and wellness questions. Is there anything going on with your health I can help you with?`;
