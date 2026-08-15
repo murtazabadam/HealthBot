@@ -1,3 +1,11 @@
+// Reminder times arrive from the frontend as plain "HH:mm" local-time
+// strings (from <input type="time">) with no timezone info at all — the
+// reminder scheduler compares them directly against the server's wall
+// clock. Cloud hosts default to UTC absent an explicit TZ, which would
+// silently fire every reminder 5.5 hours off from what a Kashmir-based
+// user actually intended. Must be set before any Date object is created.
+process.env.TZ = 'Asia/Kolkata';
+
 const express    = require('express');
 const mongoose   = require('mongoose');
 const cors       = require('cors');
