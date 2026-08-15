@@ -1,5 +1,7 @@
 const axios = require('axios');
 
+class OcrServiceError extends Error {}
+
 /**
  * Runs OCR on a prescription upload (photo OR PDF) by delegating to the
  * ml-engine's /ocr endpoint (Python + real tesseract-ocr / PyMuPDF).
@@ -18,28 +20,39 @@ const axios = require('axios');
  * The ml-engine inspects the data URL's mime prefix itself to decide
  * whether to run straight OCR (image) or the PDF path (direct text
  * extraction, falling back to per-page OCR for scanned PDFs).
+ *
+ * Throws OcrServiceError when the request itself fails (network error,
+ * non-2xx response, ML engine unreachable) — this must stay distinguishable
+ * from a genuine "the file really has no readable text" result (an empty
+ * string from a successful call), which the caller shows a different,
+ * accurate message for instead of a misleading "try a clearer photo".
  */
 async function extractTextFromFile(base64File) {
-  try {
-    const mlUrl =
-      process.env.ML_ENGINE_URL ||
-      'https://murtazabadam-healthbot-ml.hf.space/predict';
-    // /predict and /ocr live on the same ml-engine host — swap the path.
-    const ocrUrl = mlUrl.replace(/\/predict\/?$/, '/ocr');
+  const mlUrl =
+    process.env.ML_ENGINE_URL ||
+    'https://murtazabadam-healthbot-ml.hf.space/predict';
+  // /predict and /ocr live on the same ml-engine host — swap the path.
+  const ocrUrl = mlUrl.replace(/\/predict\/?$/, '/ocr');
 
+  try {
     const res = await axios.post(
       ocrUrl,
       { image: base64File },
       { timeout: 45000 } // PDFs with several pages take longer than a single photo
     );
+    // A successful call with genuinely no text is a real, valid result —
+    // return it as-is rather than throwing.
     return (res.data?.text || '').trim();
   } catch (err) {
-    console.error('OCR error:', err.response?.data || err.message);
-    return '';
+    const detail = err.response
+      ? `HTTP ${err.response.status}: ${JSON.stringify(err.response.data).slice(0, 200)}`
+      : err.message;
+    console.error('OCR service call failed:', detail);
+    throw new OcrServiceError(detail);
   }
 }
 
 // Kept as a named alias for anything still importing the old name.
 const extractTextFromImage = extractTextFromFile;
 
-module.exports = { extractTextFromFile, extractTextFromImage };
+module.exports = { extractTextFromFile, extractTextFromImage, OcrServiceError };

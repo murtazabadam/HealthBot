@@ -10,7 +10,7 @@ const nodemailer = require("nodemailer");
 const { geocodeAddress, findNearbyFacilities, FacilityLookupError } = require("../config/facilityFinder");
 const { sendEmergencyAlertEmail } = require("../config/emailService");
 const { sendSMS } = require("../config/smsService");
-const { extractTextFromFile } = require("../config/ocr");
+const { extractTextFromFile, OcrServiceError } = require("../config/ocr");
 const axios = require("axios"); // Using axios for safe Node.js compatibility
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
@@ -864,7 +864,18 @@ router.post("/prescription", auth, async (req, res) => {
     const isPdf = image.startsWith("data:application/pdf");
     const fileType = isPdf ? "pdf" : "image";
 
-    const rawText = await extractTextFromFile(image);
+    let rawText;
+    try {
+      rawText = await extractTextFromFile(image);
+    } catch (err) {
+      if (err instanceof OcrServiceError) {
+        console.error("Prescription OCR service unavailable:", err.message);
+        return res.status(503).json({
+          message: "The prescription-reading service is temporarily unavailable — please try again in a minute.",
+        });
+      }
+      throw err;
+    }
     if (!rawText) {
       return res.status(422).json({
         message: isPdf
