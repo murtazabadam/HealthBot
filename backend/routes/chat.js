@@ -10,7 +10,7 @@ const nodemailer = require("nodemailer");
 const { geocodeAddress, findNearbyFacilities, FacilityLookupError } = require("../config/facilityFinder");
 const { sendEmergencyAlertEmail } = require("../config/emailService");
 const { sendSMS } = require("../config/smsService");
-const { extractTextFromFile } = require("../config/ocr");
+const { extractTextFromFile, OcrServiceError } = require("../config/ocr");
 const axios = require("axios"); // Using axios for safe Node.js compatibility
 
 // ── ML Engine Call ─────────────────────────────────────────────────────────────
@@ -772,18 +772,6 @@ router.get("/find-doctors", auth, async (req, res) => {
 });
 
 // ── POST /api/chat/notify-emergency ─────────────────────────────────────────
-// Called by the frontend whenever an emergency is detected (either the ML/
-// keyword emergency check on a chat message, or the user's explicit
-// "Trigger Emergency Alert" action). Notifies the user's saved emergency
-// contact by email and/or SMS — whichever channels are on file — and
-// includes a Google Maps link when GPS coordinates were provided.
-//
-// This intentionally never fails loudly: a missing/misconfigured contact,
-// or an email/SMS provider hiccup, still returns 200 with emailSent/smsSent
-// flags so the frontend (which only logs a console error on failure) can't
-// accidentally block the chat UI during an actual emergency. The real
-// signal for "did it work" is emailSent/smsSent in the response, which
-// callers can check if they want to surface it.
 router.post("/notify-emergency", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -836,10 +824,6 @@ router.post("/notify-emergency", auth, async (req, res) => {
 });
 
 // ── Prescription Read Route ────────────────────────────────────────────────
-// Accepts a base64 image (data URL) of a prescription photo, OCRs it,
-// asks the AI to structure the result into a medicine list, saves it, and
-// auto-creates Reminder documents so the scheduler starts pinging the user
-// at the right times for each medicine it could confidently parse.
 function buildTimesForFrequency(timesPerDay) {
   const n = Number(timesPerDay);
   if (!Number.isFinite(n) || n <= 0) return [];
@@ -859,12 +843,21 @@ router.post("/prescription", auth, async (req, res) => {
       return res.status(400).json({ message: "A prescription image or PDF is required" });
     }
 
-    // Accept photos and PDFs — both arrive as data URLs from the frontend's
-    // FileReader, distinguished by mime prefix.
     const isPdf = image.startsWith("data:application/pdf");
     const fileType = isPdf ? "pdf" : "image";
 
-    const rawText = await extractTextFromFile(image);
+    let rawText;
+    try {
+      rawText = await extractTextFromFile(image);
+    } catch (err) {
+      if (err instanceof OcrServiceError) {
+        console.error("Prescription OCR service unavailable:", err.message);
+        return res.status(503).json({
+          message: "The prescription-reading service is temporarily unavailable — please try again in a minute.",
+        });
+      }
+      throw err;
+    }
     if (!rawText) {
       return res.status(422).json({
         message: isPdf
@@ -887,7 +880,6 @@ router.post("/prescription", auth, async (req, res) => {
     });
     await prescription.save();
 
-    // Auto-create reminders for every medicine with a usable dosing frequency.
     const createdReminders = [];
     const now = new Date();
     for (const med of structured.medicines) {
@@ -895,7 +887,7 @@ router.post("/prescription", auth, async (req, res) => {
       if (!times.length || !med.name) continue;
 
       const durationDays =
-        Number.isFinite(med.durationDays) && med.durationDays > 0 ? med.durationDays : 5; // sane default if AI couldn't extract one
+        Number.isFinite(med.durationDays) && med.durationDays > 0 ? med.durationDays : 5;
 
       const endDate = new Date(now);
       endDate.setDate(endDate.getDate() + durationDays);
@@ -937,10 +929,6 @@ router.get("/prescriptions", auth, async (req, res) => {
   }
 });
 
-// Deleting a prescription also removes any reminders it auto-created —
-// otherwise they'd be orphaned (still firing, but pointing at a
-// prescriptionId that no longer resolves to anything in the Prescriptions
-// tab), which would be confusing to leave behind.
 router.delete("/prescriptions/:id", auth, async (req, res) => {
   try {
     const prescription = await Prescription.findOneAndDelete({
@@ -1058,7 +1046,6 @@ router.post("/message", auth, async (req, res) => {
       ) &&
       !hasConversation
     ) {
-      // Fast, deterministic paths — no AI call needed for these.
       botReply = getFallbackReply(intent, userName);
     } else if (intent === "find_doctor") {
       if (!user || !user.address) {
@@ -1089,14 +1076,6 @@ router.post("/message", auth, async (req, res) => {
         }
       }
     } else if (process.env.GROQ_API_KEY) {
-      // ── Unified AI-driven symptom conversation ───────────────────────────
-      // Handles both "describing symptoms" and "just chatting" in one call:
-      // the model understands free-form phrasing (not just exact keyword
-      // matches), tracks negation across the whole conversation correctly
-      // (not just within one message), and decides naturally when it has
-      // enough of a picture to move to confirmation — replacing several
-      // disconnected, regex-based mechanisms that had drifted out of sync
-      // with each other (see formatMLBlock's comment for background).
       const historyTexts = recentHistory
         .filter((m) => m.sender === "user")
         .map((m) => m.text);
@@ -1114,9 +1093,6 @@ router.post("/message", auth, async (req, res) => {
       });
 
       if (!analysis) {
-        // The AI call itself failed (network/API error, bad JSON, etc) —
-        // degrade to the deterministic keyword pipeline for just this
-        // turn rather than leave the user with no answer at all.
         const combinedSymptoms = extractSymptomsFromTurns(historyTexts, text);
         emergency = checkEmergency(combinedSymptoms);
 
@@ -1126,9 +1102,6 @@ router.post("/message", auth, async (req, res) => {
           botReply =
             `🚨 This sounds like it could be serious, ${userName.split(" ")[0]}. Please seek medical attention immediately.` +
             (ml?.block ? `\n\n${ml.block}` : "");
-          // Persisted, not cleared — see the comment on the main emergency
-          // branch below for why: a pushback or added detail should build
-          // on this, not force the patient to repeat themselves.
           if (saveHistory) {
             conv.activeSymptomIds = combinedSymptoms;
             conv.symptomNotes = notes;
@@ -1150,12 +1123,6 @@ router.post("/message", auth, async (req, res) => {
             emergency: false,
           });
         } else {
-          // Nothing matched deterministically either — as a last check
-          // before giving up, ask the (separate, simpler) off-topic
-          // classifier whether this was ever health-related at all, so a
-          // genuinely off-topic message still gets the right response
-          // even in this double-fallback case (analyzeSymptomTurn failed
-          // AND no keyword symptoms were found).
           const offTopic = await isOffTopic(text, recentHistory);
           botReply = offTopic
             ? `That's outside what I can help with, ${userName.split(" ")[0]} — I'm a medical symptom assistant, so I can only help with health, symptoms, and wellness questions. Is there anything going on with your health I can help you with?`
@@ -1173,20 +1140,6 @@ router.post("/message", auth, async (req, res) => {
           ? (notes ? notes + "; " : "") + analysis.unmatched_notes
           : notes;
 
-        // Two separate signals feed into this, and they're not treated the
-        // same way. The deterministic keyword-combo check (checkEmergency)
-        // and the AI's own is_emergency judgment are belt-and-suspenders —
-        // trust either. But whether that combination should trigger the
-        // FULL alarm treatment (frontend's red full-screen modal, and
-        // auto-notifying the user's emergency contact by SMS/email) is a
-        // separate, higher bar: reserved for a matched red-flag combo, or
-        // the ML model's own severity assessment independently agreeing
-        // this is as severe as it gets. The AI flagging something as
-        // "concerning enough to mention" on its own gets a real, visible
-        // nudge to see a doctor soon instead — not the full alarm, which
-        // would otherwise fire on common symptom combinations (a fever
-        // with chills and fatigue, dizziness with vomiting) often enough
-        // to make people stop trusting it for when it's actually needed.
         const deterministicEmergency = checkEmergency(updatedActive);
         const aiFlaggedConcern = analysis.is_emergency;
 
@@ -1203,11 +1156,6 @@ router.post("/message", auth, async (req, res) => {
             : `⚠️ These symptoms are worth taking seriously, ${namePrefix} — please see a doctor soon rather than waiting it out.`;
           botReply = banner + (ml?.block ? `\n\n${ml.block}` : "");
 
-          // Deliberately NOT cleared here (unlike earlier versions of this
-          // route) — if the patient pushes back ("it's not that serious")
-          // or adds more detail, the conversation should keep building on
-          // what's already established instead of forgetting it and
-          // forcing them to repeat everything from scratch.
           if (saveHistory) {
             conv.activeSymptomIds = updatedActive;
             conv.symptomNotes = combinedNotes;
@@ -1240,8 +1188,6 @@ router.post("/message", auth, async (req, res) => {
         }
       }
     } else {
-      // No GROQ_API_KEY configured at all — original deterministic
-      // pipeline (keyword matching only, no AI understanding or gap-fill).
       if (intent === "symptoms") {
         const historyText = recentHistory
           .filter((m) => m.sender === "user")
@@ -1309,7 +1255,6 @@ router.get("/history", auth, async (req, res) => {
   }
 });
 
-// ── Clear History Route ────────────────────────────────────────────────────────
 router.delete("/history", auth, async (req, res) => {
   try {
     await Conversation.findOneAndDelete({ userId: req.user.id });
@@ -1344,27 +1289,12 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
       .filter((m) => m.sender === "user")
       .map((m) => m.text)
       .join(" ");
-    // combinedSymptoms trusts the user's confirmed checkbox selection as
-    // authoritative. We deliberately do NOT re-merge a fresh raw-text
-    // extraction on top of it here — that used to silently re-add a
-    // symptom the user had just explicitly unchecked (e.g. deselecting
-    // "headache" during confirmation, only for it to reappear because the
-    // word still existed somewhere in the raw conversation text).
     const combinedSymptoms = [...new Set(symptoms)];
 
-    // Any free-text detail the AI-driven flow captured along the way
-    // (things that didn't map onto a known symptom id) — folded in here so
-    // the ML call and the final reply both still have that context, even
-    // though it was never a substitute for a real symptom id.
     const notes = conv?.symptomNotes || "";
     const fullContextText = [historyText, text, notes].filter(Boolean).join(" ");
 
     const mlResult = await getMLPrediction(fullContextText, combinedSymptoms);
-    // Explicitly confirmed by the user via the confirmation card — always
-    // reveal the result. formatMLBlock has no clarification/hide-the-box
-    // gating (unlike buildMLSection, which is only used by the no-API-key
-    // fallback path) since that decision has already been made by this
-    // point; there's nothing left to ask.
     const ml = formatMLBlock(mlResult, combinedSymptoms);
 
     let botReply;
@@ -1395,9 +1325,6 @@ router.post("/confirm-symptoms", auth, async (req, res) => {
 
     if (saveHistory) {
       if (!conv) conv = new Conversation({ userId: req.user.id, messages: [] });
-      // This topic is resolved — clear the running gather state so the
-      // next message (a new topic, or just chatting) starts fresh instead
-      // of continuing to build on symptoms that were just analyzed.
       conv.activeSymptomIds = [];
       conv.symptomNotes = "";
       conv.messages.push({ sender: "bot", text: botReply });
@@ -1449,11 +1376,5 @@ router.post("/email-reminder", auth, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
-// NOTE: an older, duplicate "/facilities" route used to live here (a second,
-// less robust Overpass implementation with no mirror fallback). It was never
-// called by the frontend (which only uses GET /find-doctors, see
-// frontend/src/config.js) and has been removed so there's a single source of
-// truth for facility lookups: config/facilityFinder.js.
 
 module.exports = router;

@@ -13,7 +13,7 @@ function initGroq() {
   }
   try {
     groq = new Groq({ apiKey: key });
-    console.log('Groq AI ready! Model: llama-3.1-8b-instant');
+    console.log('Groq AI ready! Model: openai/gpt-oss-20b');
     return true;
   } catch (err) {
     console.error('Groq init error:', err.message);
@@ -65,7 +65,7 @@ ${mlPrediction
   try {
     console.log('Calling Groq AI...');
     const completion = await groq.chat.completions.create({
-      model:       'llama-3.1-8b-instant',
+      model:       'openai/gpt-oss-20b',
       messages:    [
         { role: 'system', content: systemPrompt },
         ...history,
@@ -94,13 +94,6 @@ ${mlPrediction
 }
 
 // ── Off-topic gate ───────────────────────────────────────────────────────
-// Kept as a narrow fallback ONLY for when analyzeSymptomTurn isn't in play
-// (e.g. GROQ_API_KEY unset, or an analyzeSymptomTurn call itself failed and
-// routes/chat.js fell back to the deterministic keyword pipeline for that
-// turn). When the AI path is healthy, analyzeSymptomTurn's is_health_related
-// field replaces this — folded into the same call instead of a second
-// round-trip, and with awareness of the running symptom state so short
-// replies ("yes"/"no") aren't judged in isolation.
 async function isOffTopic(userMessage, chatHistory = []) {
   if (!groq) return false; // fail open — never block the user if AI is unavailable
 
@@ -128,7 +121,7 @@ ${recentContext || '(no prior messages)'}`;
 
   try {
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
+      model: 'openai/gpt-oss-20b',
       messages: [
         { role: 'system', content: classifierPrompt },
         { role: 'user', content: userMessage },
@@ -145,29 +138,6 @@ ${recentContext || '(no prior messages)'}`;
 }
 
 // ── Unified symptom-conversation turn analysis ──────────────────────────
-// This is the core of the AI-driven intake flow. One call per health
-// message does everything the old pipeline needed several disconnected,
-// regex-based mechanisms for:
-//   - understands free-form phrasing ("I feel dull", "I stay at home a
-//     lot") instead of only exact keyword matches
-//   - properly handles negation/retraction ACROSS turns, because it's
-//     given the current running symptom list and asked to update it, not
-//     re-deriving from scratch by pattern-matching raw text every time
-//   - decides what to ask next from genuine understanding of what's
-//     already been established, instead of a "does this literal phrase
-//     appear anywhere in the text" regex that can't tell "not headache"
-//     from "headache"
-//   - decides when enough has been gathered to move to confirmation
-//
-// knownSymptoms: [{id, label}] — the fixed vocabulary the ML model
-// understands (see routes/chat.js's /symptom-options). The model is
-// instructed to only place IDs from this list into matched_symptom_ids /
-// negated_symptom_ids; anything it can't map goes into unmatched_notes
-// instead of being invented as a new, ML-meaningless ID.
-//
-// Returns null on any failure — callers MUST handle that by falling back
-// to the deterministic keyword pipeline for that turn; never assume a
-// response.
 async function analyzeSymptomTurn({
   userMessage,
   userName,
@@ -206,11 +176,13 @@ RULES:
 - The patient is the ONLY person whose health this conversation is about. If a message describes something/someone else — an object, a pet, another person, a joke, a hypothetical — do NOT extract any symptom from it, even if the wording resembles a symptom description. Set matched_symptom_ids to an empty list for that part, and gently clarify in your reply that you're asking about their own health.
 - is_health_related: false ONLY if the message has genuinely nothing to do with health, feelings, symptoms, or continuing this conversation (general trivia, unrelated requests, etc). A short reply like "yes"/"no"/"ok" while a symptom conversation is under way is ALWAYS health-related — never mark it false just because it's short.
 - is_emergency: true ONLY for presentations that genuinely warrant urgent, ER-level care right now — e.g. chest pain with breathlessness/sweating/palpitations, severe headache with vomiting, high fever together with confusion or a stiff neck, signs of a stroke (one-sided weakness, slurred speech, facial drooping), severe or uncontrolled bleeding, real difficulty breathing, suicidal ideation, unconsciousness/unresponsiveness, or a similarly severe combination the patient clearly describes. Ordinary, common symptom combinations — fever with chills and fatigue, mild dizziness with vomiting, a routine headache, general tiredness — are NOT emergencies by themselves, even together, unless a genuine red-flag from the list above is also present. Most patients you talk to will NOT be having an emergency. When unsure, prefer false — the app has a separate, less alarming way of flagging "this deserves a doctor visit soon" that doesn't require is_emergency, so there's no need to reach for true just because something sounds unwell or could theoretically turn serious.
-- matched_symptom_ids: ONLY ids from the vocabulary list above, and ONLY ones the PATIENT is CLEARLY, EXPLICITLY affirming about THEMSELVES in their current message. Map casual language onto the closest matching vocabulary id (e.g. "I feel dull/wiped out/no energy" -> fatigue) — but this is a mapping step, not a license to guess. If you are not confident the patient stated it, leave it out. NEVER include a symptom just because you (the assistant) asked about it in a previous turn and the patient's reply was unclear, off-topic, or about something else — an id only belongs here if the patient's own words support it. When genuinely unsure, do not include it — a missed symptom can be added next turn; a fabricated one cannot be un-shown once the patient sees it in the confirmation list.
+- matched_symptom_ids: ONLY ids from the vocabulary list above, and ONLY ones the PATIENT is CLEARLY, EXPLICITLY affirming about THEMSELVES in their CURRENT message. Map casual language onto the closest matching vocabulary id (e.g. "I feel dull/wiped out/no energy" -> fatigue) — but this is a mapping step, not a license to guess. If you are not confident the patient stated it, leave it out. NEVER include a symptom just because you (the assistant) asked about it in a previous turn and the patient's reply was unclear, off-topic, or about something else — an id only belongs here if the patient's own words support it. When genuinely unsure, do not include it — a missed symptom can be added next turn; a fabricated one cannot be un-shown once the patient sees it in the confirmation list.
+- IMPORTANT — do not resurrect closed topics: if the CURRENTLY TRACKED SYMPTOMS list above is empty, that means a prediction was already delivered for whatever was discussed earlier and that topic is CLOSED. Do not re-add a symptom into matched_symptom_ids just because it appears somewhere in the older chat history — only extract from what the patient is saying in their CURRENT message, right now. If the patient's current message is just a short reply ("no", "nothing else") and there is nothing new to extract, return empty matched_symptom_ids and a short, natural conversational reply (e.g. ask if there's anything else going on, or if they're doing okay) — do NOT set ready_for_confirmation to true with an empty or stale symptom list.
 - negated_symptom_ids: vocabulary ids the patient is explicitly denying or retracting in this message, whether or not they're currently tracked (e.g. "no headache", "not anymore", "actually I don't have that", "I never said I had fever").
 - unmatched_notes: any clinically relevant free-text detail, ABOUT THE PATIENT, that does NOT map onto a vocabulary id (e.g. "stays home a lot", "stressful week at work", sleep/appetite details) — short phrase, or empty string if nothing new. Do not put vocabulary-mappable symptoms here.
-- ready_for_confirmation: true once you have a reasonably complete picture — generally 2 or more tracked symptoms with any obviously-needed clarification (like fever severity, symptom duration) already given, OR the patient indicates they're done ("that's everything", "nothing else", "no other symptoms"). Do not wait indefinitely for a perfect picture — a compassionate intake nurse knows when to move forward. Never set this true if there are zero tracked symptoms.
-- reply: your natural, warm, BRIEF (1-2 sentences) response to the patient — either a relevant follow-up question if not ready_for_confirmation yet, or a brief acknowledgment if you are ready (the app will show a separate confirmation UI, so don't list out their symptoms yourself here). NEVER state or imply a diagnosis or ML prediction here — none has run yet. If is_health_related is false, still write a brief, kind redirect back to health topics as the reply. If the message was about something other than the patient's own health (an object, a joke, a third party), gently clarify you can only assess their own symptoms.
+- ready_for_confirmation: true once you have a reasonably complete picture — generally 2 or more NEWLY tracked symptoms this conversation, with any obviously-needed clarification (like fever severity, symptom duration) already given, OR the patient indicates they're done ("that's everything", "nothing else", "no other symptoms") AND there is at least one symptom to confirm. Do not wait indefinitely for a perfect picture — a compassionate intake nurse knows when to move forward. Never set this true if there are zero tracked symptoms (current + newly matched combined).
+- ANSWERING QUESTIONS ABOUT A PRIOR RESULT: if the patient is asking about, questioning, or wants to understand a prediction or disease name already shown earlier in this conversation (e.g. "can you tell me more about it", "how come it means I have X", "why do you think that", "are you sure") — this is NOT a new symptom-gathering turn. Do not deflect back into intake questions. Instead, treat it as is_health_related: true, matched_symptom_ids and negated_symptom_ids empty, ready_for_confirmation: false, and write a reply that actually answers using what's visible in the chat history (e.g. briefly explain the condition mentioned, or clarify that the ML model's suggestion is a possibility to discuss with a doctor, not a confirmed diagnosis) — genuinely engage with what they asked instead of redirecting to another intake question.
+- reply: your natural, warm, BRIEF (1-2 sentences) response to the patient — either a relevant follow-up question if not ready_for_confirmation yet, a direct answer if they asked about a prior result (see rule above), or a brief acknowledgment if you are ready (the app will show a separate confirmation UI, so don't list out their symptoms yourself here). NEVER state or imply a NEW diagnosis or ML prediction here that hasn't actually been run — you may reference/explain a prediction that's already visible in the chat history, but never invent a new one. If is_health_related is false, still write a brief, kind redirect back to health topics as the reply. If the message was about something other than the patient's own health (an object, a joke, a third party), gently clarify you can only assess their own symptoms.
 
 Patient name: ${userName}`;
 
@@ -221,18 +193,13 @@ Patient name: ${userName}`;
 
   try {
     const completion = await groq.chat.completions.create({
-      model:       'llama-3.1-8b-instant',
+      model:       'openai/gpt-oss-20b',
       messages:    [
         { role: 'system', content: systemPrompt },
         ...history,
         { role: 'user', content: userMessage }
       ],
       max_tokens:  350,
-      // Lowered from a "creative" range to as close to deterministic as
-      // this endpoint offers — this call extracts structured facts from
-      // what the patient said, it isn't creative writing, and a stray bit
-      // of sampling randomness is exactly what let it hallucinate a
-      // symptom ("high_fever") that was never mentioned in one real test.
       temperature: 0,
       response_format: { type: 'json_object' },
     });
@@ -262,11 +229,6 @@ Patient name: ${userName}`;
 module.exports = { getGroqResponse, isOffTopic, structurePrescription, analyzeSymptomTurn };
 
 // ── Prescription structuring ─────────────────────────────────────────────
-// Turns raw, error-prone OCR text from a prescription photo into a strict
-// JSON medicine list. Kept as its own narrow call (low temperature, no
-// chat history, JSON-only) rather than reusing getGroqResponse, because a
-// parsing failure here should never leak conversational text into a
-// medicine name/dosage field.
 async function structurePrescription(rawText) {
   if (!groq) return null;
 
@@ -300,7 +262,7 @@ ${rawText.slice(0, 4000)}
 
   try {
     const completion = await groq.chat.completions.create({
-      model:       'llama-3.1-8b-instant',
+      model:       'openai/gpt-oss-20b',
       messages:    [{ role: 'system', content: prompt }],
       max_tokens:  700,
       temperature: 0,
