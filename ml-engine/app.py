@@ -85,10 +85,18 @@ for _, row in prec_df.iterrows():
 SEVERITY_MAP = dict(zip(sev_df['Symptom'], sev_df['weight']))
 
 # ── NL Map ─────────────────────────────────────────────────────────────────────
+# Kept in sync with backend/routes/chat.js's NL_MAP by hand — same ids, same
+# "unspecified_fever" placeholder pattern for bare "fever" mentions. This
+# copy is only used as this endpoint's OWN fallback text extraction (see
+# extract_symptoms below), for calls where the Node backend didn't already
+# supply a trusted, explicit symptom list.
 NL_MAP = {
     'high fever': 'high_fever',    'mild fever': 'mild_fever',
-    'fever': 'high_fever',          'feverish': 'high_fever',
-    'feel hot': 'high_fever',       'high temperature': 'high_fever',
+    # Bare "fever" doesn't say how severe it is — map it to a placeholder
+    # that ISN'T a real dataset column, mirroring the Node side, so it can
+    # never be silently treated as high_fever.
+    'fever': 'unspecified_fever',   'feverish': 'unspecified_fever',
+    'feel hot': 'unspecified_fever', 'high temperature': 'high_fever',
     'cough': 'cough',               'coughing': 'cough',
     'dry cough': 'cough',           'mucus': 'mucoid_sputum',
     'phlegm': 'mucoid_sputum',
@@ -129,7 +137,9 @@ NL_MAP = {
     'joint pain': 'joint_pain',     'joints hurt': 'joint_pain',
     'muscle pain': 'muscle_pain',   'body ache': 'muscle_pain',
     'back pain': 'back_pain',       'lower back pain': 'back_pain',
-    'neck pain': 'neck_pain',       'knee pain': 'knee_pain',
+    'neck pain': 'neck_pain',       'stiff neck': 'stiff_neck',
+    'neck stiffness': 'stiff_neck',
+    'knee pain': 'knee_pain',
     'hip pain': 'hip_joint_pain',
     'runny nose': 'runny_nose',     'cold': 'runny_nose',
     'blocked nose': 'continuous_sneezing',
@@ -170,35 +180,55 @@ NL_MAP = {
     'skin peeling': 'skin_peeling', 'blisters': 'blister',
     'pus': 'pus_filled_pimples',    'pimples': 'pus_filled_pimples',
     'hair loss': 'brittle_nails',   'brittle nails': 'brittle_nails',
+    'confusion': 'altered_sensorium', 'confused': 'altered_sensorium',
+    'disoriented': 'altered_sensorium',
 }
 _SORTED_PHRASES = sorted(NL_MAP.keys(), key=len, reverse=True)
 
-def _contains_phrase(text_lower, phrase):
-    """Word-boundary match — 'pus' must not match inside 'campus'."""
-    return re.search(rf'\b{re.escape(phrase)}\b', text_lower) is not None
+# IDs that are internal placeholders, not real dataset columns — mirrors
+# NON_PICKABLE_SYMPTOM_IDS on the Node side. Never let one of these reach
+# the model as a "real" symptom.
+NON_PICKABLE_SYMPTOM_IDS = {'unspecified_fever'}
+
+_NEGATION_RE = re.compile(
+    r"\b(no|not|without|don'?t|doesn'?t|never|haven'?t)\b\s*([a-z]+\s*){0,3}$"
+)
 
 def extract_symptoms(text):
+    """
+    Negation-aware extraction, matching the logic in backend/routes/chat.js's
+    extractSymptomsWithNegation — a phrase preceded by "no"/"not"/"never" etc
+    within a short window is NOT added as a positive symptom. This function
+    is now ONLY the fallback path used when the caller didn't already supply
+    a trusted, explicit symptom list (see the "provided" handling in
+    /predict below) — it is never unioned on top of an explicit list.
+    """
     text_lower = text.lower()
     found = set()
     for phrase in _SORTED_PHRASES:
-        if _contains_phrase(text_lower, phrase):
+        for m in re.finditer(rf'\b{re.escape(phrase)}\b', text_lower):
+            context_before = text_lower[max(0, m.start() - 25):m.start()]
+            if _NEGATION_RE.search(context_before):
+                continue  # "not headache" — don't add it
             sym = NL_MAP[phrase]
-            if sym in ALL_SYMPTOMS:
+            if sym in ALL_SYMPTOMS or sym in NON_PICKABLE_SYMPTOM_IDS:
                 found.add(sym)
     for symptom in ALL_SYMPTOMS:
         readable = symptom.replace('_', ' ')
-        if _contains_phrase(text_lower, readable) or _contains_phrase(text_lower, symptom):
-            found.add(symptom)
+        for phrase in (readable, symptom):
+            m = re.search(rf'\b{re.escape(phrase)}\b', text_lower)
+            if m:
+                context_before = text_lower[max(0, m.start() - 25):m.start()]
+                if not _NEGATION_RE.search(context_before):
+                    found.add(symptom)
+                break
+    # unspecified_fever is a placeholder only — never send it to the model
+    found.discard('unspecified_fever')
     return list(found)
 
 # ── Input-quality guard ─────────────────────────────────────────────────────────
-# Short, focused messages ("fever and headache") are trusted even with one match.
-# Long, unrelated text (a pasted paragraph, an article, etc.) needs a much higher
-# ratio of recognized symptom terms before we treat it as a genuine symptom report
-# — this stops a stray coincidental match from driving a confident diagnosis out
-# of text that was never describing symptoms in the first place.
 _SHORT_TEXT_WORD_LIMIT = 40
-_MIN_SYMPTOM_DENSITY   = 0.03  # roughly 1 recognized term per ~33 words
+_MIN_SYMPTOM_DENSITY   = 0.03
 
 def is_genuine_symptom_text(text, matched_symptoms):
     word_count = len(text.split())
@@ -214,14 +244,6 @@ le = LabelEncoder()
 y_encoded = le.fit_transform(y)
 
 # ── Safe dropout augmentation ───────────────────────────────────────────────────
-# Root cause of 100% accuracy: each disease has only ONE unique symptom
-# pattern repeated ~120 times in the raw dataset, so train/test rows are
-# literally identical copies of each other - the model memorizes, not learns.
-#
-# Fix: simulate realistic incomplete symptom reporting by RANDOMLY REMOVING
-# symptoms a patient might not have mentioned. We NEVER add a symptom that
-# wasn't already present, so we can never create medically impossible
-# combinations (e.g. headache -> Paralysis, which happened with bit-flip noise).
 import random as _random
 
 def safe_dropout_augment(X, y, dropout_rate=0.2, copies=2, seed=42):
@@ -230,12 +252,12 @@ def safe_dropout_augment(X, y, dropout_rate=0.2, copies=2, seed=42):
     for i in range(len(X)):
         active_idx = [j for j, v in enumerate(X[i]) if v == 1]
         if len(active_idx) <= 2:
-            continue  # too sparse already, skip
+            continue
         for _ in range(copies):
             noisy = X[i].copy()
             for j in active_idx:
                 if rng.random() < dropout_rate:
-                    noisy[j] = 0  # only remove, never add
+                    noisy[j] = 0
             X_aug.append(noisy)
             y_aug.append(y[i])
     return np.array(X_aug, dtype=np.float32), np.array(y_aug)
@@ -376,24 +398,13 @@ def ocr():
     { "image": "data:<mime>;base64,..." } (or a bare base64 string with no
     data-URL prefix, in which case it's assumed to be an image). Returns
     { "text": "..." }.
-
-    PDF handling: prescriptions arrive either as a real, text-based PDF
-    (e.g. exported from a clinic's system) or as a scan/photo saved as a
-    PDF. We try the cheap, accurate path first — pulling embedded text
-    directly via PyMuPDF — and only fall back to rendering each page to an
-    image and running Tesseract on it if that yields next to nothing
-    (the signature of a scanned/image-only PDF).
     """
     data = request.get_json(silent=True) or {}
     file_field = data.get('image', '')
     if not file_field:
         return jsonify({"error": "no_image", "message": "No file provided."}), 400
 
-    # Detect a PDF from its data-URL mime prefix. A bare base64 string with
-    # no prefix is assumed to be an image, matching the previous behaviour.
     is_pdf = file_field.startswith('data:application/pdf')
-
-    # Strip a "data:<mime>;base64," style prefix if present.
     b64_data = file_field.split(',', 1)[1] if ',' in file_field else file_field
 
     try:
@@ -415,18 +426,6 @@ def ocr():
 
 
 def _extract_pdf_text(file_bytes, min_chars_per_page=20, max_pages=10):
-    """
-    Text-first, OCR-fallback PDF reading.
-
-    - Opens the PDF with PyMuPDF and tries direct text extraction per page
-      (fast, exact — works for any PDF that has a real text layer).
-    - Any page whose direct-extracted text is suspiciously short (under
-      min_chars_per_page) is treated as image-only and re-read by
-      rendering that page to a bitmap and running Tesseract on it.
-    - Capped at max_pages: prescriptions are almost always 1-2 pages, and
-      capping bounds both response time and memory use against someone
-      accidentally uploading an unrelated, much longer PDF.
-    """
     doc = fitz.open(stream=file_bytes, filetype="pdf")
     pages_text = []
 
@@ -438,9 +437,6 @@ def _extract_pdf_text(file_bytes, min_chars_per_page=20, max_pages=10):
             pages_text.append(direct_text)
             continue
 
-        # Fall back to OCR for this page: render at 2x zoom for a sharper
-        # image than the PDF's default page resolution, which noticeably
-        # helps Tesseract's accuracy on scanned documents.
         pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
         img = Image.open(io.BytesIO(pix.tobytes("png")))
         ocr_text = pytesseract.image_to_string(img).strip()
@@ -456,21 +452,29 @@ def predict():
     text_input   = data.get('text', '')
     symptom_list = data.get('symptoms', [])
 
-    ml_symptoms = extract_symptoms(text_input) if text_input else []
-
-    # Discard free-text matches if the message doesn't look like a genuine
-    # symptom report (e.g. a long unrelated paragraph that happened to
-    # contain a coincidental match). Explicitly provided symptoms (from a
-    # structured picker, not free text) are never affected by this.
-    if text_input and ml_symptoms and not is_genuine_symptom_text(text_input, ml_symptoms):
-        ml_symptoms = []
-
     provided = [
         s.strip().lower().replace(' ', '_')
         for s in symptom_list
         if s.strip().lower().replace(' ', '_') in ALL_SYMPTOMS
     ]
-    symptoms = list(set(ml_symptoms + provided))
+
+    if provided:
+        # The caller (chat.js) already resolved negation and multi-turn
+        # context ("I had a headache, but not anymore") into this list —
+        # trust it EXCLUSIVELY rather than re-deriving from raw text_input
+        # and unioning the two together. Unioning was the actual bug: it
+        # silently re-added anything the caller had deliberately excluded
+        # (e.g. a symptom the patient explicitly denied earlier in the
+        # conversation) purely because the word still appeared somewhere
+        # in the raw conversation text passed along for ML context.
+        symptoms = provided
+    else:
+        # No structured symptom list — e.g. a direct free-text-only call.
+        # Fall back to this endpoint's own negation-aware extraction.
+        ml_symptoms = extract_symptoms(text_input) if text_input else []
+        if text_input and ml_symptoms and not is_genuine_symptom_text(text_input, ml_symptoms):
+            ml_symptoms = []
+        symptoms = ml_symptoms
 
     if not symptoms:
         return jsonify({
@@ -509,16 +513,11 @@ def predict():
         if confidence < 1.0:
             continue
 
-        # ── Symptom overlap filter ─────────────────────────────────────────
-        # Only include prediction if at least 1 user symptom
-        # actually belongs to this disease in the dataset
         known_syms = DISEASE_SYMPTOMS.get(disease, set())
         overlap    = len(user_symptom_set & known_syms)
-        # Require at least 2 matching symptoms to prevent wrong predictions
-        # e.g. headache alone should not predict Brain Hemorrhage or AIDS
         min_overlap = 2 if len(user_symptom_set) >= 3 else 1
         if overlap < min_overlap:
-            continue  # skip medically irrelevant predictions
+            continue
 
         agreement = sum(1 for p in individual if p == disease)
         predictions.append({
