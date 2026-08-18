@@ -71,8 +71,9 @@ ${mlPrediction
         ...history,
         { role: 'user', content: userMessage }
       ],
-      max_tokens:  90,
+      max_tokens:  250,
       temperature: 0.7,
+      reasoning_effort: 'low', // gpt-oss models always spend tokens "thinking" first — curb it, since this call just needs a short reply, not deep reasoning
     });
 
     const response = completion.choices[0]?.message?.content?.trim() || null;
@@ -126,8 +127,9 @@ ${recentContext || '(no prior messages)'}`;
         { role: 'system', content: classifierPrompt },
         { role: 'user', content: userMessage },
       ],
-      max_tokens: 3,
+      max_tokens: 100,
       temperature: 0,
+      reasoning_effort: 'low', // was 3 tokens total under the old non-reasoning model — gpt-oss needs real headroom for its reasoning pass before it can even emit YES/NO
     });
     const answer = (completion.choices[0]?.message?.content || '').trim().toUpperCase();
     return answer.startsWith('NO');
@@ -199,8 +201,9 @@ Patient name: ${userName}`;
         ...history,
         { role: 'user', content: userMessage }
       ],
-      max_tokens:  350,
+      max_tokens:  900,
       temperature: 0,
+      reasoning_effort: 'low', // curb reasoning-token spend so the actual JSON has room to complete within the budget
       response_format: { type: 'json_object' },
     });
 
@@ -264,8 +267,9 @@ ${rawText.slice(0, 4000)}
     const completion = await groq.chat.completions.create({
       model:       'openai/gpt-oss-20b',
       messages:    [{ role: 'system', content: prompt }],
-      max_tokens:  700,
+      max_tokens:  1500,
       temperature: 0,
+      reasoning_effort: 'low', // curb reasoning-token spend so there's room left for the actual medicine-list JSON
     });
 
     const raw = completion.choices[0]?.message?.content?.trim() || '';
