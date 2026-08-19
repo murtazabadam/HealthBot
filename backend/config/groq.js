@@ -196,7 +196,7 @@ Patient name: ${userName}`;
 
   try {
     const completion = await groq.chat.completions.create({
-      model:       'openai/gpt-oss-20b',
+      model:       'openai/gpt-oss-120b', // separate daily quota pool from gpt-oss-20b — this is the highest-traffic call, so it gets its own budget instead of competing with getGroqResponse/isOffTopic/structurePrescription
       messages:    [
         { role: 'system', content: systemPrompt },
         ...history,
@@ -253,7 +253,11 @@ Patient name: ${userName}`;
       reply: typeof parsed.reply === 'string' && parsed.reply.trim() ? parsed.reply.trim() : null,
     };
   } catch (err) {
-    console.error('analyzeSymptomTurn failed:', err.message);
+    if (err.status === 429 || err.message?.includes('rate_limit_exceeded')) {
+      console.error('analyzeSymptomTurn hit daily rate limit:', err.message);
+    } else {
+      console.error('analyzeSymptomTurn failed:', err.message);
+    }
     return null;
   }
 }
