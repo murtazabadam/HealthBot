@@ -201,10 +201,38 @@ Patient name: ${userName}`;
         ...history,
         { role: 'user', content: userMessage }
       ],
-      max_tokens:  900,
+      max_tokens:  2000, // gpt-oss spends real tokens on its reasoning pass even at 'low' effort; 900 was cutting the JSON off mid-object on longer turns
       temperature: 0,
-      reasoning_effort: 'low', // curb reasoning-token spend so the actual JSON has room to complete within the budget
-      response_format: { type: 'json_object' },
+      reasoning_effort: 'low',
+      response_format: {
+        type: 'json_schema',
+        json_schema: {
+          name: 'symptom_turn',
+          strict: true,
+          schema: {
+            type: 'object',
+            properties: {
+              is_health_related: { type: 'boolean' },
+              is_emergency: { type: 'boolean' },
+              matched_symptom_ids: { type: 'array', items: { type: 'string' } },
+              negated_symptom_ids: { type: 'array', items: { type: 'string' } },
+              unmatched_notes: { type: 'string' },
+              ready_for_confirmation: { type: 'boolean' },
+              reply: { type: 'string' },
+            },
+            required: [
+              'is_health_related',
+              'is_emergency',
+              'matched_symptom_ids',
+              'negated_symptom_ids',
+              'unmatched_notes',
+              'ready_for_confirmation',
+              'reply',
+            ],
+            additionalProperties: false,
+          },
+        },
+      },
     });
 
     const raw = completion.choices[0]?.message?.content?.trim() || '';
