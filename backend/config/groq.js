@@ -1,38 +1,119 @@
-const Groq = require('groq-sdk');
+// ── Multi-provider AI layer with free-tier fallback ─────────────────────
+// Groq's free tier caps at ~200k tokens/day PER MODEL. Once that's hit,
+// every call 429s until the daily reset. Rather than the whole chatbot
+// going down, this tries providers in order and falls through to the
+// next one on a rate-limit or error — each provider draws from a totally
+// separate free quota pool, so exhausting Groq doesn't touch Mistral's.
+//
+// All three are OpenAI-compatible REST APIs, so one generic caller works
+// for all of them — no separate SDKs needed.
+const axios = require('axios');
 
-const responseCache = new Map();
-const CACHE_MAX     = 100;
+const PROVIDERS = [
+  {
+    name: 'groq',
+    envKey: 'GROQ_API_KEY',
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    bigModel: 'openai/gpt-oss-120b',
+    smallModel: 'openai/gpt-oss-20b',
+    supportsJsonMode: true,
+  },
+  {
+    name: 'mistral',
+    envKey: 'MISTRAL_API_KEY',
+    url: 'https://api.mistral.ai/v1/chat/completions',
+    bigModel: 'mistral-small-latest',
+    smallModel: 'mistral-small-latest',
+    supportsJsonMode: true,
+  },
+  {
+    name: 'openrouter',
+    envKey: 'OPENROUTER_API_KEY',
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    bigModel: 'meta-llama/llama-3.3-70b-instruct:free',
+    smallModel: 'meta-llama/llama-3.3-70b-instruct:free',
+    supportsJsonMode: false, // free-routed models don't reliably honor response_format
+    extraHeaders: {
+      'HTTP-Referer': 'https://healthbotsc.vercel.app',
+      'X-Title': 'HealthBot',
+    },
+  },
+];
 
-let groq = null;
-
-function initGroq() {
-  const key = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY;
-  if (!key) {
-    console.log('AI: No API key — ML-only mode');
-    return false;
-  }
-  try {
-    groq = new Groq({ apiKey: key });
-    console.log('Groq AI ready! Model: openai/gpt-oss-20b');
-    return true;
-  } catch (err) {
-    console.error('Groq init error:', err.message);
-    return false;
-  }
+function configuredProviders() {
+  return PROVIDERS.filter(p => !!process.env[p.envKey]);
 }
 
-initGroq();
+function logReadyProviders() {
+  const ready = configuredProviders().map(p => p.name);
+  if (ready.length === 0) {
+    console.log('AI: No provider API keys set — ML-only mode');
+  } else {
+    console.log(`AI ready! Provider fallback chain: ${ready.join(' -> ')}`);
+  }
+}
+logReadyProviders();
+
+// Tries each configured provider in order. Returns the raw text content,
+// or null if every provider failed (caller must fall back to the
+// deterministic keyword pipeline in that case).
+async function callWithFallback({ messages, maxTokens, temperature = 0, useBigModel = true, jsonMode = false }) {
+  const providers = configuredProviders();
+  if (providers.length === 0) return null;
+
+  for (const provider of providers) {
+    const key = process.env[provider.envKey];
+    const model = useBigModel ? provider.bigModel : provider.smallModel;
+
+    try {
+      const payload = { model, messages, max_tokens: maxTokens, temperature };
+      if (jsonMode && provider.supportsJsonMode) {
+        payload.response_format = { type: 'json_object' };
+      }
+
+      const res = await axios.post(provider.url, payload, {
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          ...(provider.extraHeaders || {}),
+        },
+        timeout: 25000,
+      });
+
+      const content = res.data?.choices?.[0]?.message?.content?.trim();
+      if (content) {
+        console.log(`AI (${provider.name}/${model}): SUCCESS`);
+        return content;
+      }
+      console.warn(`AI (${provider.name}): empty response, trying next provider...`);
+    } catch (err) {
+      const status = err.response?.status;
+      const apiMsg = err.response?.data?.error?.message || err.message;
+      if (status === 429) {
+        console.warn(`AI (${provider.name}): rate-limited, trying next provider...`);
+      } else {
+        console.error(`AI (${provider.name}) error:`, apiMsg);
+      }
+      // fall through to next provider
+    }
+  }
+
+  console.error('AI: all providers exhausted or failed for this call');
+  return null;
+}
+
+// ── Conversational reply ─────────────────────────────────────────────────
+const responseCache = new Map();
+const CACHE_MAX = 100;
 
 async function getGroqResponse(userMessage, mlPrediction, userName, chatHistory = []) {
-  if (!groq) return null;
-
   const cacheKey = `${userMessage.toLowerCase().trim()}_${mlPrediction || 'none'}`;
   if (responseCache.has(cacheKey)) {
     console.log('AI: Cache hit');
     return responseCache.get(cacheKey);
   }
 
-  const isFollowUp  = !mlPrediction && chatHistory.length > 0;
+  const isFollowUp = !mlPrediction && chatHistory.length > 0;
   const systemPrompt = `You are HealthBot, a compassionate AI medical assistant. You have memory of this full conversation.
 
 STRICT RULES:
@@ -57,48 +138,31 @@ ${mlPrediction
       ? 'Patient is continuing the conversation — use chat history for full context. No ML prediction has been run yet.'
       : 'No ML prediction yet — ask patient to describe symptoms'}`;
 
-  // Build history — keep last 8 messages for context
   const history = chatHistory.slice(-8).map(msg => ({
-    role:    msg.sender === 'user' ? 'user' : 'assistant',
-    content: msg.text.substring(0, 500)
+    role: msg.sender === 'user' ? 'user' : 'assistant',
+    content: msg.text.substring(0, 500),
   }));
 
-  try {
-    console.log('Calling Groq AI...');
-    const completion = await groq.chat.completions.create({
-      model:       'openai/gpt-oss-20b',
-      messages:    [
-        { role: 'system', content: systemPrompt },
-        ...history,
-        { role: 'user', content: userMessage }
-      ],
-      max_tokens:  250,
-      temperature: 0.7,
-      reasoning_effort: 'low', // gpt-oss models always spend tokens "thinking" first — curb it, since this call just needs a short reply, not deep reasoning
-    });
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...history,
+    { role: 'user', content: userMessage },
+  ];
 
-    const response = completion.choices[0]?.message?.content?.trim() || null;
-    console.log('Groq:', response ? 'SUCCESS' : 'NULL response');
+  console.log('Calling AI (conversation)...');
+  const response = await callWithFallback({ messages, maxTokens: 90, temperature: 0.7, useBigModel: false });
 
-    if (response) {
-      if (responseCache.size >= CACHE_MAX) {
-        responseCache.delete(responseCache.keys().next().value);
-      }
-      // Only cache symptom messages — not conversational ones
-      if (mlPrediction) responseCache.set(cacheKey, response);
+  if (response) {
+    if (responseCache.size >= CACHE_MAX) {
+      responseCache.delete(responseCache.keys().next().value);
     }
-    return response;
-
-  } catch (err) {
-    console.error('Groq error:', err.message);
-    return null;
+    if (mlPrediction) responseCache.set(cacheKey, response);
   }
+  return response;
 }
 
 // ── Off-topic gate ───────────────────────────────────────────────────────
 async function isOffTopic(userMessage, chatHistory = []) {
-  if (!groq) return false; // fail open — never block the user if AI is unavailable
-
   const recentContext = chatHistory
     .slice(-4)
     .map(m => `${m.sender}: ${m.text}`)
@@ -121,23 +185,14 @@ Reply with exactly one word: YES or NO. Nothing else — no punctuation, no expl
 Recent conversation for context:
 ${recentContext || '(no prior messages)'}`;
 
-  try {
-    const completion = await groq.chat.completions.create({
-      model: 'openai/gpt-oss-20b',
-      messages: [
-        { role: 'system', content: classifierPrompt },
-        { role: 'user', content: userMessage },
-      ],
-      max_tokens: 100,
-      temperature: 0,
-      reasoning_effort: 'low', // was 3 tokens total under the old non-reasoning model — gpt-oss needs real headroom for its reasoning pass before it can even emit YES/NO
-    });
-    const answer = (completion.choices[0]?.message?.content || '').trim().toUpperCase();
-    return answer.startsWith('NO');
-  } catch (err) {
-    console.error('Off-topic classification failed:', err.message);
-    return false; // fail open — a classifier error should never block a real user
-  }
+  const messages = [
+    { role: 'system', content: classifierPrompt },
+    { role: 'user', content: userMessage },
+  ];
+
+  const answer = await callWithFallback({ messages, maxTokens: 3, temperature: 0, useBigModel: false });
+  if (answer === null) return false; // fail open — never block a real user if every provider is down
+  return answer.trim().toUpperCase().startsWith('NO');
 }
 
 // ── Unified symptom-conversation turn analysis ──────────────────────────
@@ -149,12 +204,8 @@ async function analyzeSymptomTurn({
   chatHistory = [],
   knownSymptoms = [],
 }) {
-  if (!groq) return null;
-
   const vocabList = knownSymptoms.map(s => `${s.id} (${s.label})`).join(', ');
-  const activeList = activeSymptoms.length
-    ? activeSymptoms.join(', ')
-    : '(none yet)';
+  const activeList = activeSymptoms.length ? activeSymptoms.join(', ') : '(none yet)';
 
   const systemPrompt = `You are a careful, compassionate AI intake nurse for a symptom-checking chatbot. You are having a natural, flowing conversation with a patient to build up a picture of their symptoms before an ML model predicts a likely condition.
 
@@ -178,70 +229,36 @@ Read the patient's LATEST message (given as the user turn below, with recent cha
 RULES:
 - The patient is the ONLY person whose health this conversation is about. If a message describes something/someone else — an object, a pet, another person, a joke, a hypothetical — do NOT extract any symptom from it, even if the wording resembles a symptom description. Set matched_symptom_ids to an empty list for that part, and gently clarify in your reply that you're asking about their own health.
 - is_health_related: false ONLY if the message has genuinely nothing to do with health, feelings, symptoms, or continuing this conversation (general trivia, unrelated requests, etc). A short reply like "yes"/"no"/"ok" while a symptom conversation is under way is ALWAYS health-related — never mark it false just because it's short.
-- is_emergency: true ONLY for presentations that genuinely warrant urgent, ER-level care right now — e.g. chest pain with breathlessness/sweating/palpitations, severe headache with vomiting, high fever together with confusion or a stiff neck, signs of a stroke (one-sided weakness, slurred speech, facial drooping), severe or uncontrolled bleeding, real difficulty breathing, suicidal ideation, unconsciousness/unresponsiveness, or a similarly severe combination the patient clearly describes. Ordinary, common symptom combinations — fever with chills and fatigue, mild dizziness with vomiting, a routine headache, general tiredness — are NOT emergencies by themselves, even together, unless a genuine red-flag from the list above is also present. Most patients you talk to will NOT be having an emergency. When unsure, prefer false — the app has a separate, less alarming way of flagging "this deserves a doctor visit soon" that doesn't require is_emergency, so there's no need to reach for true just because something sounds unwell or could theoretically turn serious.
-- matched_symptom_ids: ONLY ids from the vocabulary list above, and ONLY ones the PATIENT is CLEARLY, EXPLICITLY affirming about THEMSELVES in their CURRENT message. Map casual language onto the closest matching vocabulary id (e.g. "I feel dull/wiped out/no energy" -> fatigue) — but this is a mapping step, not a license to guess. If you are not confident the patient stated it, leave it out. NEVER include a symptom just because you (the assistant) asked about it in a previous turn and the patient's reply was unclear, off-topic, or about something else — an id only belongs here if the patient's own words support it. When genuinely unsure, do not include it — a missed symptom can be added next turn; a fabricated one cannot be un-shown once the patient sees it in the confirmation list.
-- IMPORTANT — do not resurrect closed topics: if the CURRENTLY TRACKED SYMPTOMS list above is empty, that means a prediction was already delivered for whatever was discussed earlier and that topic is CLOSED. Do not re-add a symptom into matched_symptom_ids just because it appears somewhere in the older chat history — only extract from what the patient is saying in their CURRENT message, right now. If the patient's current message is just a short reply ("no", "nothing else") and there is nothing new to extract, return empty matched_symptom_ids and a short, natural conversational reply (e.g. ask if there's anything else going on, or if they're doing okay) — do NOT set ready_for_confirmation to true with an empty or stale symptom list.
-- negated_symptom_ids: vocabulary ids the patient is explicitly denying or retracting in this message, whether or not they're currently tracked (e.g. "no headache", "not anymore", "actually I don't have that", "I never said I had fever").
-- unmatched_notes: any clinically relevant free-text detail, ABOUT THE PATIENT, that does NOT map onto a vocabulary id (e.g. "stays home a lot", "stressful week at work", sleep/appetite details) — short phrase, or empty string if nothing new. Do not put vocabulary-mappable symptoms here.
-- ready_for_confirmation: true once you have a reasonably complete picture — generally 2 or more NEWLY tracked symptoms this conversation, with any obviously-needed clarification (like fever severity, symptom duration) already given, OR the patient indicates they're done ("that's everything", "nothing else", "no other symptoms") AND there is at least one symptom to confirm. Do not wait indefinitely for a perfect picture — a compassionate intake nurse knows when to move forward. Never set this true if there are zero tracked symptoms (current + newly matched combined).
-- ANSWERING QUESTIONS ABOUT A PRIOR RESULT: if the patient is asking about, questioning, or wants to understand a prediction or disease name already shown earlier in this conversation (e.g. "can you tell me more about it", "how come it means I have X", "why do you think that", "are you sure") — this is NOT a new symptom-gathering turn. Do not deflect back into intake questions. Instead, treat it as is_health_related: true, matched_symptom_ids and negated_symptom_ids empty, ready_for_confirmation: false, and write a reply that actually answers using what's visible in the chat history (e.g. briefly explain the condition mentioned, or clarify that the ML model's suggestion is a possibility to discuss with a doctor, not a confirmed diagnosis) — genuinely engage with what they asked instead of redirecting to another intake question.
-- reply: your natural, warm, BRIEF (1-2 sentences) response to the patient — either a relevant follow-up question if not ready_for_confirmation yet, a direct answer if they asked about a prior result (see rule above), or a brief acknowledgment if you are ready (the app will show a separate confirmation UI, so don't list out their symptoms yourself here). NEVER state or imply a NEW diagnosis or ML prediction here that hasn't actually been run — you may reference/explain a prediction that's already visible in the chat history, but never invent a new one. If is_health_related is false, still write a brief, kind redirect back to health topics as the reply. If the message was about something other than the patient's own health (an object, a joke, a third party), gently clarify you can only assess their own symptoms.
+- is_emergency: true ONLY for presentations that genuinely warrant urgent, ER-level care right now — e.g. chest pain with breathlessness/sweating/palpitations, severe headache with vomiting, high fever together with confusion or a stiff neck, signs of a stroke (one-sided weakness, slurred speech, facial drooping), severe or uncontrolled bleeding, real difficulty breathing, suicidal ideation, unconsciousness/unresponsiveness, or a similarly severe combination the patient clearly describes. Ordinary, common symptom combinations — fever with chills and fatigue, mild dizziness with vomiting, a routine headache, general tiredness — are NOT emergencies by themselves, even together, unless a genuine red-flag from the list above is also present. When unsure, prefer false.
+- matched_symptom_ids: ONLY ids from the vocabulary list above, and ONLY ones the PATIENT is CLEARLY, EXPLICITLY affirming about THEMSELVES in their current message. Map casual language onto the closest matching vocabulary id (e.g. "I feel dull/wiped out/no energy" -> fatigue). If not confident, leave it out.
+- negated_symptom_ids: vocabulary ids the patient is explicitly denying or retracting in this message, whether or not they're currently tracked.
+- unmatched_notes: any clinically relevant free-text detail, ABOUT THE PATIENT, that does NOT map onto a vocabulary id — short phrase, or empty string if nothing new.
+- ready_for_confirmation: true once you have a reasonably complete picture — generally 2 or more tracked symptoms with obviously-needed clarification given, OR the patient indicates they're done. Never true if zero tracked symptoms.
+- reply: your natural, warm, BRIEF (1-2 sentences) response to the patient. NEVER state or imply a diagnosis or ML prediction here — none has run yet. If is_health_related is false, still write a brief, kind redirect back to health topics. If the message was about something other than the patient's own health, gently clarify you can only assess their own symptoms.
+- CRITICAL — NEVER FABRICATE ANYTHING: you have no tools, cannot book appointments, cannot call anyone, cannot access any live portal/database, and cannot look up real phone numbers, addresses, or reference numbers. If the patient asks for something like that, your reply must plainly say you can't do that, not invent an answer.
 
 Patient name: ${userName}`;
 
   const history = chatHistory.slice(-10).map(msg => ({
-    role:    msg.sender === 'user' ? 'user' : 'assistant',
-    content: msg.text.substring(0, 500)
+    role: msg.sender === 'user' ? 'user' : 'assistant',
+    content: msg.text.substring(0, 500),
   }));
 
-  try {
-    const completion = await groq.chat.completions.create({
-      model:       'openai/gpt-oss-120b', // separate daily quota pool from gpt-oss-20b — this is the highest-traffic call, so it gets its own budget instead of competing with getGroqResponse/isOffTopic/structurePrescription
-      messages:    [
-        { role: 'system', content: systemPrompt },
-        ...history,
-        { role: 'user', content: userMessage }
-      ],
-      max_tokens:  2000, // gpt-oss spends real tokens on its reasoning pass even at 'low' effort; 900 was cutting the JSON off mid-object on longer turns
-      temperature: 0,
-      reasoning_effort: 'low',
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'symptom_turn',
-          strict: true,
-          schema: {
-            type: 'object',
-            properties: {
-              is_health_related: { type: 'boolean' },
-              is_emergency: { type: 'boolean' },
-              matched_symptom_ids: { type: 'array', items: { type: 'string' } },
-              negated_symptom_ids: { type: 'array', items: { type: 'string' } },
-              unmatched_notes: { type: 'string' },
-              ready_for_confirmation: { type: 'boolean' },
-              reply: { type: 'string' },
-            },
-            required: [
-              'is_health_related',
-              'is_emergency',
-              'matched_symptom_ids',
-              'negated_symptom_ids',
-              'unmatched_notes',
-              'ready_for_confirmation',
-              'reply',
-            ],
-            additionalProperties: false,
-          },
-        },
-      },
-    });
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    ...history,
+    { role: 'user', content: userMessage },
+  ];
 
-    const raw = completion.choices[0]?.message?.content?.trim() || '';
-    const parsed = JSON.parse(raw);
+  const raw = await callWithFallback({ messages, maxTokens: 2000, temperature: 0, useBigModel: true, jsonMode: true });
+  if (!raw) return null;
+
+  try {
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(cleaned);
 
     const knownIds = new Set(knownSymptoms.map(s => s.id));
-    const cleanIds = (arr) =>
-      Array.isArray(arr) ? arr.filter(id => knownIds.has(id)) : [];
+    const cleanIds = (arr) => (Array.isArray(arr) ? arr.filter(id => knownIds.has(id)) : []);
 
     return {
       is_health_related: parsed.is_health_related !== false,
@@ -253,21 +270,13 @@ Patient name: ${userName}`;
       reply: typeof parsed.reply === 'string' && parsed.reply.trim() ? parsed.reply.trim() : null,
     };
   } catch (err) {
-    if (err.status === 429 || err.message?.includes('rate_limit_exceeded')) {
-      console.error('analyzeSymptomTurn hit daily rate limit:', err.message);
-    } else {
-      console.error('analyzeSymptomTurn failed:', err.message);
-    }
+    console.error('analyzeSymptomTurn: failed to parse JSON:', err.message);
     return null;
   }
 }
 
-module.exports = { getGroqResponse, isOffTopic, structurePrescription, analyzeSymptomTurn };
-
 // ── Prescription structuring ─────────────────────────────────────────────
 async function structurePrescription(rawText) {
-  if (!groq) return null;
-
   const prompt = `You are a medical prescription parser. Below is raw OCR text extracted from a photo of a doctor's prescription. It will contain OCR noise: garbled characters, misread words, stray symbols, and irrelevant boilerplate (clinic letterhead, signatures, etc).
 
 Extract ONLY medicines you can identify with reasonable confidence. Return STRICT JSON and nothing else — no markdown, no commentary — in exactly this shape:
@@ -296,25 +305,21 @@ OCR TEXT:
 ${rawText.slice(0, 4000)}
 """`;
 
-  try {
-    const completion = await groq.chat.completions.create({
-      model:       'openai/gpt-oss-20b',
-      messages:    [{ role: 'system', content: prompt }],
-      max_tokens:  1500,
-      temperature: 0,
-      reasoning_effort: 'low', // curb reasoning-token spend so there's room left for the actual medicine-list JSON
-    });
+  const messages = [{ role: 'system', content: prompt }];
+  const raw = await callWithFallback({ messages, maxTokens: 700, temperature: 0, useBigModel: false, jsonMode: true });
+  if (!raw) return null;
 
-    const raw = completion.choices[0]?.message?.content?.trim() || '';
+  try {
     const cleaned = raw.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(cleaned);
-
     if (!Array.isArray(parsed.medicines)) parsed.medicines = [];
     parsed.doctorName = parsed.doctorName || '';
-    parsed.notes       = parsed.notes || '';
+    parsed.notes = parsed.notes || '';
     return parsed;
   } catch (err) {
     console.error('Prescription structuring failed:', err.message);
     return null;
   }
 }
+
+module.exports = { getGroqResponse, isOffTopic, structurePrescription, analyzeSymptomTurn };
