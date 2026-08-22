@@ -801,12 +801,13 @@ router.post("/notify-emergency", auth, async (req, res) => {
 
     const smsMessage =
       `HealthBot Emergency Alert: ${user.name} may need immediate help.` +
+      (user.phoneNumber ? ` Their phone: ${user.phoneNumber}.` : "") +
       (mapsUrl ? ` Location: ${mapsUrl}` : "") +
       ` Please try to reach them now.`;
 
     const [emailSent, smsSent] = await Promise.all([
       contactEmail
-        ? sendEmergencyAlertEmail(contactEmail, contactName, user.name, mapsUrl)
+        ? sendEmergencyAlertEmail(contactEmail, contactName, user.name, mapsUrl, user.phoneNumber)
         : Promise.resolve(false),
       contactPhone ? sendSMS(contactPhone, smsMessage) : Promise.resolve(false),
     ]);
