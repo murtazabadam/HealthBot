@@ -47,9 +47,10 @@ async function sendOTPEmail(toEmail, toName, otp, type = 'verification') {
 }
 
 // ── Emergency alert email ────────────────────────────────────────────────────
-async function sendEmergencyAlertEmail(toEmail, contactName, userName, mapsUrl) {
+async function sendEmergencyAlertEmail(toEmail, contactName, userName, mapsUrl, userPhone) {
   const subject = `URGENT: ${userName} may need help — HealthBot Emergency Alert`;
-  const body = `Hi ${contactName || 'there'},\n\n${userName} triggered an emergency alert on HealthBot and may need immediate help.\n\n${mapsUrl ? `Their location: ${mapsUrl}\n\n` : ''}Please try to reach them right away, and contact emergency services if you cannot.\n\n— HealthBot`;
+  const phoneLine = userPhone ? `Their phone number: ${userPhone}\n\n` : '';
+  const body = `Hi ${contactName || 'there'},\n\n${userName} triggered an emergency alert on HealthBot and may need immediate help.\n\n${phoneLine}${mapsUrl ? `Their location: ${mapsUrl}\n\n` : ''}Please call them right away. If you cannot reach them, contact local emergency services immediately.\n\n— HealthBot`;
 
   try {
     await axios.post(
@@ -66,9 +67,10 @@ async function sendEmergencyAlertEmail(toEmail, contactName, userName, mapsUrl) 
               <p style="margin:0;font-size:16px;"><strong>${userName}</strong> may need immediate help.</p>
             </div>
             <p>Hi ${contactName || 'there'},</p>
-            <p>${userName} triggered an emergency alert on HealthBot. Please try to reach them right away.</p>
+            <p>${userName} triggered an emergency alert on HealthBot. Please call them right away — every minute counts.</p>
+            ${userPhone ? `<p style="margin:16px 0;"><a href="tel:${userPhone}" style="display:inline-block;background:#dc2626;color:#fff;font-weight:bold;padding:12px 20px;border-radius:8px;text-decoration:none;">📞 Call ${userName}: ${userPhone}</a></p>` : ''}
             ${mapsUrl ? `<p><a href="${mapsUrl}" style="color:#0d9488;font-weight:bold;">View their location on Google Maps</a></p>` : ''}
-            <p style="color:#888;font-size:12px;margin-top:20px;">If you cannot reach them, please contact local emergency services.</p>
+            <p style="color:#888;font-size:12px;margin-top:20px;">If you cannot reach them, please contact local emergency services (108) immediately.</p>
           </div>
         `,
       },
