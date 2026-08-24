@@ -49,13 +49,35 @@ const GOOGLE_TYPE_LABELS = {
   doctor: "Doctor",
 };
 
-// Tried in order; first one that responds successfully wins. All three are
-// free, public Overpass instances — no API key or account needed for any.
+// Tried in order; first one that responds successfully wins. All are free,
+// public Overpass instances — no API key or account needed for any. Five
+// mirrors instead of three: the public network occasionally has multiple
+// mirrors degraded at once (shared community infrastructure, no SLA), so
+// more independent attempts meaningfully reduces the odds of a total outage.
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.openstreetmap.ru/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
 ];
+
+// Simple in-memory cache, keyed by location rounded to ~1.1km. Two jobs:
+//  1. Avoid hammering the free public mirrors with repeat lookups for the
+//     same area within a short window.
+//  2. Resilience: if every live source fails on a later request (e.g. the
+//     public Overpass network is having a bad day), serve the last known
+//     good result for that area instead of a hard failure, as long as it
+//     isn't too old. Resets on server restart — acceptable for a
+//     student-project deployment; would need a DB-backed cache to persist
+//     across restarts.
+const FACILITY_CACHE = new Map();
+const CACHE_FRESH_MS = 60 * 60 * 1000; // serve straight from cache
+const CACHE_STALE_MAX_MS = 24 * 60 * 60 * 1000; // fallback ceiling on failure
+
+function cacheKeyFor(latitude, longitude) {
+  return `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+}
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -343,6 +365,14 @@ function mergeFacilitySources(osmFacilities, googleFacilities) {
 // source with a real result — that must surface as a failure, not as a
 // silent "found nothing nearby".
 async function findNearbyFacilities(latitude, longitude) {
+  const key = cacheKeyFor(latitude, longitude);
+  const cached = FACILITY_CACHE.get(key);
+
+  if (cached && Date.now() - cached.time < CACHE_FRESH_MS) {
+    console.log(`Facility lookup: serving fresh cache for ${key}`);
+    return cached.data;
+  }
+
   const googleConfigured = Boolean(GOOGLE_PLACES_API_KEY);
 
   const [osmResult, googleResult] = await Promise.allSettled([
@@ -364,6 +394,11 @@ async function findNearbyFacilities(latitude, longitude) {
   const googleFailed = googleResult.status === "rejected" || !googleConfigured;
 
   if (osmFailed && googleFailed) {
+    if (cached && Date.now() - cached.time < CACHE_STALE_MAX_MS) {
+      const ageMin = Math.round((Date.now() - cached.time) / 60000);
+      console.warn(`Facility lookup: live sources failed, serving stale cache (${ageMin} min old) for ${key}`);
+      return cached.data;
+    }
     const osmMsg = osmResult.status === "rejected" ? osmResult.reason.message : "unknown error";
     const googleMsg = !googleConfigured
       ? "not configured (GOOGLE_PLACES_API_KEY unset)"
@@ -377,7 +412,9 @@ async function findNearbyFacilities(latitude, longitude) {
     `Facility lookup: ${osmFacilities.length} from OSM, ${googleFacilities.length} from Google` +
       (googleConfigured ? "" : " (Google not configured)"),
   );
-  return mergeFacilitySources(osmFacilities, googleFacilities);
+  const merged = mergeFacilitySources(osmFacilities, googleFacilities);
+  FACILITY_CACHE.set(key, { data: merged, time: Date.now() });
+  return merged;
 }
 
 module.exports = { geocodeAddress, findNearbyFacilities, FacilityLookupError };
