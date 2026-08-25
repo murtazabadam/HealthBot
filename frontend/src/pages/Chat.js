@@ -3732,7 +3732,7 @@ export function ChatDashboard() {
               <h2
                 className={`text-3xl font-bold mb-8 ${isDark ? "text-white" : "text-slate-900"}`}
               >
-                Saved Prescriptions & Advice
+                Saved Advice
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <SavedCard
